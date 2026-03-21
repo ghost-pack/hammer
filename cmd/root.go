@@ -3,8 +3,8 @@ package cmd
 import (
 	"context"
 
+	"dagger.io/dagger"
 	"github.com/ghost-pack/hammer/internal/cli"
-	"github.com/ghost-pack/hammer/internal/service"
 	"github.com/spf13/cobra"
 )
 
@@ -14,22 +14,21 @@ var rootCmd = &cobra.Command{
 	Long:  `Use this to hammer things out.`,
 }
 
-var newDaggerClient = NewDaggerClient
-
 func Execute() error {
 	ctx := context.Background()
-	client, err := newDaggerClient(ctx)
+	client, err := NewDaggerClient(ctx)
 	if err != nil {
 		return err
 	}
 	defer client.Close()
 
-	// 2. Create service layer (depends on client)
-	buildSvc := service.NewBuildService(client)
+	commands := []func(*dagger.Client) *cobra.Command{
+		cli.NewBuildCmd,
+	}
 
-	// 3. Create CLI commands (depend on service)
-	buildCmd := cli.NewBuildCmd(buildSvc)
-	rootCmd.AddCommand(buildCmd)
+	for _, cmdConstructor := range commands {
+		rootCmd.AddCommand(cmdConstructor(client))
+	}
 
 	return rootCmd.Execute()
 }
