@@ -2,6 +2,8 @@ package dagger
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -127,4 +129,87 @@ func TestNewDaggerClient_ConnectionError(t *testing.T) {
 	client, err := NewDaggerClient(ctx)
 	assert.Error(t, err, "expected connection error with cancelled context")
 	assert.Nil(t, client, "client should be nil on error")
+}
+
+func TestDaggerClient_RunCommandWithMount(t *testing.T) {
+	ctx := context.Background()
+	client, err := NewDaggerClient(ctx)
+	require.NoError(t, err, "failed to connect to Dagger engine")
+	defer client.Close()
+
+	// Create a temporary directory with a known file for mounting tests
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "test.txt")
+	err = os.WriteFile(testFile, []byte("hello world"), 0644)
+	require.NoError(t, err)
+
+	tests := []struct {
+		name        string
+		image       string
+		command     []string
+		mountPath   string
+		hostDir     string
+		expectedOut string
+		expectErr   bool
+	}{
+		{
+			name:        "list files in mounted directory",
+			image:       "alpine:latest",
+			command:     []string{"ls"},
+			mountPath:   "/mnt",
+			hostDir:     tmpDir,
+			expectedOut: "test.txt\n",
+			expectErr:   false,
+		},
+		{
+			name:        "cat file content from mounted directory",
+			image:       "alpine:latest",
+			command:     []string{"cat", "/mnt/test.txt"},
+			mountPath:   "/mnt",
+			hostDir:     tmpDir,
+			expectedOut: "hello world",
+			expectErr:   false,
+		},
+		{
+			name:        "working directory is mount point",
+			image:       "alpine:latest",
+			command:     []string{"pwd"},
+			mountPath:   "/workspace",
+			hostDir:     tmpDir,
+			expectedOut: "/workspace\n",
+			expectErr:   false,
+		},
+		{
+			name:        "non‑zero exit code in mounted container",
+			image:       "alpine:latest",
+			command:     []string{"sh", "-c", "exit 1"},
+			mountPath:   "/mnt",
+			hostDir:     tmpDir,
+			expectedOut: "",
+			expectErr:   true,
+		},
+		{
+			name:        "host directory does not exist",
+			image:       "alpine:latest",
+			command:     []string{"ls"},
+			mountPath:   "/mnt",
+			hostDir:     "/nonexistent/path",
+			expectedOut: "",
+			expectErr:   true, // Dagger will fail to mount
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			stdout, err := client.RunCommandWithMount(ctx, tt.image, tt.command, tt.mountPath, tt.hostDir)
+
+			if tt.expectErr {
+				assert.Error(t, err, "expected an error but got none")
+				assert.Equal(t, tt.expectedOut, stdout, "stdout mismatch")
+			} else {
+				assert.NoError(t, err, "expected no error but got one")
+				assert.Equal(t, tt.expectedOut, stdout, "stdout mismatch")
+			}
+		})
+	}
 }

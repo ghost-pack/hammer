@@ -17,10 +17,12 @@ func TestBuildService_Build(t *testing.T) {
 		{
 			name: "successful build",
 			setupMock: func(m *MockDaggerClient) {
-				m.On("RunCommand",
-					mock.Anything, // context
+				m.On("RunCommandWithMount",
+					mock.Anything,
 					"alpine:latest",
-					[]string{"echo", "Building with Dagger!"},
+					[]string{"ls", "-la"},
+					"/src",
+					".",
 				).Return("Building with Dagger!\n", nil)
 			},
 			expectError: false,
@@ -28,10 +30,12 @@ func TestBuildService_Build(t *testing.T) {
 		{
 			name: "run command fails",
 			setupMock: func(m *MockDaggerClient) {
-				m.On("RunCommand",
+				m.On("RunCommandWithMount",
 					mock.Anything,
 					"alpine:latest",
-					[]string{"echo", "Building with Dagger!"},
+					[]string{"ls", "-la"},
+					"/src",
+					".",
 				).Return("", assert.AnError)
 			},
 			expectError: true,

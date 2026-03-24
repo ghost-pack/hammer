@@ -20,7 +20,13 @@ func NewBuildService(client dagger.DaggerClient) BuildService {
 }
 
 func (s *buildServiceImpl) Build(ctx context.Context) error {
-	out, err := s.client.RunCommand(ctx, "alpine:latest", []string{"echo", "Building with Dagger!"})
+	out, err := s.client.RunCommandWithMount(
+		ctx,
+		"alpine:latest",
+		[]string{"ls", "-la"},
+		"/src",
+		".",
+	)
 	if err != nil {
 		return err
 	}
