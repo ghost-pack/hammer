@@ -53,10 +53,7 @@ func TestDaggerClient_Integration(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			stdout, err := client.Container().
-				From(tt.image).
-				WithExec(tt.command).
-				Stdout(ctx)
+			stdout, err := client.RunCommand(ctx, tt.image, tt.command)
 
 			if tt.expectErr {
 				assert.Error(t, err, "expected an error but got none")
@@ -87,10 +84,7 @@ func TestDaggerClient_Close(t *testing.T) {
 				return client
 			},
 			run: func(t *testing.T, client DaggerClient) error {
-				_, err := client.Container().
-					From("alpine:latest").
-					WithExec([]string{"echo", "test"}).
-					Stdout(context.Background())
+				_, err := client.RunCommand(context.Background(), "alpine:latest", []string{"echo", "test"})
 				return err
 			},
 			expectErr: true,

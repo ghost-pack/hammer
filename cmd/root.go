@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"context"
+	"fmt"
+	"os"
 
 	"github.com/ghost-pack/hammer/internal/dagger"
 	"github.com/ghost-pack/hammer/internal/service"
@@ -20,11 +22,14 @@ func Execute() error {
 	if err != nil {
 		return err
 	}
-	defer client.Close()
+	defer func() {
+		if err := client.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error closing Dagger client: %v\n", err)
+		}
+	}()
 
 	svcs := service.NewServices(client)
 
-	// Slice of constructors that accept *Services
 	commands := []func(*service.Services) *cobra.Command{
 		NewBuildCmd,
 		//cli.NewTerraformBuildCmd,

@@ -8,11 +8,11 @@ import (
 )
 
 type DaggerClient interface {
-	Container() *dagger.Container
+	RunCommand(ctx context.Context, image string, command []string) (string, error)
 	Close() error
 }
 
-type RealDaggerClient struct {
+type DaggerClientImpl struct {
 	client *dagger.Client
 }
 
@@ -21,13 +21,16 @@ func NewDaggerClient(ctx context.Context) (DaggerClient, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &RealDaggerClient{client}, nil
+	return &DaggerClientImpl{client}, nil
 }
 
-func (r *RealDaggerClient) Container() *dagger.Container {
-	return r.client.Container()
+func (r *DaggerClientImpl) RunCommand(ctx context.Context, image string, command []string) (string, error) {
+	return r.client.Container().
+		From(image).
+		WithExec(command).
+		Stdout(ctx)
 }
 
-func (r *RealDaggerClient) Close() error {
+func (r *DaggerClientImpl) Close() error {
 	return r.client.Close()
 }

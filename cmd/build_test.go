@@ -39,15 +39,11 @@ func TestNewBuildCmd(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create a new mock each time
 			mockSvc := new(mockBuildService)
-			// Set expectation: Build(ctx) should be called once and return tt.mockError
 			mockSvc.On("Build", mock.Anything).Return(tt.mockError)
 
-			// Inject the mock into the command via Services struct
 			cmd := NewBuildCmd(&service.Services{Build: mockSvc})
 
-			// Execute the command's RunE function
 			err := cmd.RunE(cmd, nil)
 
 			if tt.expectErr {
@@ -56,7 +52,6 @@ func TestNewBuildCmd(t *testing.T) {
 				assert.NoError(t, err, "expected no error but got one")
 			}
 
-			// Optional: verify that the mock was called as expected
 			mockSvc.AssertExpectations(t)
 		})
 	}
