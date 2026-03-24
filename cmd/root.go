@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 
-	"github.com/ghost-pack/hammer/internal/cli"
 	"github.com/ghost-pack/hammer/internal/service"
 	"github.com/spf13/cobra"
 )
@@ -26,7 +25,7 @@ func Execute() error {
 
 	// Slice of constructors that accept *Services
 	commands := []func(*service.Services) *cobra.Command{
-		cli.NewBuildCmd,
+		NewBuildCmd,
 		//cli.NewTerraformBuildCmd,
 		//cli.NewNodeBuildCmd,
 		//cli.NewTrivyOnImageCmd,

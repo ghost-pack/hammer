@@ -1,5 +1,5 @@
 // internal/cli/build.go
-package cli
+package cmd
 
 import (
 	"github.com/ghost-pack/hammer/internal/service"
