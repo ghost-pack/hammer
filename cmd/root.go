@@ -3,8 +3,8 @@ package cmd
 import (
 	"context"
 
-	"dagger.io/dagger"
 	"github.com/ghost-pack/hammer/internal/cli"
+	"github.com/ghost-pack/hammer/internal/service"
 	"github.com/spf13/cobra"
 )
 
@@ -22,12 +22,18 @@ func Execute() error {
 	}
 	defer client.Close()
 
-	commands := []func(*dagger.Client) *cobra.Command{
+	svcs := service.NewServices(client)
+
+	// Slice of constructors that accept *Services
+	commands := []func(*service.Services) *cobra.Command{
 		cli.NewBuildCmd,
+		//cli.NewTerraformBuildCmd,
+		//cli.NewNodeBuildCmd,
+		//cli.NewTrivyOnImageCmd,
 	}
 
 	for _, cmdConstructor := range commands {
-		rootCmd.AddCommand(cmdConstructor(client))
+		rootCmd.AddCommand(cmdConstructor(svcs))
 	}
 
 	return rootCmd.Execute()

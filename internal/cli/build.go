@@ -1,19 +1,17 @@
+// internal/cli/build.go
 package cli
 
 import (
-	"dagger.io/dagger"
-	"github.com/spf13/cobra"
-
 	"github.com/ghost-pack/hammer/internal/service"
+	"github.com/spf13/cobra"
 )
 
-func NewBuildCmd(client *dagger.Client) *cobra.Command {
-	svc := service.NewBuildService(client)
+func NewBuildCmd(services *service.Services) *cobra.Command {
 	return &cobra.Command{
 		Use:   "build",
 		Short: "Build something",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return svc.Build(cmd.Context())
+			return services.Build.Build(cmd.Context())
 		},
 	}
 }
