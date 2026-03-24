@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 
+	"github.com/ghost-pack/hammer/internal/dagger"
 	"github.com/ghost-pack/hammer/internal/service"
 	"github.com/spf13/cobra"
 )
@@ -15,7 +16,7 @@ var rootCmd = &cobra.Command{
 
 func Execute() error {
 	ctx := context.Background()
-	client, err := NewDaggerClient(ctx)
+	client, err := dagger.NewDaggerClient(ctx)
 	if err != nil {
 		return err
 	}

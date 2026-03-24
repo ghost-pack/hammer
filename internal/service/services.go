@@ -1,7 +1,7 @@
 // internal/service/services.go
 package service
 
-import "dagger.io/dagger"
+import "github.com/ghost-pack/hammer/internal/dagger"
 
 type Services struct {
 	Build BuildService
@@ -11,7 +11,7 @@ type Services struct {
 	//Trivy     TrivyService
 }
 
-func NewServices(client *dagger.Client) *Services {
+func NewServices(client dagger.DaggerClient) *Services {
 	return &Services{
 		Build: NewBuildService(client),
 		//Terraform: NewTerraformService(client),

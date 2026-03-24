@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"dagger.io/dagger"
+	"github.com/ghost-pack/hammer/internal/dagger"
 )
 
 type BuildService interface {
@@ -12,15 +12,13 @@ type BuildService interface {
 }
 
 type buildServiceImpl struct {
-	client *dagger.Client
+	client dagger.DaggerClient
 }
 
-// TODO: Make a wrapper interface around the dagger client
-func NewBuildService(client *dagger.Client) BuildService {
+func NewBuildService(client dagger.DaggerClient) BuildService {
 	return &buildServiceImpl{client: client}
 }
 
-// Build performs the actual build using Dagger.
 func (s *buildServiceImpl) Build(ctx context.Context) error {
 	out, err := s.client.Container().
 		From("alpine:latest").
