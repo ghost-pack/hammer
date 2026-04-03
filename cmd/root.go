@@ -2,12 +2,22 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
 	"github.com/ghost-pack/hammer/internal/dagger"
 	"github.com/ghost-pack/hammer/internal/service"
 	"github.com/spf13/cobra"
+	"go.opentelemetry.io/otel"
+)
+
+const name = "github.com/ghost-pack/hammer"
+
+var (
+	tracer = otel.Tracer(name)
+	//meter   = otel.Meter(name)
+	//logger = otelslog.NewLogger(name)
 )
 
 var rootCmd = &cobra.Command{
@@ -18,6 +28,11 @@ var rootCmd = &cobra.Command{
 
 func Execute() error {
 	ctx := context.Background()
+	otelShutdown, err := setupOTelSDK(ctx)
+	defer func() {
+		err = errors.Join(err, otelShutdown(context.Background()))
+	}()
+
 	client, err := dagger.NewDaggerClient(ctx)
 	if err != nil {
 		return err
@@ -40,6 +55,8 @@ func Execute() error {
 	for _, cmdConstructor := range commands {
 		rootCmd.AddCommand(cmdConstructor(svcs))
 	}
+	ctx, span := tracer.Start(ctx, "hammer")
+	defer span.End()
 
-	return rootCmd.Execute()
+	return rootCmd.ExecuteContext(ctx)
 }

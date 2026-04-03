@@ -2,9 +2,18 @@ package service
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/ghost-pack/hammer/internal/dagger"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+)
+
+const name = "github.com/ghost-pack/hammer"
+
+var (
+	tracer = otel.Tracer(name)
+	//meter   = otel.Meter(name)
+	//logger = otelslog.NewLogger(name)
 )
 
 type BuildService interface {
@@ -20,7 +29,9 @@ func NewBuildService(client dagger.DaggerClient) BuildService {
 }
 
 func (s *buildServiceImpl) Build(ctx context.Context) error {
-	out, err := s.client.RunCommandWithMount(
+	ctx, span := tracer.Start(ctx, "build")
+	defer span.End()
+	_, err := s.client.RunCommandWithMount(
 		ctx,
 		"alpine:latest",
 		[]string{"ls", "-la"},
@@ -30,7 +41,8 @@ func (s *buildServiceImpl) Build(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(out)
-	fmt.Println("sup also this is brian")
+	rollValueAttr := attribute.Int("roll.value", 1)
+	span.SetAttributes(rollValueAttr)
+
 	return nil
 }
