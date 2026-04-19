@@ -4,12 +4,6 @@ import (
 	"context"
 
 	"github.com/ghost-pack/hammer/internal/dagger"
-	"github.com/ghost-pack/hammer/internal/service/observability"
-	"go.opentelemetry.io/otel/attribute"
-)
-
-var (
-	tracer = observability.Tracer("golang")
 )
 
 type BuildServiceImpl struct {
@@ -25,16 +19,14 @@ func (s *BuildServiceImpl) Build(ctx context.Context) error {
 	defer span.End()
 	_, err := s.client.RunCommandWithMount(
 		ctx,
-		"alpine:latest",
-		[]string{"ls", "-la"},
+		"cgr.dev/chainguard/go",
+		[]string{"go", "build", "."},
 		"/src",
 		".",
 	)
 	if err != nil {
 		return err
 	}
-	rollValueAttr := attribute.Int("roll.value", 1)
-	span.SetAttributes(rollValueAttr)
 
 	return nil
 }

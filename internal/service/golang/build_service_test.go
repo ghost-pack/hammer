@@ -20,8 +20,8 @@ func TestBuildService_Build(t *testing.T) {
 			setupMock: func(m *mocks.MockDaggerClient) {
 				m.On("RunCommandWithMount",
 					mock.Anything,
-					"alpine:latest",
-					[]string{"ls", "-la"},
+					"cgr.dev/chainguard/go",
+					[]string{"go", "build", "."},
 					"/src",
 					".",
 				).Return("Building with Dagger!\n", nil)
@@ -33,8 +33,8 @@ func TestBuildService_Build(t *testing.T) {
 			setupMock: func(m *mocks.MockDaggerClient) {
 				m.On("RunCommandWithMount",
 					mock.Anything,
-					"alpine:latest",
-					[]string{"ls", "-la"},
+					"cgr.dev/chainguard/go",
+					[]string{"go", "build", "."},
 					"/src",
 					".",
 				).Return("", assert.AnError)

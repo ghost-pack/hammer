@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"dagger.io/dagger"
+	"dagger.io/dagger/dag"
 )
 
 type DaggerClient interface {
@@ -41,6 +42,11 @@ func (r *DaggerClientImpl) RunCommandWithMount(ctx context.Context, image string
 		WithMountedDirectory(mountPath, dir). // Mount at the given path
 		WithWorkdir(mountPath).               // Set that as working directory
 		WithExec(command).
+		WithUnixSocket(
+			"/var/run/docker.sock",
+			dag.Host().UnixSocket("/run/user/1000/podman/podman.sock"),
+		).
+		WithEnvVariable("DOCKER_HOST", "unix:///var/run/docker.sock").
 		Stdout(ctx)
 }
 

@@ -42,7 +42,7 @@ func TestNewBuildCmd(t *testing.T) {
 			mockSvc := new(mockBuildService)
 			mockSvc.On("Build", mock.Anything).Return(tt.mockError)
 
-			cmd := NewBuildCmd(&service.Services{Build: mockSvc})
+			cmd := NewCICommand(&service.Services{Build: mockSvc})
 
 			err := cmd.RunE(cmd, nil)
 

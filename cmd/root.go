@@ -46,7 +46,7 @@ func Execute() error {
 	svcs := service.NewServices(client)
 
 	commands := []func(*service.Services) *cobra.Command{
-		NewBuildCmd,
+		NewCICommand,
 		//cli.NewTerraformBuildCmd,
 		//cli.NewNodeBuildCmd,
 		//cli.NewTrivyOnImageCmd,
