@@ -14,7 +14,16 @@ type mockBuildService struct {
 	mock.Mock
 }
 
+type mockTestService struct {
+	mock.Mock
+}
+
 func (m *mockBuildService) Build(ctx context.Context) error {
+	args := m.Called(ctx)
+	return args.Error(0)
+}
+
+func (m *mockTestService) Test(ctx context.Context) error {
 	args := m.Called(ctx)
 	return args.Error(0)
 }
@@ -39,10 +48,11 @@ func TestNewBuildCmd(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockSvc := new(mockBuildService)
-			mockSvc.On("Build", mock.Anything).Return(tt.mockError)
-
-			cmd := NewCICommand(&service.Services{Build: mockSvc})
+			mockBuildSvc := new(mockBuildService)
+			mockBuildSvc.On("Build", mock.Anything).Return(tt.mockError)
+			mockTestSvc := new(mockTestService)
+			mockTestSvc.On("Test", mock.Anything).Return(nil)
+			cmd := NewCICommand(&service.Services{Build: mockBuildSvc, Test: mockTestSvc})
 
 			err := cmd.RunE(cmd, nil)
 
@@ -52,7 +62,7 @@ func TestNewBuildCmd(t *testing.T) {
 				assert.NoError(t, err, "expected no error but got one")
 			}
 
-			mockSvc.AssertExpectations(t)
+			mockBuildSvc.AssertExpectations(t)
 		})
 	}
 }
