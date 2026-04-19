@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/ghost-pack/hammer/internal/dagger"
+	"go.opentelemetry.io/otel/codes"
 )
 
 type TestServiceImpl struct {
@@ -25,7 +26,10 @@ func (s *TestServiceImpl) Test(ctx context.Context) error {
 		".",
 	)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return err
 	}
+	span.SetStatus(codes.Ok, "Tests passed.")
 	return nil
 }
