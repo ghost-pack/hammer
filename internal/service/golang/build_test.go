@@ -1,9 +1,10 @@
-package service
+package golang
 
 import (
 	"context"
 	"testing"
 
+	"github.com/ghost-pack/hammer/internal/service/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -11,12 +12,12 @@ import (
 func TestBuildService_Build(t *testing.T) {
 	tests := []struct {
 		name        string
-		setupMock   func(*MockDaggerClient)
+		setupMock   func(*mocks.MockDaggerClient)
 		expectError bool
 	}{
 		{
 			name: "successful build",
-			setupMock: func(m *MockDaggerClient) {
+			setupMock: func(m *mocks.MockDaggerClient) {
 				m.On("RunCommandWithMount",
 					mock.Anything,
 					"alpine:latest",
@@ -29,7 +30,7 @@ func TestBuildService_Build(t *testing.T) {
 		},
 		{
 			name: "run command fails",
-			setupMock: func(m *MockDaggerClient) {
+			setupMock: func(m *mocks.MockDaggerClient) {
 				m.On("RunCommandWithMount",
 					mock.Anything,
 					"alpine:latest",
@@ -44,7 +45,7 @@ func TestBuildService_Build(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockClient := new(MockDaggerClient)
+			mockClient := new(mocks.MockDaggerClient)
 			tt.setupMock(mockClient)
 
 			svc := NewBuildService(mockClient)

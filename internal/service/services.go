@@ -1,7 +1,15 @@
-// internal/service/services.go
 package service
 
-import "github.com/ghost-pack/hammer/internal/dagger"
+import (
+	"context"
+
+	"github.com/ghost-pack/hammer/internal/dagger"
+	"github.com/ghost-pack/hammer/internal/service/golang"
+)
+
+type BuildService interface {
+	Build(ctx context.Context) error
+}
 
 type Services struct {
 	Build BuildService
@@ -13,7 +21,7 @@ type Services struct {
 
 func NewServices(client dagger.DaggerClient) *Services {
 	return &Services{
-		Build: NewBuildService(client),
+		Build: golang.NewBuildService(client),
 		//Terraform: NewTerraformService(client),
 		//Node:      NewNodeService(client),
 		//Trivy:     NewTrivyService(client),
