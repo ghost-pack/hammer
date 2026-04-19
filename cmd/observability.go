@@ -74,6 +74,7 @@ func newPropagator() propagation.TextMapPropagator {
 func newTracerProvider() (*trace.TracerProvider, error) {
 	exporter, err := otlptracegrpc.New(context.Background(),
 		otlptracegrpc.WithEndpoint("localhost:4317"), // local jaeger
+		otlptracegrpc.WithInsecure(),                 // local jaeger
 	)
 	if err != nil {
 		return nil, err
