@@ -53,7 +53,7 @@ func TestInitStdoutEmitsValidSpans(t *testing.T) {
 
 func TestPickExporterDefaultsToStdout(t *testing.T) {
 	cfg := Config{}
-	got := pickExporter("", cfg)
+	got := pickExporter("stdout", cfg)
 	if got != ExporterStdout {
 		t.Errorf("expected stdout default, got %q", got)
 	}
