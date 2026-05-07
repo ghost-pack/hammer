@@ -34,6 +34,8 @@ func Execute() error {
 		}
 	}()
 
+	ctx, span := tracing.Start(ctx, "hammer pipeline")
+	defer span.End()
 	if err := cli.Execute(ctx); err != nil {
 		slog.ErrorContext(ctx, "command failed", "err", err)
 		return err

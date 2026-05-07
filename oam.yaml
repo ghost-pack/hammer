@@ -1,0 +1,22 @@
+apiVersion: core.oam.dev/v1beta1
+kind: Application
+metadata:
+  name: hammer
+  annotations:
+    team: "ghost-pack"
+    description: "The hammer CLI."
+spec:
+  components:
+    - name: hammer
+      type: goservice
+      # TODO: flesh out properties and traits and stuff eventually.
+#      properties:
+#        entrypoint: ./cmd/server
+#      traits:
+#        - type: resources
+#          properties:
+#            cpu: "1000m"
+#            memory: 1Gi
+#        - type: scalar
+#          properties:
+#            replicas: 2

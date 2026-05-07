@@ -5,6 +5,7 @@ import (
 	"context"
 	"log/slog"
 
+	_ "github.com/ghost-pack/hammer/internal/pipeline/goservice"
 	"github.com/spf13/cobra"
 )
 
