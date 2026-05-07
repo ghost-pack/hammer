@@ -73,3 +73,38 @@ func Run(ctx context.Context, name string, args []string, opts Options) (*Result
 	}
 	return res, nil
 }
+
+func RunWithoutOptions(ctx context.Context, name string, args []string) (*Result, error) {
+	ctx, span := tracing.Tracer("runner").Start(ctx, "exec:"+name,
+		trace.WithAttributes(
+			attribute.String("cmd", name),
+			attribute.StringSlice("args", args)))
+	defer span.End()
+
+	cmd := exec.CommandContext(ctx, name, args...)
+
+	var outBuf, errBuf bytes.Buffer
+
+	cmd.Stdout = &outBuf
+	cmd.Stderr = &errBuf
+
+	runErr := cmd.Run()
+	res := &Result{
+		Stdout:   outBuf.Bytes(),
+		Stderr:   errBuf.Bytes(),
+		ExitCode: cmd.ProcessState.ExitCode(),
+	}
+
+	span.SetAttributes(attribute.Int("exit_code", res.ExitCode))
+
+	if _, ok := errors.AsType[*exec.ExitError](runErr); ok {
+		span.SetStatus(codes.Error, "non-zero exit")
+		return res, fmt.Errorf("%s exited with code %d", name, res.ExitCode)
+	}
+	if runErr != nil {
+		span.RecordError(runErr)
+		span.SetStatus(codes.Error, runErr.Error())
+		return res, fmt.Errorf("Failed to run %s: %w", name, runErr)
+	}
+	return res, nil
+}
