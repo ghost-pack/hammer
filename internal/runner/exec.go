@@ -53,25 +53,7 @@ func Run(ctx context.Context, name string, args []string, opts Options) (*Result
 		cmd.Stderr = &errBuf
 	}
 
-	runErr := cmd.Run()
-	res := &Result{
-		Stdout:   outBuf.Bytes(),
-		Stderr:   errBuf.Bytes(),
-		ExitCode: cmd.ProcessState.ExitCode(),
-	}
-
-	span.SetAttributes(attribute.Int("exit_code", res.ExitCode))
-
-	if _, ok := errors.AsType[*exec.ExitError](runErr); ok {
-		span.SetStatus(codes.Error, "non-zero exit")
-		return res, fmt.Errorf("%s exited with code %d", name, res.ExitCode)
-	}
-	if runErr != nil {
-		span.RecordError(runErr)
-		span.SetStatus(codes.Error, runErr.Error())
-		return res, fmt.Errorf("Failed to run %s: %w", name, runErr)
-	}
-	return res, nil
+	return runCommand(cmd, outBuf, errBuf, span, name)
 }
 
 func RunWithoutOptions(ctx context.Context, name string, args []string) (*Result, error) {
@@ -88,6 +70,10 @@ func RunWithoutOptions(ctx context.Context, name string, args []string) (*Result
 	cmd.Stdout = &outBuf
 	cmd.Stderr = &errBuf
 
+	return runCommand(cmd, outBuf, errBuf, span, name)
+}
+
+func runCommand(cmd *exec.Cmd, outBuf bytes.Buffer, errBuf bytes.Buffer, span trace.Span, name string) (*Result, error) {
 	runErr := cmd.Run()
 	res := &Result{
 		Stdout:   outBuf.Bytes(),
@@ -104,7 +90,7 @@ func RunWithoutOptions(ctx context.Context, name string, args []string) (*Result
 	if runErr != nil {
 		span.RecordError(runErr)
 		span.SetStatus(codes.Error, runErr.Error())
-		return res, fmt.Errorf("Failed to run %s: %w", name, runErr)
+		return res, fmt.Errorf("failed to run %s: %w", name, runErr)
 	}
 	return res, nil
 }
