@@ -62,8 +62,7 @@ func Run(ctx context.Context, name string, args []string, opts Options) (*Result
 
 	span.SetAttributes(attribute.Int("exit_code", res.ExitCode))
 
-	var exitErr *exec.ExitError
-	if errors.As(runErr, &exitErr) {
+	if _, ok := errors.AsType[*exec.ExitError](runErr); ok {
 		span.SetStatus(codes.Error, "non-zero exit")
 		return res, fmt.Errorf("%s exited with code %d", name, res.ExitCode)
 	}
