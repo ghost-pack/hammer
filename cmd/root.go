@@ -2,61 +2,41 @@ package cmd
 
 import (
 	"context"
-	"errors"
-	"fmt"
+	"log/slog"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
-	"github.com/ghost-pack/hammer/internal/dagger"
-	"github.com/ghost-pack/hammer/internal/service"
-	"github.com/spf13/cobra"
-	"go.opentelemetry.io/otel"
+	"github.com/ghost-pack/hammer/internal/cli"
+	"github.com/ghost-pack/hammer/internal/observability/logging"
+	"github.com/ghost-pack/hammer/internal/observability/tracing"
 )
 
 const name = "github.com/ghost-pack/hammer"
 
-var (
-	tracer = otel.Tracer(name)
-	//meter   = otel.Meter(name)
-	//logger = otelslog.NewLogger(name)
-)
-
-var rootCmd = &cobra.Command{
-	Use:   "hammer",
-	Short: "Root command for hammer",
-	Long:  `Use this to hammer things out.`,
-}
-
 func Execute() error {
-	ctx := context.Background()
-	otelShutdown, err := setupOTelSDK(ctx)
-	defer func() {
-		err = errors.Join(err, otelShutdown(context.Background()))
-	}()
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
 
-	client, err := dagger.NewDaggerClient(ctx)
+	logger := logging.New()
+	slog.SetDefault(logger)
+
+	shutdown, err := tracing.Init(ctx)
 	if err != nil {
-		return err
+		slog.WarnContext(ctx, "tracing init failed", "err", err)
 	}
 	defer func() {
-		if err := client.Close(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error closing Dagger client: %v\n", err)
+		sctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := shutdown(sctx); err != nil {
+			slog.WarnContext(ctx, "tracing shutdown failed", "err", err)
 		}
 	}()
 
-	svcs := service.NewServices(client)
-
-	commands := []func(*service.Services) *cobra.Command{
-		NewCICommand,
-		//cli.NewTerraformBuildCmd,
-		//cli.NewNodeBuildCmd,
-		//cli.NewTrivyOnImageCmd,
+	if err := cli.Execute(ctx); err != nil {
+		slog.ErrorContext(ctx, "command failed", "err", err)
+		return err
 	}
-
-	for _, cmdConstructor := range commands {
-		rootCmd.AddCommand(cmdConstructor(svcs))
-	}
-	ctx, span := tracer.Start(ctx, "hammer")
-	defer span.End()
-
-	return rootCmd.ExecuteContext(ctx)
+	return nil
 }
