@@ -16,7 +16,6 @@ func newDeployCmd() *cobra.Command {
 			slog.InfoContext(ctx, "deploy start",
 				"file", flagOAMFile,
 				"env", flagEnv,
-				"dry_run", flagDryRun,
 			)
 
 			// TODO: dispatch to pipeline.RunDeploy(ctx)

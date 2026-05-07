@@ -24,7 +24,6 @@ func newCICmd() *cobra.Command {
 			slog.InfoContext(ctx, "ci start",
 				"file", flagOAMFile,
 				"env", flagEnv,
-				"dry_run", flagDryRun,
 			)
 
 			// TODO: load oam.yaml, dispatch to pipeline.

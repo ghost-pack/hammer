@@ -8,7 +8,6 @@ import (
 var (
 	flagOAMFile string
 	flagEnv     string
-	flagDryRun  bool
 	flagVerbose bool
 )
 
