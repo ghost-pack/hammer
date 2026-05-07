@@ -15,7 +15,7 @@ func newCICmd() *cobra.Command {
 		Short: "Run the CI pipeline (build, scan, push) for the app in oam.yaml",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			ctx, span := tracing.Tracer("runner").Start(ctx, "CI",
+			ctx, span := tracing.Tracer("cobra").Start(ctx, "CI",
 				trace.WithAttributes(
 					attribute.String("cmd", "CI"),
 					attribute.StringSlice("args", args)))
