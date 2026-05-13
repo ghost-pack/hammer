@@ -8,6 +8,7 @@ import (
 	"github.com/ghost-pack/hammer/internal/oam"
 	"github.com/ghost-pack/hammer/internal/observability/tracing"
 	"github.com/ghost-pack/hammer/internal/pipeline"
+	"github.com/ghost-pack/hammer/internal/runner"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -23,11 +24,13 @@ func New(component oam.Component) (pipeline.Pipeline, error) {
 
 	return &Pipeline{
 		component: &component,
+		runner:    runner.New(),
 	}, nil
 }
 
 type Pipeline struct {
 	component *oam.Component
+	runner    runner.Runner
 }
 
 func (p *Pipeline) ComponentType() string {

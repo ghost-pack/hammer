@@ -28,7 +28,18 @@ type Options struct {
 	InheritEnv bool
 }
 
-func Run(ctx context.Context, name string, args []string, opts Options) (*Result, error) {
+type Runner interface {
+	Run(ctx context.Context, name string, args []string, opts Options) (*Result, error)
+	RunWithoutOptions(ctx context.Context, name string, args []string) (*Result, error)
+}
+
+type OSRunner struct{}
+
+func New() *OSRunner {
+	return &OSRunner{}
+}
+
+func (*OSRunner) Run(ctx context.Context, name string, args []string, opts Options) (*Result, error) {
 	ctx, span := tracing.Tracer("runner").Start(ctx, "exec:"+name,
 		trace.WithAttributes(
 			attribute.String("cmd", name),
@@ -56,7 +67,7 @@ func Run(ctx context.Context, name string, args []string, opts Options) (*Result
 	return runCommand(cmd, &outBuf, &errBuf, span, name)
 }
 
-func RunWithoutOptions(ctx context.Context, name string, args []string) (*Result, error) {
+func (*OSRunner) RunWithoutOptions(ctx context.Context, name string, args []string) (*Result, error) {
 	ctx, span := tracing.Tracer("runner").Start(ctx, "exec:"+name,
 		trace.WithAttributes(
 			attribute.String("cmd", name),
