@@ -5,8 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
-	"os"
 	"os/exec"
 
 	"github.com/ghost-pack/hammer/internal/observability/tracing"
@@ -22,10 +20,8 @@ type Result struct {
 }
 
 type Options struct {
-	Dir        string
-	Env        []string
-	StreamTo   io.Writer
-	InheritEnv bool
+	Dir string
+	Env []string
 }
 
 type Runner interface {
@@ -49,20 +45,11 @@ func (*OSRunner) Run(ctx context.Context, name string, args []string, opts Optio
 
 	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Dir = opts.Dir
-	if opts.InheritEnv {
-		cmd.Env = append(os.Environ(), opts.Env...)
-	} else {
-		cmd.Env = opts.Env
-	}
+	cmd.Env = opts.Env
 
 	var outBuf, errBuf bytes.Buffer
-	if opts.StreamTo != nil {
-		cmd.Stdout = io.MultiWriter(opts.StreamTo, &outBuf)
-		cmd.Stderr = io.MultiWriter(opts.StreamTo, &errBuf)
-	} else {
-		cmd.Stdout = &outBuf
-		cmd.Stderr = &errBuf
-	}
+	cmd.Stdout = &outBuf
+	cmd.Stderr = &errBuf
 
 	return runCommand(cmd, &outBuf, &errBuf, span, name)
 }
