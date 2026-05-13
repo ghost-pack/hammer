@@ -53,7 +53,7 @@ func Run(ctx context.Context, name string, args []string, opts Options) (*Result
 		cmd.Stderr = &errBuf
 	}
 
-	return runCommand(cmd, outBuf, errBuf, span, name)
+	return runCommand(cmd, &outBuf, &errBuf, span, name)
 }
 
 func RunWithoutOptions(ctx context.Context, name string, args []string) (*Result, error) {
@@ -70,10 +70,10 @@ func RunWithoutOptions(ctx context.Context, name string, args []string) (*Result
 	cmd.Stdout = &outBuf
 	cmd.Stderr = &errBuf
 
-	return runCommand(cmd, outBuf, errBuf, span, name)
+	return runCommand(cmd, &outBuf, &errBuf, span, name)
 }
 
-func runCommand(cmd *exec.Cmd, outBuf bytes.Buffer, errBuf bytes.Buffer, span trace.Span, name string) (*Result, error) {
+func runCommand(cmd *exec.Cmd, outBuf *bytes.Buffer, errBuf *bytes.Buffer, span trace.Span, name string) (*Result, error) {
 	runErr := cmd.Run()
 	res := &Result{
 		Stdout:   outBuf.Bytes(),

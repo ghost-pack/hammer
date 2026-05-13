@@ -10,7 +10,10 @@ import (
 func (p *Pipeline) test(ctx context.Context) error {
 	result, err := runner.RunWithoutOptions(ctx, "go", []string{"test", "./..."})
 	if err != nil {
-		return err
+		if result == nil {
+			return err
+		}
+		return fmt.Errorf("test failed with error %w: %s", err, result.Stdout)
 	}
 	if result.ExitCode != 0 {
 		return fmt.Errorf("test failed with exit code %d: %s", result.ExitCode, result.Stderr)
