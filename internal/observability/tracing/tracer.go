@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 // ShutdownFunc flushes pending spans and shuts down the provider.
@@ -43,7 +44,7 @@ func InitWithConfig(ctx context.Context, cfg Config) (ShutdownFunc, error) {
 	if cfg.Exporter == ExporterNone {
 		// Set the no-op tracer provider explicitly so calls to otel.Tracer
 		// don't accidentally use a real one from elsewhere.
-		otel.SetTracerProvider(trace.NewNoopTracerProvider())
+		otel.SetTracerProvider(noop.NewTracerProvider())
 		return noopShutdown, nil
 	}
 
