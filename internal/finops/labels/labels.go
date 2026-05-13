@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/ghost-pack/hammer/internal/oam"
 )
 
 const (
@@ -36,7 +38,7 @@ var requiredKeys = []string{
 type Labels map[string]string
 
 type Builder struct {
-	//App *oam.Application TODO: Add an OAM Application with a bunch of info.
+	App           *oam.App
 	Env           string
 	HammerVersion string
 	Repo          string
@@ -45,11 +47,11 @@ type Builder struct {
 
 func (b *Builder) Build() (Labels, error) {
 	l := Labels{
-		//KeyApp:      normalize(b.App.Name)
-		//KeyKind: normalize(b.App.Kind),
-		KeyEnv: normalize(b.Env),
-		//KeyTeam: normalize(b.App.Metadata.Team),
-		//KeyCostCenter: normalize(b.App.Metadata.CostCenter),
+		KeyApp:  normalize(b.App.Metadata.Name),
+		KeyKind: normalize(b.App.Kind),
+		KeyEnv:  normalize(b.Env),
+		KeyTeam: normalize(b.App.Metadata.Annotations["team"]),
+		//KeyCostCenter: normalize(b.App.Metadata.Annotations["cost-center"]),
 		KeyManagedBy:     normalize(ManagedByValue),
 		KeyHammerVersion: normalize(b.HammerVersion),
 		KeyRepo:          normalize(b.Repo),
