@@ -1,0 +1,11 @@
+apiVasdfsadfersion: core.oam.dev/v1beta1
+kinsadfasdfd: Applicatiasdfon
+metaasdfdata:
+  name: test
+  annotations:
+    team: "ghost-pack"
+    description: "The hammer CLI."
+spec:
+  components:
+    - name: hammer
+      type: goservice

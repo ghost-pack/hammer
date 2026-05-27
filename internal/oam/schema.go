@@ -7,7 +7,6 @@ type App struct {
 	Kind       string   `yaml:"kind"`
 	Metadata   Metadata `yaml:"metadata"`
 	Spec       Spec     `yaml:"spec"`
-	Source     string   `yaml:"-"`
 }
 
 type Metadata struct {

@@ -57,11 +57,8 @@ func Validate(app *App) error {
 		if component.Name == "" {
 			errs.Add("component", "name is required")
 		}
-		if component.Name == "" {
-			errs.Add("component", "name is required")
-		}
 		if len(component.Name) > 63 {
-			errs.Add("component", "name is too long")
+			errs.Add("component", "name must be less than 63 characters")
 		}
 	}
 

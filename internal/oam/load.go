@@ -2,6 +2,7 @@ package oam
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -30,9 +31,9 @@ func Load(path string) (*App, error) {
 		return nil, err
 	}
 
-	app.Source = abs
 	err = Validate(app)
 	if err != nil {
+		fmt.Printf("error: %v\n", err)
 		return nil, err
 	}
 	return app, nil

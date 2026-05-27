@@ -1,0 +1,7 @@
+apiVersion: core.oam.dev/v1beta1
+metadata:
+  annotations:
+    description: "The hammer CLI."
+spec:
+  components:
+    - type: goservice
