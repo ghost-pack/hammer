@@ -9,11 +9,11 @@ import (
 )
 
 const (
-	KeyApp           = "app"
-	KeyKind          = "kind"
-	KeyEnv           = "env"
-	KeyTeam          = "team"
-	KeyCostCenter    = "cost-center"
+	KeyApp  = "app"
+	KeyKind = "kind"
+	KeyEnv  = "env"
+	KeyTeam = "team"
+	//KeyCostCenter    = "cost-center"
 	KeyManagedBy     = "managed-by"
 	KeyHammerVersion = "hammer-version"
 	KeyRepo          = "repo"
@@ -32,7 +32,7 @@ var (
 )
 
 var requiredKeys = []string{
-	KeyApp, KeyKind, KeyEnv, KeyTeam, KeyCostCenter, KeyManagedBy, KeyHammerVersion, KeyRepo, KeyCommit,
+	KeyApp, KeyKind, KeyEnv, KeyTeam /* KeyCostCenter, */, KeyManagedBy, KeyHammerVersion, KeyRepo, KeyCommit,
 }
 
 type Labels map[string]string
