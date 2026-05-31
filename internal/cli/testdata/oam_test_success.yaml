@@ -1,0 +1,11 @@
+apiVersion: core.oam.dev/v1beta1
+kind: Application
+metadata:
+  name: test
+  annotations:
+    team: "ghost-pack"
+    description: "The hammer CLI."
+spec:
+  components:
+    - name: hammer
+      type: noop

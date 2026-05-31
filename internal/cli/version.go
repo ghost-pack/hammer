@@ -1,7 +1,7 @@
 package cli
 
 import (
-	"fmt"
+	"log/slog"
 
 	"github.com/spf13/cobra"
 )
@@ -20,9 +20,9 @@ func newVersionCmd() *cobra.Command {
 		Use:   "version",
 		Short: "Print hammer version information",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Fprintln(cmd.OutOrStdout(), "hammer", version)
-			fmt.Fprintln(cmd.OutOrStdout(), "  commit:", commit)
-			fmt.Fprintln(cmd.OutOrStdout(), "  built: ", date)
+			slog.InfoContext(cmd.Context(), "hammer", "version", version)
+			slog.InfoContext(cmd.Context(), "  commit:", "commit", commit)
+			slog.InfoContext(cmd.Context(), "  built: ", "date", date)
 		},
 	}
 }

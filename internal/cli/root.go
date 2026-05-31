@@ -9,11 +9,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Execute runs the root command with the given context.
-// Called from main(). Returns an error suitable for os.Exit(1) on failure.
 func Execute(ctx context.Context) error {
 	root := newRootCmd()
-	// ExecuteContext makes ctx available to every subcommand via cmd.Context().
 	return root.ExecuteContext(ctx)
 }
 
@@ -43,7 +40,6 @@ infrastructure for building it, scanning it, and deploying it to GCP.`,
 	cmd.AddCommand(
 		newVersionCmd(),
 		newCICmd(),
-		newDeployCmd(),
 	)
 
 	return cmd

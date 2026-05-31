@@ -4,7 +4,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Persistent flag values, populated by Cobra at parse time.
 var (
 	flagOAMFile string
 	flagEnv     string
