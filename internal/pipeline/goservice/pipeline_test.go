@@ -80,6 +80,8 @@ func TestPipeline_CI(t *testing.T) {
 			setupMock: func(m *MockRunner) {
 				m.On("RunWithoutOptions", mock.Anything, "go", []string{"test", "./..."}).
 					Return(&runner.Result{ExitCode: 0}, nil)
+				m.On("RunWithoutOptions", mock.Anything, "go", []string{"build", "."}).
+					Return(&runner.Result{ExitCode: 0}, nil)
 			},
 			wantErr: false,
 		},
@@ -106,6 +108,39 @@ func TestPipeline_CI(t *testing.T) {
 			component: &oam.Component{Name: "testComponent", Type: "goservice"},
 			setupMock: func(m *MockRunner) {
 				m.On("RunWithoutOptions", mock.Anything, "go", []string{"test", "./..."}).
+					Return(&runner.Result{ExitCode: 1}, nil)
+			},
+			wantErr: true,
+		},
+		{
+			name:      "FailedCI_BuildHadError",
+			component: &oam.Component{Name: "testComponent", Type: "goservice"},
+			setupMock: func(m *MockRunner) {
+				m.On("RunWithoutOptions", mock.Anything, "go", []string{"test", "./..."}).
+					Return(&runner.Result{ExitCode: 0}, nil)
+				m.On("RunWithoutOptions", mock.Anything, "go", []string{"build", "."}).
+					Return(&runner.Result{ExitCode: 1}, errors.New("test error"))
+			},
+			wantErr: true,
+		},
+		{
+			name:      "FailedCI_BuildHadErrorNoResult",
+			component: &oam.Component{Name: "testComponent", Type: "goservice"},
+			setupMock: func(m *MockRunner) {
+				m.On("RunWithoutOptions", mock.Anything, "go", []string{"test", "./..."}).
+					Return(&runner.Result{ExitCode: 0}, nil)
+				m.On("RunWithoutOptions", mock.Anything, "go", []string{"build", "."}).
+					Return(nil, errors.New("test error"))
+			},
+			wantErr: true,
+		},
+		{
+			name:      "FailedCI_BuildHadBadResult",
+			component: &oam.Component{Name: "testComponent", Type: "goservice"},
+			setupMock: func(m *MockRunner) {
+				m.On("RunWithoutOptions", mock.Anything, "go", []string{"test", "./..."}).
+					Return(&runner.Result{ExitCode: 0}, nil)
+				m.On("RunWithoutOptions", mock.Anything, "go", []string{"build", "."}).
 					Return(&runner.Result{ExitCode: 1}, nil)
 			},
 			wantErr: true,

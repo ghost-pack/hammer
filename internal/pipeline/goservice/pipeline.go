@@ -45,7 +45,7 @@ func (p *Pipeline) CI(ctx context.Context) error {
 
 	phases := []phase{
 		{"test", p.test},
-		//{"build", p.build},
+		{"build", p.build},
 		//{"scan", p.scan},
 		//{"push", p.push},
 	}
