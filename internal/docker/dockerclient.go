@@ -17,7 +17,7 @@ import (
 )
 
 type DockerClient interface {
-	Build(ctx context.Context, binaryPath, imageTag string) error
+	Build(ctx context.Context, baseImage, binaryPath, imageTag string) error
 }
 
 type DockerClientImpl struct {
@@ -34,14 +34,14 @@ func NewDockerClient() (DockerClient, error) {
 	return &DockerClientImpl{cli}, nil
 }
 
-func (b *DockerClientImpl) Build(ctx context.Context, binaryPath, imageTag string) error {
+func (b *DockerClientImpl) Build(ctx context.Context, baseImage, binaryPath, imageTag string) error {
 	ctx, span := tracing.Tracer("docker build").Start(ctx, "docker build",
 		trace.WithAttributes(
 			attribute.String("cmd", "docker"),
 			attribute.StringSlice("args", []string{"build", "-f", binaryPath, "-t", imageTag})))
 	defer span.End()
 
-	buildCtx, err := tarContext(binaryPath)
+	buildCtx, err := tarContext(binaryPath, baseImage)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -74,16 +74,16 @@ func (b *DockerClientImpl) Build(ctx context.Context, binaryPath, imageTag strin
 // tarContext creates an in-memory tar archive containing:
 //   - the Go binary (renamed to "app")
 //   - a Dockerfile that layers it onto cgr.dev/chainguard/static
-func tarContext(binaryPath string) (io.ReadCloser, error) {
+func tarContext(binaryPath string, baseImage string) (io.ReadCloser, error) {
 	binaryData, err := os.ReadFile(binaryPath)
 	if err != nil {
 		return nil, fmt.Errorf("reading binary %q: %w", binaryPath, err)
 	}
 
-	dockerfile := []byte(`FROM cgr.dev/chainguard/static:latest
-COPY app /usr/local/bin/app
-ENTRYPOINT ["/usr/local/bin/app"]
-`)
+	dockerfile := []byte(fmt.Sprintf(`FROM %s
+	COPY app /usr/local/bin/app
+	ENTRYPOINT ["/usr/local/bin/app"]
+	`, baseImage))
 
 	var buf bytes.Buffer
 	tw := tar.NewWriter(&buf)

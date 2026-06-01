@@ -14,7 +14,7 @@ type MockDockerClient struct {
 	mock.Mock
 }
 
-func (m *MockDockerClient) Build(ctx context.Context, binaryPath, imageTag string) error {
+func (m *MockDockerClient) Build(ctx context.Context, baseImage, binaryPath, imageTag string) error {
 	callArgs := m.Called(ctx, binaryPath, imageTag)
 	return callArgs.Error(0)
 }

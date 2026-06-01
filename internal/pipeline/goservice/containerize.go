@@ -5,7 +5,7 @@ import (
 )
 
 func (p *Pipeline) containerize(ctx context.Context) error {
-	err := p.dockerClient.Build(ctx, p.component.Name, "testImageTagWhatever")
+	err := p.dockerClient.Build(ctx, "cgr.dev/chainguard/static:latest", p.component.Name, "testimagetagwhatever")
 	if err != nil {
 		return err
 	}
