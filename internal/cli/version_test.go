@@ -31,7 +31,7 @@ func TestVersionCmd(t *testing.T) {
 			},
 		},
 		{
-			name:    "release build values",
+			name:    "release docker values",
 			version: "v1.2.3",
 			commit:  "abc1234",
 			date:    "2024-01-15",

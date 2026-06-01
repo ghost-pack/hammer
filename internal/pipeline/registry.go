@@ -3,11 +3,11 @@ package pipeline
 import (
 	"fmt"
 
+	"github.com/ghost-pack/hammer/internal/docker"
 	"github.com/ghost-pack/hammer/internal/oam"
-	"github.com/moby/moby/client"
 )
 
-type Factory func(oam.Component, client.APIClient) (Pipeline, error)
+type Factory func(oam.Component, docker.DockerClient) (Pipeline, error)
 
 var registry = map[string]Factory{}
 
@@ -24,7 +24,7 @@ func Register(componentType string, f Factory) {
 	registry[componentType] = f
 }
 
-func For(component oam.Component, dockerClient client.APIClient) (Pipeline, error) {
+func For(component oam.Component, dockerClient docker.DockerClient) (Pipeline, error) {
 	if component.Type == "" {
 		return nil, fmt.Errorf("componentType is nil")
 	}

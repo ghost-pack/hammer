@@ -5,18 +5,22 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/ghost-pack/hammer/internal/docker"
 	"github.com/ghost-pack/hammer/internal/oam"
 	"github.com/ghost-pack/hammer/internal/pipeline"
 	"github.com/ghost-pack/hammer/internal/runner"
-	"github.com/moby/moby/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
 type MockDockerClient struct {
-	client.APIClient
 	mock.Mock
+}
+
+func (m *MockDockerClient) Build(ctx context.Context, binaryPath, imageTag string) error {
+	callArgs := m.Called(ctx, binaryPath, imageTag)
+	return callArgs.Error(0)
 }
 
 type MockRunner struct {
@@ -38,7 +42,7 @@ func (m *MockRunner) RunWithoutOptions(ctx context.Context, name string, args []
 func TestNewPipeline(t *testing.T) {
 	type args struct {
 		component oam.Component
-		client    client.APIClient
+		client    docker.DockerClient
 	}
 	tests := []struct {
 		name    string
@@ -87,7 +91,7 @@ func TestPipeline_CI(t *testing.T) {
 			setupMock: func(m *MockRunner) {
 				m.On("RunWithoutOptions", mock.Anything, "go", []string{"test", "./..."}).
 					Return(&runner.Result{ExitCode: 0}, nil)
-				m.On("RunWithoutOptions", mock.Anything, "go", []string{"build", "."}).
+				m.On("RunWithoutOptions", mock.Anything, "go", []string{"docker", "."}).
 					Return(&runner.Result{ExitCode: 0}, nil)
 			},
 			wantErr: false,
@@ -125,7 +129,7 @@ func TestPipeline_CI(t *testing.T) {
 			setupMock: func(m *MockRunner) {
 				m.On("RunWithoutOptions", mock.Anything, "go", []string{"test", "./..."}).
 					Return(&runner.Result{ExitCode: 0}, nil)
-				m.On("RunWithoutOptions", mock.Anything, "go", []string{"build", "."}).
+				m.On("RunWithoutOptions", mock.Anything, "go", []string{"docker", "."}).
 					Return(&runner.Result{ExitCode: 1}, errors.New("test error"))
 			},
 			wantErr: true,
@@ -136,7 +140,7 @@ func TestPipeline_CI(t *testing.T) {
 			setupMock: func(m *MockRunner) {
 				m.On("RunWithoutOptions", mock.Anything, "go", []string{"test", "./..."}).
 					Return(&runner.Result{ExitCode: 0}, nil)
-				m.On("RunWithoutOptions", mock.Anything, "go", []string{"build", "."}).
+				m.On("RunWithoutOptions", mock.Anything, "go", []string{"docker", "."}).
 					Return(nil, errors.New("test error"))
 			},
 			wantErr: true,
@@ -147,7 +151,7 @@ func TestPipeline_CI(t *testing.T) {
 			setupMock: func(m *MockRunner) {
 				m.On("RunWithoutOptions", mock.Anything, "go", []string{"test", "./..."}).
 					Return(&runner.Result{ExitCode: 0}, nil)
-				m.On("RunWithoutOptions", mock.Anything, "go", []string{"build", "."}).
+				m.On("RunWithoutOptions", mock.Anything, "go", []string{"docker", "."}).
 					Return(&runner.Result{ExitCode: 1}, nil)
 			},
 			wantErr: true,

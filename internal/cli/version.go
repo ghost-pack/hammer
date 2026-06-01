@@ -6,9 +6,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// version is set at build time via -ldflags:
+// version is set at docker time via -ldflags:
 //
-//	go build -ldflags "-X github.com/you/hammer/internal/cli.version=v1.2.3"
+//	go docker -ldflags "-X github.com/you/hammer/internal/cli.version=v1.2.3"
 var (
 	version = "dev"
 	commit  = "none"

@@ -4,15 +4,19 @@ import (
 	"context"
 	"testing"
 
+	"github.com/ghost-pack/hammer/internal/docker"
 	"github.com/ghost-pack/hammer/internal/oam"
-	"github.com/moby/moby/client"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
 type MockDockerClient struct {
-	client.APIClient
 	mock.Mock
+}
+
+func (m *MockDockerClient) Build(ctx context.Context, binaryPath, imageTag string) error {
+	callArgs := m.Called(ctx, binaryPath, imageTag)
+	return callArgs.Error(0)
 }
 
 type MockPipeline struct {
@@ -32,7 +36,7 @@ func (m *MockPipeline) CI(ctx context.Context) error {
 func TestFor(t *testing.T) {
 	type args struct {
 		component oam.Component
-		client    client.APIClient
+		client    docker.DockerClient
 	}
 	tests := []struct {
 		name    string
@@ -49,7 +53,7 @@ func TestFor(t *testing.T) {
 			},
 			want: &MockPipeline{},
 			setup: func() {
-				Register("goservice", func(component oam.Component, client client.APIClient) (Pipeline, error) {
+				Register("goservice", func(component oam.Component, client docker.DockerClient) (Pipeline, error) {
 					return &MockPipeline{}, nil
 				})
 			},
@@ -109,7 +113,7 @@ func TestRegister(t *testing.T) {
 			name: "SuccessRegister",
 			args: args{
 				componentType: "goservice",
-				f: func(component oam.Component, client client.APIClient) (Pipeline, error) {
+				f: func(component oam.Component, client docker.DockerClient) (Pipeline, error) {
 					return &MockPipeline{}, nil
 				},
 			},
@@ -120,7 +124,7 @@ func TestRegister(t *testing.T) {
 			name: "FailedRegister_duplicate",
 			args: args{
 				componentType: "goservice",
-				f: func(component oam.Component, client client.APIClient) (Pipeline, error) {
+				f: func(component oam.Component, client docker.DockerClient) (Pipeline, error) {
 					return &MockPipeline{}, nil
 				},
 			},
@@ -140,7 +144,7 @@ func TestRegister(t *testing.T) {
 			name: "FailedRegister_noComponentType",
 			args: args{
 				componentType: "",
-				f: func(component oam.Component, client client.APIClient) (Pipeline, error) {
+				f: func(component oam.Component, client docker.DockerClient) (Pipeline, error) {
 					return &MockPipeline{}, nil
 				},
 			},

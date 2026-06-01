@@ -6,7 +6,7 @@ import (
 )
 
 func (p *Pipeline) build(ctx context.Context) error {
-	result, err := p.runner.RunWithoutOptions(ctx, "go", []string{"build", "."})
+	result, err := p.runner.RunWithoutOptions(ctx, "go", []string{"docker", "."})
 	if err != nil {
 		if result == nil {
 			return err

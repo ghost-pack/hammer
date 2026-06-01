@@ -3,10 +3,10 @@ package cli
 import (
 	"log/slog"
 
+	"github.com/ghost-pack/hammer/internal/docker"
 	"github.com/ghost-pack/hammer/internal/oam"
 	"github.com/ghost-pack/hammer/internal/observability/tracing"
 	"github.com/ghost-pack/hammer/internal/pipeline"
-	"github.com/moby/moby/client"
 	"github.com/spf13/cobra"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -15,7 +15,7 @@ import (
 func newCICmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "ci",
-		Short: "Run the CI pipeline (build, scan, push) for the app in oam.yaml",
+		Short: "Run the CI pipeline (docker, scan, push) for the app in oam.yaml",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			ctx, span := tracing.Tracer("cobra").Start(ctx, "CI",
@@ -30,7 +30,7 @@ func newCICmd() *cobra.Command {
 			)
 
 			// Just giving this to every pipeline for now.
-			dockerClient, err := client.New(client.FromEnv)
+			dockerClient, err := docker.NewDockerClient()
 			if err != nil {
 				return err
 			}

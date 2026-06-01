@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/ghost-pack/hammer/internal/docker"
 	"github.com/ghost-pack/hammer/internal/oam"
 	"github.com/ghost-pack/hammer/internal/pipeline"
-	"github.com/moby/moby/client"
 	"github.com/stretchr/testify/require"
 )
 
@@ -17,7 +17,7 @@ func init() {
 }
 
 // The noop component is only used for testing.
-func New(component oam.Component, client client.APIClient) (pipeline.Pipeline, error) {
+func New(component oam.Component, client docker.DockerClient) (pipeline.Pipeline, error) {
 	if component.Type != "noop" {
 		return nil, fmt.Errorf("noop component must be of type noop")
 	}
@@ -39,7 +39,7 @@ func (p *Pipeline) CI(ctx context.Context) error {
 	return nil
 }
 
-func NewBadPipeline(component oam.Component, client client.APIClient) (pipeline.Pipeline, error) {
+func NewBadPipeline(component oam.Component, client docker.DockerClient) (pipeline.Pipeline, error) {
 	if component.Type != "bad" {
 		return nil, fmt.Errorf("bad component must be of type bad")
 	}

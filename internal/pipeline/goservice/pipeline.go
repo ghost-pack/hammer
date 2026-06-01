@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/ghost-pack/hammer/internal/docker"
 	"github.com/ghost-pack/hammer/internal/oam"
 	"github.com/ghost-pack/hammer/internal/observability/tracing"
 	"github.com/ghost-pack/hammer/internal/pipeline"
 	"github.com/ghost-pack/hammer/internal/runner"
-	"github.com/moby/moby/client"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -18,7 +18,7 @@ func init() {
 	pipeline.Register("goservice", New)
 }
 
-func New(component oam.Component, dockerClient client.APIClient) (pipeline.Pipeline, error) {
+func New(component oam.Component, dockerClient docker.DockerClient) (pipeline.Pipeline, error) {
 	if component.Type != "goservice" {
 		return nil, fmt.Errorf("goservice component must be of type goservice")
 	}
@@ -33,7 +33,7 @@ func New(component oam.Component, dockerClient client.APIClient) (pipeline.Pipel
 type Pipeline struct {
 	component    *oam.Component
 	runner       runner.Runner
-	dockerClient client.APIClient
+	dockerClient docker.DockerClient
 }
 
 func (p *Pipeline) ComponentType() string {
@@ -48,7 +48,7 @@ func (p *Pipeline) CI(ctx context.Context) error {
 
 	phases := []phase{
 		{"test", p.test},
-		{"build", p.build},
+		{"docker", p.build},
 		//{"scan", p.scan},
 		//{"push", p.push},
 	}
