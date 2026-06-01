@@ -8,10 +8,16 @@ import (
 	"github.com/ghost-pack/hammer/internal/oam"
 	"github.com/ghost-pack/hammer/internal/pipeline"
 	"github.com/ghost-pack/hammer/internal/runner"
+	"github.com/moby/moby/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
+
+type MockDockerClient struct {
+	client.APIClient
+	mock.Mock
+}
 
 type MockRunner struct {
 	mock.Mock
@@ -32,6 +38,7 @@ func (m *MockRunner) RunWithoutOptions(ctx context.Context, name string, args []
 func TestNewPipeline(t *testing.T) {
 	type args struct {
 		component oam.Component
+		client    client.APIClient
 	}
 	tests := []struct {
 		name    string
@@ -41,20 +48,20 @@ func TestNewPipeline(t *testing.T) {
 	}{
 		{
 			name:    "SuccessfulNewPipeline",
-			args:    args{oam.Component{Name: "testComponent", Type: "goservice"}},
-			want:    &Pipeline{component: &oam.Component{Name: "testComponent", Type: "goservice"}, runner: runner.New()},
+			args:    args{component: oam.Component{Name: "testComponent", Type: "goservice"}, client: &MockDockerClient{}},
+			want:    &Pipeline{component: &oam.Component{Name: "testComponent", Type: "goservice"}, runner: runner.New(), dockerClient: &MockDockerClient{}},
 			wantErr: false,
 		},
 		{
 			name:    "FailedNewPipeline",
-			args:    args{oam.Component{Name: "testComponent", Type: "notgoservice"}},
+			args:    args{component: oam.Component{Name: "testComponent", Type: "notgoservice"}, client: &MockDockerClient{}},
 			want:    nil,
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := New(tt.args.component)
+			got, err := New(tt.args.component, tt.args.client)
 			if err != nil {
 				if tt.wantErr {
 					require.Error(t, err)

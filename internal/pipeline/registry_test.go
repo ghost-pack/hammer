@@ -5,9 +5,15 @@ import (
 	"testing"
 
 	"github.com/ghost-pack/hammer/internal/oam"
+	"github.com/moby/moby/client"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
+
+type MockDockerClient struct {
+	client.APIClient
+	mock.Mock
+}
 
 type MockPipeline struct {
 	mock.Mock
@@ -24,44 +30,57 @@ func (m *MockPipeline) CI(ctx context.Context) error {
 }
 
 func TestFor(t *testing.T) {
-	tests := []struct {
-		name      string
+	type args struct {
 		component oam.Component
-		setup     func()
-		want      Pipeline
-		wantErr   bool
+		client    client.APIClient
+	}
+	tests := []struct {
+		name    string
+		args    args
+		setup   func()
+		want    Pipeline
+		wantErr bool
 	}{
 		{
-			name:      "SuccessfulFor",
-			component: oam.Component{Name: "testComponent", Type: "goservice"},
-			want:      &MockPipeline{},
+			name: "SuccessfulFor",
+			args: args{
+				component: oam.Component{Name: "testComponent", Type: "goservice"},
+				client:    &MockDockerClient{},
+			},
+			want: &MockPipeline{},
 			setup: func() {
-				Register("goservice", func(component oam.Component) (Pipeline, error) {
+				Register("goservice", func(component oam.Component, client client.APIClient) (Pipeline, error) {
 					return &MockPipeline{}, nil
 				})
 			},
 			wantErr: false,
 		},
 		{
-			name:      "Failure_NilType",
-			component: oam.Component{Name: "testComponent", Type: ""},
-			want:      &MockPipeline{},
-			setup:     func() {},
-			wantErr:   true,
+			name: "Failure_NilType",
+			args: args{
+				component: oam.Component{Name: "testComponent", Type: ""},
+				client:    &MockDockerClient{},
+			},
+			want:    &MockPipeline{},
+			setup:   func() {},
+			wantErr: true,
 		},
 		{
-			name:      "Failure_UnregisteredType",
-			component: oam.Component{Name: "testComponent", Type: "testtype"},
-			want:      &MockPipeline{},
-			setup:     func() {},
-			wantErr:   true,
+			name: "Failure_UnregisteredType",
+			args: args{
+				component: oam.Component{Name: "testComponent", Type: "testtype"},
+				client:    &MockDockerClient{},
+			},
+			want:    &MockPipeline{},
+			setup:   func() {},
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			registry = map[string]Factory{}
 			tt.setup()
-			got, err := For(tt.component)
+			got, err := For(tt.args.component, tt.args.client)
 			if err != nil {
 				if tt.wantErr {
 					require.Error(t, err)
@@ -90,7 +109,7 @@ func TestRegister(t *testing.T) {
 			name: "SuccessRegister",
 			args: args{
 				componentType: "goservice",
-				f: func(component oam.Component) (Pipeline, error) {
+				f: func(component oam.Component, client client.APIClient) (Pipeline, error) {
 					return &MockPipeline{}, nil
 				},
 			},
@@ -101,7 +120,7 @@ func TestRegister(t *testing.T) {
 			name: "FailedRegister_duplicate",
 			args: args{
 				componentType: "goservice",
-				f: func(component oam.Component) (Pipeline, error) {
+				f: func(component oam.Component, client client.APIClient) (Pipeline, error) {
 					return &MockPipeline{}, nil
 				},
 			},
@@ -121,7 +140,7 @@ func TestRegister(t *testing.T) {
 			name: "FailedRegister_noComponentType",
 			args: args{
 				componentType: "",
-				f: func(component oam.Component) (Pipeline, error) {
+				f: func(component oam.Component, client client.APIClient) (Pipeline, error) {
 					return &MockPipeline{}, nil
 				},
 			},

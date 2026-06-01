@@ -6,6 +6,7 @@ import (
 	"github.com/ghost-pack/hammer/internal/oam"
 	"github.com/ghost-pack/hammer/internal/observability/tracing"
 	"github.com/ghost-pack/hammer/internal/pipeline"
+	"github.com/moby/moby/client"
 	"github.com/spf13/cobra"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -28,13 +29,19 @@ func newCICmd() *cobra.Command {
 				"env", flagEnv,
 			)
 
+			// Just giving this to every pipeline for now.
+			dockerClient, err := client.New(client.FromEnv)
+			if err != nil {
+				return err
+			}
+
 			app, err := oam.Load(flagOAMFile)
 			if err != nil {
 				return err
 			}
 
 			for _, component := range app.Spec.Components {
-				componentPipeline, err := pipeline.For(component)
+				componentPipeline, err := pipeline.For(component, dockerClient)
 				if err != nil {
 					return err
 				}
