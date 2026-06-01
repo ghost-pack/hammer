@@ -35,10 +35,10 @@ func NewDockerClient() (DockerClient, error) {
 }
 
 func (b *DockerClientImpl) Build(ctx context.Context, binaryPath, imageTag string) error {
-	ctx, span := tracing.Tracer("docker docker").Start(ctx, "docker docker",
+	ctx, span := tracing.Tracer("docker build").Start(ctx, "docker build",
 		trace.WithAttributes(
 			attribute.String("cmd", "docker"),
-			attribute.StringSlice("args", []string{"docker", "-f", binaryPath, "-t", imageTag})))
+			attribute.StringSlice("args", []string{"build", "-f", binaryPath, "-t", imageTag})))
 	defer span.End()
 
 	buildCtx, err := tarContext(binaryPath)

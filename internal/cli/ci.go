@@ -15,7 +15,7 @@ import (
 func newCICmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "ci",
-		Short: "Run the CI pipeline (docker, scan, push) for the app in oam.yaml",
+		Short: "Run the CI pipeline (build, scan, push) for the app in oam.yaml",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			ctx, span := tracing.Tracer("cobra").Start(ctx, "CI",
