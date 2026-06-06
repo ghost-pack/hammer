@@ -71,9 +71,6 @@ func (b *DockerClientImpl) Build(ctx context.Context, baseImage, binaryPath, ima
 	return nil
 }
 
-// tarContext creates an in-memory tar archive containing:
-//   - the Go binary (renamed to "app")
-//   - a Dockerfile that layers it onto cgr.dev/chainguard/static
 func tarContext(binaryPath string, baseImage string) (io.ReadCloser, error) {
 	binaryData, err := os.ReadFile(binaryPath)
 	if err != nil {
@@ -81,16 +78,17 @@ func tarContext(binaryPath string, baseImage string) (io.ReadCloser, error) {
 	}
 
 	dockerfile := []byte(fmt.Sprintf(`FROM %s
-	COPY app /usr/local/bin/app
-	ENTRYPOINT ["/usr/local/bin/app"]
-	`, baseImage))
+COPY app /usr/local/bin/app
+ENTRYPOINT ["/usr/local/bin/app"]
+`, baseImage))
 
 	var buf bytes.Buffer
 	tw := tar.NewWriter(&buf)
 
+	// Point of this function is to package up the Dockerfile and the binary (we just made) into a tar file.
 	files := []struct {
 		name string
-		mode int64
+		mode int64 // setting mode here skips chmod
 		data []byte
 	}{
 		{"Dockerfile", 0644, dockerfile},
