@@ -109,3 +109,68 @@ func TestStreamBuildOutput_Error(t *testing.T) {
 	assert.EqualError(t, err, "build failed: something went wrong")
 	assert.Contains(t, out.String(), "Starting build")
 }
+
+// captureStdout replaces os.Stdout, runs f, and returns the captured output.
+func captureStdout(f func()) string {
+	r, w, _ := os.Pipe()
+	old := os.Stdout
+	os.Stdout = w
+
+	f()
+
+	w.Close()
+	var buf bytes.Buffer
+	_, _ = io.Copy(&buf, r)
+	os.Stdout = old
+	return buf.String()
+}
+
+func TestStreamPushOutput_Success(t *testing.T) {
+	input := `{"status":"Preparing","progress":"[=]  ","id":"abc123"}
+{"status":"Pushing","progress":"[=>]  ","id":"abc123"}
+{"status":"Pushed","id":"abc123"}
+{"status":"latest: digest: sha256:abc..."}
+`
+	reader := strings.NewReader(input)
+
+	var out string
+	captureStdout(func() {
+		out = captureStdout(func() {
+			err := streamPushOutput(reader)
+			require.NoError(t, err)
+		})
+	})
+
+	assert.Contains(t, out, "abc123: Preparing [=]")
+	assert.Contains(t, out, "abc123: Pushing [=>]")
+	assert.Contains(t, out, "abc123: Pushed ")
+	assert.Contains(t, out, "latest: digest: sha256:abc...")
+}
+
+func TestStreamPushOutput_Error(t *testing.T) {
+	input := `{"status":"Preparing","id":"abc123"}
+{"error":"unauthorized: access denied"}
+`
+	reader := strings.NewReader(input)
+
+	err := streamPushOutput(reader)
+	require.Error(t, err)
+	assert.EqualError(t, err, "push error: unauthorized: access denied")
+}
+
+func TestStreamPushOutput_BadJSON(t *testing.T) {
+	input := `{"status":"Preparing"}
+this is not json
+`
+	reader := strings.NewReader(input)
+
+	err := streamPushOutput(reader)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid character") // json syntax error
+}
+
+func TestStreamPushOutput_EmptyStream(t *testing.T) {
+	reader := strings.NewReader("")
+	err := streamPushOutput(reader)
+	require.NoError(t, err) // EOF immediately returns nil
+}

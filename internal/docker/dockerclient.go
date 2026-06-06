@@ -18,6 +18,8 @@ import (
 
 type DockerClient interface {
 	Build(ctx context.Context, baseImage, binaryPath, imageTag string) error
+	Tag(ctx context.Context, source, target string) error
+	Push(ctx context.Context, image string) error
 }
 
 type DockerClientImpl struct {
@@ -32,6 +34,54 @@ func NewDockerClient() (DockerClient, error) {
 		return nil, fmt.Errorf("creating docker client: %w", err)
 	}
 	return &DockerClientImpl{cli}, nil
+}
+
+func (b *DockerClientImpl) Tag(ctx context.Context, source, target string) error {
+	ctx, span := tracing.Tracer("docker tag").Start(ctx, "docker tag",
+		trace.WithAttributes(
+			attribute.String("source", source),
+			attribute.String("target", target),
+		))
+	defer span.End()
+	_, err := b.ImageTag(ctx, client.ImageTagOptions{
+		Source: source,
+		Target: target,
+	})
+
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return fmt.Errorf("tagging image %s → %s: %w", source, target, err)
+	}
+
+	span.SetStatus(codes.Ok, "")
+	return nil
+}
+
+func (b *DockerClientImpl) Push(ctx context.Context, image string) error {
+	ctx, span := tracing.Tracer("docker push").Start(ctx, "docker push",
+		trace.WithAttributes(attribute.String("image", image)),
+	)
+	defer span.End()
+
+	pushResp, err := b.ImagePush(ctx, image, client.ImagePushOptions{
+		RegistryAuth: "", // relies on local Docker credential helper
+	})
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return fmt.Errorf("pushing image %s: %w", image, err)
+	}
+	defer pushResp.Close()
+
+	if err := streamPushOutput(pushResp); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return fmt.Errorf("streaming push output: %w", err)
+	}
+
+	span.SetStatus(codes.Ok, "")
+	return nil
 }
 
 func (b *DockerClientImpl) Build(ctx context.Context, baseImage, binaryPath, imageTag string) error {
@@ -138,6 +188,34 @@ func streamBuildOutput(r io.Reader) error {
 		}
 		if ev.Error != "" {
 			return fmt.Errorf("%s", ev.Error)
+		}
+	}
+}
+
+type pushMessage struct {
+	Status   string `json:"status"`
+	Progress string `json:"progress"`
+	ID       string `json:"id"`
+	Error    string `json:"error"`
+}
+
+func streamPushOutput(r io.Reader) error {
+	dec := json.NewDecoder(r)
+	for {
+		var msg pushMessage
+		if err := dec.Decode(&msg); err != nil {
+			if err == io.EOF {
+				return nil
+			}
+			return err
+		}
+		if msg.Error != "" {
+			return fmt.Errorf("push error: %s", msg.Error)
+		}
+		if msg.ID != "" && msg.Status != "" {
+			fmt.Printf("%s: %s %s\n", msg.ID, msg.Status, msg.Progress)
+		} else if msg.Status != "" {
+			fmt.Println(msg.Status)
 		}
 	}
 }

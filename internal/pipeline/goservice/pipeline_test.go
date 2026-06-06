@@ -19,7 +19,17 @@ type MockDockerClient struct {
 }
 
 func (m *MockDockerClient) Build(ctx context.Context, baseImage, binaryPath, imageTag string) error {
-	callArgs := m.Called(ctx, binaryPath, imageTag)
+	callArgs := m.Called(ctx, baseImage, binaryPath, imageTag)
+	return callArgs.Error(0)
+}
+
+func (m *MockDockerClient) Tag(ctx context.Context, source, target string) error {
+	callArgs := m.Called(ctx, source, target)
+	return callArgs.Error(0)
+}
+
+func (m *MockDockerClient) Push(ctx context.Context, image string) error {
+	callArgs := m.Called(ctx, image)
 	return callArgs.Error(0)
 }
 
@@ -93,7 +103,7 @@ func TestPipeline_CI(t *testing.T) {
 					Return(&runner.Result{ExitCode: 0}, nil)
 				mockRunner.On("Run", mock.Anything, "go", []string{"build", "-o", "testComponent", "."}, mock.Anything).
 					Return(&runner.Result{ExitCode: 0}, nil)
-				mockDockerClient.On("Build", mock.Anything, mock.Anything, mock.Anything).
+				mockDockerClient.On("Build", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 			},
 			wantErr: false,
@@ -106,7 +116,7 @@ func TestPipeline_CI(t *testing.T) {
 					Return(&runner.Result{ExitCode: 0}, nil)
 				mockRunner.On("Run", mock.Anything, "go", []string{"build", "-o", "testComponent", "."}, mock.Anything).
 					Return(&runner.Result{ExitCode: 0}, nil)
-				mockDockerClient.On("Build", mock.Anything, mock.Anything, mock.Anything).
+				mockDockerClient.On("Build", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(errors.New("test error"))
 			},
 			wantErr: true,
@@ -117,7 +127,7 @@ func TestPipeline_CI(t *testing.T) {
 			setupMock: func(mockRunner *MockRunner, mockDockerClient *MockDockerClient) {
 				mockRunner.On("RunWithoutOptions", mock.Anything, "go", []string{"test", "./..."}).
 					Return(&runner.Result{ExitCode: 1}, errors.New("test error"))
-				mockDockerClient.On("Build", mock.Anything, mock.Anything, mock.Anything).
+				mockDockerClient.On("Build", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 			},
 			wantErr: true,
@@ -128,7 +138,7 @@ func TestPipeline_CI(t *testing.T) {
 			setupMock: func(mockRunner *MockRunner, mockDockerClient *MockDockerClient) {
 				mockRunner.On("RunWithoutOptions", mock.Anything, "go", []string{"test", "./..."}).
 					Return(nil, errors.New("test error"))
-				mockDockerClient.On("Build", mock.Anything, mock.Anything, mock.Anything).
+				mockDockerClient.On("Build", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 			},
 			wantErr: true,
@@ -139,7 +149,7 @@ func TestPipeline_CI(t *testing.T) {
 			setupMock: func(mockRunner *MockRunner, mockDockerClient *MockDockerClient) {
 				mockRunner.On("RunWithoutOptions", mock.Anything, "go", []string{"test", "./..."}).
 					Return(&runner.Result{ExitCode: 1}, nil)
-				mockDockerClient.On("Build", mock.Anything, mock.Anything, mock.Anything).
+				mockDockerClient.On("Build", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 			},
 			wantErr: true,
@@ -152,7 +162,7 @@ func TestPipeline_CI(t *testing.T) {
 					Return(&runner.Result{ExitCode: 0}, nil)
 				mockRunner.On("Run", mock.Anything, "go", []string{"build", "-o", "testComponent", "."}, mock.Anything).
 					Return(&runner.Result{ExitCode: 1}, errors.New("test error"))
-				mockDockerClient.On("Build", mock.Anything, mock.Anything, mock.Anything).
+				mockDockerClient.On("Build", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 			},
 			wantErr: true,
@@ -165,7 +175,7 @@ func TestPipeline_CI(t *testing.T) {
 					Return(&runner.Result{ExitCode: 0}, nil)
 				mockRunner.On("Run", mock.Anything, "go", []string{"build", "-o", "testComponent", "."}, mock.Anything).
 					Return(nil, errors.New("test error"))
-				mockDockerClient.On("Build", mock.Anything, mock.Anything, mock.Anything).
+				mockDockerClient.On("Build", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 			},
 			wantErr: true,
@@ -178,7 +188,7 @@ func TestPipeline_CI(t *testing.T) {
 					Return(&runner.Result{ExitCode: 0}, nil)
 				mockRunner.On("Run", mock.Anything, "go", []string{"build", "-o", "testComponent", "."}, mock.Anything).
 					Return(&runner.Result{ExitCode: 1}, nil)
-				mockDockerClient.On("Build", mock.Anything, mock.Anything, mock.Anything).
+				mockDockerClient.On("Build", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 			},
 			wantErr: true,
