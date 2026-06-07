@@ -115,6 +115,10 @@ func (b *DockerClientImpl) Build(ctx context.Context, baseImage, binaryPath, ima
 		Tags:       []string{imageTag},
 		Dockerfile: "Dockerfile",
 		Remove:     true,
+		Labels: map[string]string{
+			"org.opencontainers.image.revision": os.Getenv("COMMIT_SHA"),
+			"org.opencontainers.image.version":  os.Getenv("COMMIT_SHA"),
+		},
 	})
 	if err != nil {
 		span.RecordError(err)

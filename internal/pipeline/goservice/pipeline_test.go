@@ -136,6 +136,26 @@ func TestPipeline_CI(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:      "SuccessfulCIPipelineWithCommitSha",
+			component: &oam.Component{Name: "testComponent", Type: "goservice"},
+			setupMock: func(mockRunner *MockRunner, mockDockerClient *MockDockerClient, mockGarClient *MockGarClient) {
+				mockRunner.On("RunWithoutOptions", mock.Anything, "go", []string{"test", "./..."}).
+					Return(&runner.Result{ExitCode: 0}, nil)
+				mockRunner.On("Run", mock.Anything, "go", []string{"build", "-o", "testComponent", "."}, mock.Anything).
+					Return(&runner.Result{ExitCode: 0}, nil)
+				mockDockerClient.On("Build", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockDockerClient.On("Tag", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockGarClient.On("EnsureRepository", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockDockerClient.On("Push", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				t.Setenv("COMMIT_SHA", "abc1234")
+			},
+			wantErr: false,
+		},
+		{
 			name:      "FailedCIPipeline Containerization",
 			component: &oam.Component{Name: "testComponent", Type: "goservice"},
 			setupMock: func(mockRunner *MockRunner, mockDockerClient *MockDockerClient, mockGarClient *MockGarClient) {
