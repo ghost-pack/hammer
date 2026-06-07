@@ -44,9 +44,9 @@ func (p *Pipeline) ComponentType() string {
 }
 
 func (p *Pipeline) CI(ctx context.Context) error {
-	ctx, span := tracing.Tracer("goservice").Start(ctx, "goservice",
+	ctx, span := tracing.Tracer("goservice CI").Start(ctx, "goservice CI",
 		trace.WithAttributes(
-			attribute.String("cmd", "goservice")))
+			attribute.String("cmd", "goservice CI")))
 	defer span.End()
 
 	phases := []phase{
@@ -56,6 +56,26 @@ func (p *Pipeline) CI(ctx context.Context) error {
 		{"tag", p.tag},
 		{"ensureGarExists", p.createGar},
 		{"push", p.push},
+	}
+
+	for _, ph := range phases {
+		slog.InfoContext(ctx, "phase start", "phase", ph.name)
+		if err := ph.run(ctx); err != nil {
+			slog.ErrorContext(ctx, "phase error", "phase", ph.name, "error", err)
+			return fmt.Errorf("phase %s error: %w", ph.name, err)
+		}
+	}
+	return nil
+}
+
+func (p *Pipeline) Analyze(ctx context.Context) error {
+	ctx, span := tracing.Tracer("goservice analyze").Start(ctx, "goservice analyze",
+		trace.WithAttributes(
+			attribute.String("cmd", "goservice analyze")))
+	defer span.End()
+
+	phases := []phase{
+		{"test", p.test},
 	}
 
 	for _, ph := range phases {

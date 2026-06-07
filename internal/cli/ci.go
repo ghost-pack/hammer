@@ -1,7 +1,9 @@
 package cli
 
 import (
+	"context"
 	"log/slog"
+	"os"
 
 	"github.com/ghost-pack/hammer/internal/docker"
 	"github.com/ghost-pack/hammer/internal/gcp"
@@ -48,13 +50,21 @@ func newCICmd() *cobra.Command {
 				return err
 			}
 
+			onMain := os.Getenv("BRANCH_NAME") == "main"
+
 			for _, component := range app.Spec.Components {
 				componentPipeline, err := pipeline.For(component, dockerClient, garClient)
 				if err != nil {
 					return err
 				}
-				err = componentPipeline.CI(ctx)
-				if err != nil {
+				var run func(context.Context) error
+				if onMain {
+					run = componentPipeline.CI
+				} else {
+					run = componentPipeline.Analyze
+				}
+
+				if err := run(ctx); err != nil {
 					return err
 				}
 			}

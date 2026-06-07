@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/ghost-pack/hammer/internal/docker"
@@ -40,6 +41,10 @@ func (p *Pipeline) CI(ctx context.Context) error {
 	return nil
 }
 
+func (p *Pipeline) Analyze(ctx context.Context) error {
+	return nil
+}
+
 func NewBadPipeline(component oam.Component, client docker.DockerClient, garClient gcp.GarClient) (pipeline.Pipeline, error) {
 	if component.Type != "bad" {
 		return nil, fmt.Errorf("bad component must be of type bad")
@@ -59,6 +64,10 @@ func (p *BadPipeline) ComponentType() string {
 }
 
 func (p *BadPipeline) CI(ctx context.Context) error {
+	return fmt.Errorf("bad pipeline")
+}
+
+func (p *BadPipeline) Analyze(ctx context.Context) error {
 	return fmt.Errorf("bad pipeline")
 }
 
@@ -107,6 +116,51 @@ func TestCI(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			os.Setenv("BRANCH_NAME", "main")
+			rootCmd := newRootCmd()
+
+			rootCmd.SetArgs([]string{"ci", "--file", tt.oamFile,
+				"--env", "dev"})
+
+			err := rootCmd.Execute()
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestAnalyze(t *testing.T) {
+	tests := []struct {
+		name    string
+		oamFile string
+		wantErr bool
+	}{
+		{
+			name:    "successful CI execution",
+			oamFile: "testdata/oam_test_success.yaml",
+		},
+		{
+			name:    "failed unparseable oam file",
+			oamFile: "testdata/oam_unparseable.yaml",
+			wantErr: true,
+		},
+		{
+			name:    "failed unparseable oam file",
+			oamFile: "testdata/oam_test_fail_bad_component.yaml",
+			wantErr: true,
+		},
+		{
+			name:    "failed unparseable oam file",
+			oamFile: "testdata/oam_test_fail_ci_failure.yaml",
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			os.Setenv("BRANCH_NAME", "notmain")
 			rootCmd := newRootCmd()
 
 			rootCmd.SetArgs([]string{"ci", "--file", tt.oamFile,
