@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/ghost-pack/hammer/internal/docker"
+	"github.com/ghost-pack/hammer/internal/gcp"
 	"github.com/ghost-pack/hammer/internal/oam"
 	"github.com/ghost-pack/hammer/internal/observability/tracing"
 	"github.com/ghost-pack/hammer/internal/pipeline"
@@ -18,7 +19,7 @@ func init() {
 	pipeline.Register("goservice", New)
 }
 
-func New(component oam.Component, dockerClient docker.DockerClient) (pipeline.Pipeline, error) {
+func New(component oam.Component, dockerClient docker.DockerClient, garClient gcp.GarClient) (pipeline.Pipeline, error) {
 	if component.Type != "goservice" {
 		return nil, fmt.Errorf("goservice component must be of type goservice")
 	}
@@ -27,6 +28,7 @@ func New(component oam.Component, dockerClient docker.DockerClient) (pipeline.Pi
 		component:    &component,
 		runner:       runner.New(),
 		dockerClient: dockerClient,
+		garClient:    garClient,
 	}, nil
 }
 
@@ -34,6 +36,7 @@ type Pipeline struct {
 	component    *oam.Component
 	runner       runner.Runner
 	dockerClient docker.DockerClient
+	garClient    gcp.GarClient
 }
 
 func (p *Pipeline) ComponentType() string {
@@ -50,8 +53,9 @@ func (p *Pipeline) CI(ctx context.Context) error {
 		{"test", p.test},
 		{"build", p.build},
 		{"containerize", p.containerize},
-		//{"scan", p.scan},
-		//{"push", p.push},
+		{"tag", p.tag},
+		{"ensureGarExists", p.createGar},
+		{"push", p.push},
 	}
 
 	for _, ph := range phases {

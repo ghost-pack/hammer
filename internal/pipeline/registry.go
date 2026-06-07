@@ -4,10 +4,11 @@ import (
 	"fmt"
 
 	"github.com/ghost-pack/hammer/internal/docker"
+	"github.com/ghost-pack/hammer/internal/gcp"
 	"github.com/ghost-pack/hammer/internal/oam"
 )
 
-type Factory func(oam.Component, docker.DockerClient) (Pipeline, error)
+type Factory func(oam.Component, docker.DockerClient, gcp.GarClient) (Pipeline, error)
 
 var registry = map[string]Factory{}
 
@@ -24,7 +25,7 @@ func Register(componentType string, f Factory) {
 	registry[componentType] = f
 }
 
-func For(component oam.Component, dockerClient docker.DockerClient) (Pipeline, error) {
+func For(component oam.Component, dockerClient docker.DockerClient, garClient gcp.GarClient) (Pipeline, error) {
 	if component.Type == "" {
 		return nil, fmt.Errorf("componentType is nil")
 	}
@@ -33,5 +34,5 @@ func For(component oam.Component, dockerClient docker.DockerClient) (Pipeline, e
 	if !ok {
 		return nil, fmt.Errorf("componentType %s is not registered", component.Type)
 	}
-	return f(component, dockerClient)
+	return f(component, dockerClient, garClient)
 }

@@ -20,6 +20,7 @@ type DockerClient interface {
 	Build(ctx context.Context, baseImage, binaryPath, imageTag string) error
 	Tag(ctx context.Context, source, target string) error
 	Push(ctx context.Context, image string) error
+	Close() error
 }
 
 type DockerClientImpl struct {
@@ -34,6 +35,10 @@ func NewDockerClient() (DockerClient, error) {
 		return nil, fmt.Errorf("creating docker client: %w", err)
 	}
 	return &DockerClientImpl{cli}, nil
+}
+
+func (b *DockerClientImpl) Close() error {
+	return b.APIClient.Close()
 }
 
 func (b *DockerClientImpl) Tag(ctx context.Context, source, target string) error {
@@ -64,8 +69,15 @@ func (b *DockerClientImpl) Push(ctx context.Context, image string) error {
 	)
 	defer span.End()
 
+	registryAuth, err := resolveRegistryAuth(image)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return fmt.Errorf("resolving registry auth: %w", err)
+	}
+
 	pushResp, err := b.ImagePush(ctx, image, client.ImagePushOptions{
-		RegistryAuth: "", // relies on local Docker credential helper
+		RegistryAuth: registryAuth,
 	})
 	if err != nil {
 		span.RecordError(err)

@@ -4,6 +4,7 @@ import (
 	"log/slog"
 
 	"github.com/ghost-pack/hammer/internal/docker"
+	"github.com/ghost-pack/hammer/internal/gcp"
 	"github.com/ghost-pack/hammer/internal/oam"
 	"github.com/ghost-pack/hammer/internal/observability/tracing"
 	"github.com/ghost-pack/hammer/internal/pipeline"
@@ -34,6 +35,13 @@ func newCICmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			defer dockerClient.Close()
+
+			garClient, err := gcp.NewGarClient(cmd.Context())
+			if err != nil {
+				return err
+			}
+			defer garClient.Close()
 
 			app, err := oam.Load(flagOAMFile)
 			if err != nil {
@@ -41,7 +49,7 @@ func newCICmd() *cobra.Command {
 			}
 
 			for _, component := range app.Spec.Components {
-				componentPipeline, err := pipeline.For(component, dockerClient)
+				componentPipeline, err := pipeline.For(component, dockerClient, garClient)
 				if err != nil {
 					return err
 				}
