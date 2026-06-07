@@ -45,9 +45,9 @@ func (p *Pipeline) ComponentType() string {
 }
 
 func (p *Pipeline) CI(ctx context.Context) error {
-	ctx, span := tracing.Tracer("goservice CI").Start(ctx, "goservice CI",
+	ctx, span := tracing.Tracer(fmt.Sprintf("%s CI", p.ComponentType())).Start(ctx, fmt.Sprintf("%s CI", p.ComponentType()),
 		trace.WithAttributes(
-			attribute.String("cmd", "goservice CI")))
+			attribute.String("cmd", fmt.Sprintf("%s CI", p.ComponentType()))))
 	defer span.End()
 
 	var phases []phase
@@ -84,9 +84,9 @@ func (p *Pipeline) CI(ctx context.Context) error {
 }
 
 func (p *Pipeline) Analyze(ctx context.Context) error {
-	ctx, span := tracing.Tracer("goservice analyze").Start(ctx, "goservice analyze",
+	ctx, span := tracing.Tracer(fmt.Sprintf("%s analyze", p.ComponentType())).Start(ctx, fmt.Sprintf("%s analyze", p.ComponentType()),
 		trace.WithAttributes(
-			attribute.String("cmd", "goservice analyze")))
+			attribute.String("cmd", fmt.Sprintf("%s analyze", p.ComponentType()))))
 	defer span.End()
 
 	phases := []phase{
