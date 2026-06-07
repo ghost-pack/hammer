@@ -5,7 +5,13 @@ import (
 )
 
 func (p *Pipeline) containerize(ctx context.Context) error {
-	err := p.dockerClient.Build(ctx, "cgr.dev/chainguard/static:latest", p.component.Name, "myapp:local")
+	var baseImage string
+	if p.ComponentType() == "gocli" {
+		baseImage = "cgr.dev/chainguard/go:latest"
+	} else {
+		baseImage = "cgr.dev/chainguard/static:latest"
+	}
+	err := p.dockerClient.Build(ctx, baseImage, p.component.Name, "myapp:local")
 	if err != nil {
 		return err
 	}

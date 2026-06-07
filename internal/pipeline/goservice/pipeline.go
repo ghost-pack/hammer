@@ -17,10 +17,11 @@ import (
 
 func init() {
 	pipeline.Register("goservice", New)
+	pipeline.Register("gocli", New)
 }
 
 func New(component oam.Component, dockerClient docker.DockerClient, garClient gcp.GarClient) (pipeline.Pipeline, error) {
-	if component.Type != "goservice" {
+	if component.Type != "goservice" && component.Type != "gocli" {
 		return nil, fmt.Errorf("goservice component must be of type goservice")
 	}
 
@@ -40,7 +41,7 @@ type Pipeline struct {
 }
 
 func (p *Pipeline) ComponentType() string {
-	return "goservice"
+	return p.component.Type
 }
 
 func (p *Pipeline) CI(ctx context.Context) error {
@@ -49,13 +50,27 @@ func (p *Pipeline) CI(ctx context.Context) error {
 			attribute.String("cmd", "goservice CI")))
 	defer span.End()
 
-	phases := []phase{
-		{"test", p.test},
-		{"build", p.build},
-		{"containerize", p.containerize},
-		{"tag", p.tag},
-		{"ensureGarExists", p.createGar},
-		{"push", p.push},
+	var phases []phase
+
+	if p.ComponentType() == "gocli" {
+		phases = []phase{
+			{"test", p.test},
+			{"build", p.build},
+			{"containerize", p.containerize},
+			{"tag", p.tag},
+			{"ensureGarExists", p.createGar},
+			{"push", p.push},
+		}
+	} else if p.ComponentType() == "goservice" {
+		phases = []phase{
+			{"test", p.test},
+			{"build", p.build},
+			{"containerize", p.containerize},
+			{"tag", p.tag},
+			{"ensureGarExists", p.createGar},
+			{"push", p.push},
+			// deploy to cloud run also
+		}
 	}
 
 	for _, ph := range phases {

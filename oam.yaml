@@ -8,7 +8,7 @@ metadata:
 spec:
   components:
     - name: hammer
-      type: goservice
+      type: gocli
       # TODO: flesh out properties and traits and stuff eventually.
 #      properties:
 #        entrypoint: ./cmd/server
