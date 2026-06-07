@@ -1,0 +1,21 @@
+steps:
+  - name: "ubuntu"
+    entrypoint: "bash"
+    args:
+      - "-eEuo"
+      - "pipefail"
+      - "-c"
+      - |-
+        #!/bin/sh
+        echo "hey $_REPO_NAME"
+        echo "${PROJECT_ID}"
+        exit 0
+    env:
+      - "PROJECT_ID=$PROJECT_ID"
+      - "PROJECT_NUMBER=$PROJECT_NUMBER"
+
+substitutions:
+  _SUB_VALUE2: "something else"
+  _REPO_NAME: $(body.repository.name)
+options:
+  substitutionOption: "ALLOW_LOOSE"

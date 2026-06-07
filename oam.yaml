@@ -10,6 +10,10 @@ spec:
     - name: hammer
       type: gocli
       # TODO: flesh out properties and traits and stuff eventually.
+    - name: hammer-cicd
+      type: cloudbuild
+      properties:
+        path: ./cloudbuild/cloudbuild.yaml
 #      properties:
 #        entrypoint: ./cmd/server
 #      traits:
