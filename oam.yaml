@@ -14,6 +14,10 @@ spec:
       type: cloudbuild
       properties:
         path: ./cloudbuild/cloudbuild.yaml
+    - name: hammer-toolkit
+      type: toolkit
+      properties:
+        path:
 #      properties:
 #        entrypoint: ./cmd/server
 #      traits:
