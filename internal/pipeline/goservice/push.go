@@ -16,7 +16,7 @@ func (p *Pipeline) push(ctx context.Context) error {
 
 	fullImageTag := fmt.Sprintf("us-central1-docker.pkg.dev/cloud-build-pipeline-396819/%s/%s:%s", p.component.Name, p.component.Name, tag)
 
-	err := p.dockerClient.Push(ctx, fullImageTag)
+	err := p.dockerClient.Push(ctx, "./localimage.tar", fullImageTag)
 	if err != nil {
 		return err
 	}

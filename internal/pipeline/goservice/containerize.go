@@ -11,7 +11,7 @@ func (p *Pipeline) containerize(ctx context.Context) error {
 	} else {
 		baseImage = "cgr.dev/chainguard/static:latest"
 	}
-	err := p.dockerClient.Build(ctx, baseImage, p.component.Name, "myapp:local")
+	err := p.dockerClient.Build(ctx, baseImage, p.component.Name, "./localimage.tar")
 	if err != nil {
 		return err
 	}

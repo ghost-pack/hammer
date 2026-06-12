@@ -33,11 +33,7 @@ func newCICmd() *cobra.Command {
 			)
 
 			// Just giving this to every pipeline for now.
-			dockerClient, err := docker.NewDockerClient()
-			if err != nil {
-				return err
-			}
-			defer dockerClient.Close()
+			dockerClient := docker.NewClient()
 
 			garClient, err := gcp.NewGarClient(cmd.Context())
 			if err != nil {

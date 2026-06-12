@@ -18,7 +18,7 @@ func init() {
 	pipeline.Register("cloudbuild", New)
 }
 
-func New(component oam.Component, _ docker.DockerClient, _ gcp.GarClient) (pipeline.Pipeline, error) {
+func New(component oam.Component, _ docker.Client, _ gcp.GarClient) (pipeline.Pipeline, error) {
 	if component.Type != "cloudbuild" {
 		return nil, fmt.Errorf("cloudbuild component must be of type cloudbuild")
 	}

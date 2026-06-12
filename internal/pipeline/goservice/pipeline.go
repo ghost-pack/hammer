@@ -20,7 +20,7 @@ func init() {
 	pipeline.Register("gocli", New)
 }
 
-func New(component oam.Component, dockerClient docker.DockerClient, garClient gcp.GarClient) (pipeline.Pipeline, error) {
+func New(component oam.Component, dockerClient docker.Client, garClient gcp.GarClient) (pipeline.Pipeline, error) {
 	if component.Type != "goservice" && component.Type != "gocli" {
 		return nil, fmt.Errorf("goservice component must be of type goservice")
 	}
@@ -36,7 +36,7 @@ func New(component oam.Component, dockerClient docker.DockerClient, garClient gc
 type Pipeline struct {
 	component    *oam.Component
 	runner       runner.Runner
-	dockerClient docker.DockerClient
+	dockerClient docker.Client
 	garClient    gcp.GarClient
 }
 
@@ -57,7 +57,6 @@ func (p *Pipeline) CI(ctx context.Context) error {
 			{"test", p.test},
 			{"build", p.build},
 			{"containerize", p.containerize},
-			{"tag", p.tag},
 			{"ensureGarExists", p.createGar},
 			{"push", p.push},
 		}
@@ -66,7 +65,6 @@ func (p *Pipeline) CI(ctx context.Context) error {
 			{"test", p.test},
 			{"build", p.build},
 			{"containerize", p.containerize},
-			{"tag", p.tag},
 			{"ensureGarExists", p.createGar},
 			{"push", p.push},
 			// deploy to cloud run also

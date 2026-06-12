@@ -19,23 +19,13 @@ type MockDockerClient struct {
 	mock.Mock
 }
 
-func (m *MockDockerClient) Build(ctx context.Context, baseImage, binaryPath, imageTag string) error {
-	callArgs := m.Called(ctx, baseImage, binaryPath, imageTag)
+func (m *MockDockerClient) Build(ctx context.Context, baseImage, binaryPath, tarPath string) error {
+	callArgs := m.Called(ctx, baseImage, binaryPath, tarPath)
 	return callArgs.Error(0)
 }
 
-func (m *MockDockerClient) Tag(ctx context.Context, source, target string) error {
-	callArgs := m.Called(ctx, source, target)
-	return callArgs.Error(0)
-}
-
-func (m *MockDockerClient) Push(ctx context.Context, image string) error {
-	callArgs := m.Called(ctx, image)
-	return callArgs.Error(0)
-}
-
-func (m *MockDockerClient) Close() error {
-	callArgs := m.Called()
+func (m *MockDockerClient) Push(ctx context.Context, tarPath, imageTag string) error {
+	callArgs := m.Called(ctx, tarPath, imageTag)
 	return callArgs.Error(0)
 }
 
@@ -72,7 +62,7 @@ func (m *MockGarClient) Close() error {
 func TestNewPipeline(t *testing.T) {
 	type args struct {
 		component oam.Component
-		client    docker.DockerClient
+		client    docker.Client
 		garClient gcp.GarClient
 	}
 	tests := []struct {
@@ -126,8 +116,6 @@ func TestPipeline_CI(t *testing.T) {
 					Return(&runner.Result{ExitCode: 0}, nil)
 				mockDockerClient.On("Build", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
-				mockDockerClient.On("Tag", mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
 				mockGarClient.On("EnsureRepository", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockDockerClient.On("Push", mock.Anything, mock.Anything, mock.Anything).
@@ -145,8 +133,6 @@ func TestPipeline_CI(t *testing.T) {
 					Return(&runner.Result{ExitCode: 0}, nil)
 				mockDockerClient.On("Build", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
-				mockDockerClient.On("Tag", mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
 				mockGarClient.On("EnsureRepository", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockDockerClient.On("Push", mock.Anything, mock.Anything, mock.Anything).
@@ -163,8 +149,6 @@ func TestPipeline_CI(t *testing.T) {
 				mockRunner.On("Run", mock.Anything, "go", []string{"build", "-o", "testComponent", "."}, mock.Anything).
 					Return(&runner.Result{ExitCode: 0}, nil)
 				mockDockerClient.On("Build", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
-				mockDockerClient.On("Tag", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockGarClient.On("EnsureRepository", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
@@ -248,21 +232,6 @@ func TestPipeline_CI(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:      "FailedCI_TagHadBadResult",
-			component: &oam.Component{Name: "testComponent", Type: "goservice"},
-			setupMock: func(mockRunner *MockRunner, mockDockerClient *MockDockerClient, mockGarClient *MockGarClient) {
-				mockRunner.On("RunWithoutOptions", mock.Anything, "go", []string{"test", "./..."}).
-					Return(&runner.Result{ExitCode: 0}, nil)
-				mockRunner.On("Run", mock.Anything, "go", []string{"build", "-o", "testComponent", "."}, mock.Anything).
-					Return(&runner.Result{ExitCode: 0}, nil)
-				mockDockerClient.On("Build", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
-				mockDockerClient.On("Tag", mock.Anything, mock.Anything, mock.Anything).
-					Return(errors.New("tag error"))
-			},
-			wantErr: true,
-		},
-		{
 			name:      "Failed gar ensure",
 			component: &oam.Component{Name: "testComponent", Type: "goservice"},
 			setupMock: func(mockRunner *MockRunner, mockDockerClient *MockDockerClient, mockGarClient *MockGarClient) {
@@ -271,8 +240,6 @@ func TestPipeline_CI(t *testing.T) {
 				mockRunner.On("Run", mock.Anything, "go", []string{"build", "-o", "testComponent", "."}, mock.Anything).
 					Return(&runner.Result{ExitCode: 0}, nil)
 				mockDockerClient.On("Build", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
-				mockDockerClient.On("Tag", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockGarClient.On("EnsureRepository", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(errors.New("ensure error"))
@@ -288,8 +255,6 @@ func TestPipeline_CI(t *testing.T) {
 				mockRunner.On("Run", mock.Anything, "go", []string{"build", "-o", "testComponent", "."}, mock.Anything).
 					Return(&runner.Result{ExitCode: 0}, nil)
 				mockDockerClient.On("Build", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
-				mockDockerClient.On("Tag", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockGarClient.On("EnsureRepository", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)

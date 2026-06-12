@@ -1,176 +1,174 @@
 package docker
 
 import (
-	"archive/tar"
-	"bytes"
+	"context"
 	"fmt"
-	"io"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/registry"
+	"github.com/google/go-containerregistry/pkg/v1/random"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 )
 
-func TestTarContext(t *testing.T) {
-	// Create a temporary binary file
-	dir := t.TempDir()
-	binaryPath := filepath.Join(dir, "myapp")
-	binaryData := []byte("fake binary content")
-	require.NoError(t, os.WriteFile(binaryPath, binaryData, 0644))
-
-	baseImage := "alpine:latest"
-	reader, err := tarContext(binaryPath, baseImage)
-	require.NoError(t, err)
-	defer reader.Close()
-
-	// Read the whole tar stream into a buffer
-	var buf bytes.Buffer
-	_, err = io.Copy(&buf, reader)
-	require.NoError(t, err)
-
-	// Parse the tar archive
-	tr := tar.NewReader(&buf)
-
-	// --- First entry: Dockerfile ---
-	hdr, err := tr.Next()
-	require.NoError(t, err)
-	assert.Equal(t, "Dockerfile", hdr.Name)
-	assert.Equal(t, int64(0644), hdr.Mode)
-
-	body, err := io.ReadAll(tr)
-	require.NoError(t, err)
-	// The Dockerfile string is built exactly as in tarContext:
-	expectedDockerfile := fmt.Sprintf("FROM %s\nCOPY app /usr/local/bin/app\nENTRYPOINT [\"/usr/local/bin/app\"]\n", baseImage)
-	assert.Equal(t, expectedDockerfile, string(body))
-
-	// --- Second entry: app ---
-	hdr, err = tr.Next()
-	require.NoError(t, err)
-	assert.Equal(t, "app", hdr.Name)
-	assert.Equal(t, int64(0755), hdr.Mode)
-	assert.Equal(t, int64(len(binaryData)), hdr.Size)
-
-	body, err = io.ReadAll(tr)
-	require.NoError(t, err)
-	assert.Equal(t, binaryData, body)
-
-	// --- No more entries ---
-	_, err = tr.Next()
-	assert.ErrorIs(t, err, io.EOF)
+// shared setup — one test registry per test run is fine
+func setupRegistry(t *testing.T) string {
+	t.Helper()
+	s := httptest.NewServer(registry.New())
+	t.Cleanup(s.Close)
+	return strings.TrimPrefix(s.URL, "http://")
 }
 
-func TestStreamBuildOutput_Success(t *testing.T) {
-	// Simulate a normal build stream
-	input := `{"stream":"Step 1/2 : FROM alpine\n"}
-{"stream":" ---\u003e abc123\n"}
-{"stream":"Successfully built abc123\n"}
-{"aux":{"ID":"sha256:abc..."}}` + "\n"
-	reader := strings.NewReader(input)
-
-	// Capture stdout (streamBuildOutput uses fmt.Print)
-	r, w, _ := os.Pipe()
-	old := os.Stdout
-	os.Stdout = w
-
-	err := streamBuildOutput(reader)
-
-	w.Close()
-	var out bytes.Buffer
-	_, _ = io.Copy(&out, r)
-	os.Stdout = old
-
-	require.NoError(t, err)
-	assert.Contains(t, out.String(), "Step 1/2")
-	assert.Contains(t, out.String(), "Successfully built abc123")
+// push a random image into the test registry to use as a base
+func seedBaseImage(t *testing.T, host string) string {
+	t.Helper()
+	ref := fmt.Sprintf("%s/base:latest", host)
+	img, err := random.Image(512, 1)
+	if err != nil {
+		t.Fatalf("random.Image: %v", err)
+	}
+	tag, err := name.NewTag(ref, name.Insecure)
+	if err != nil {
+		t.Fatalf("name.NewTag: %v", err)
+	}
+	if err := remote.Write(tag, img, remote.WithAuthFromKeychain(authn.DefaultKeychain)); err != nil {
+		t.Fatalf("seeding base image: %v", err)
+	}
+	return ref
 }
 
-func TestStreamBuildOutput_Error(t *testing.T) {
-	// Simulate a stream that returns an error
-	input := `{"stream":"Starting build\n"}
-{"error":"build failed: something went wrong"}
-`
-	reader := strings.NewReader(input)
-
-	r, w, _ := os.Pipe()
-	old := os.Stdout
-	os.Stdout = w
-
-	err := streamBuildOutput(reader)
-
-	w.Close()
-	var out bytes.Buffer
-	_, _ = io.Copy(&out, r)
-	os.Stdout = old
-
-	require.Error(t, err)
-	assert.EqualError(t, err, "build failed: something went wrong")
-	assert.Contains(t, out.String(), "Starting build")
+func fakeBinary(t *testing.T) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "app")
+	if err := os.WriteFile(path, []byte("not a real binary but good enough"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	return path
 }
 
-// captureStdout replaces os.Stdout, runs f, and returns the captured output.
-func captureStdout(f func()) string {
-	r, w, _ := os.Pipe()
-	old := os.Stdout
-	os.Stdout = w
-
-	f()
-
-	w.Close()
-	var buf bytes.Buffer
-	_, _ = io.Copy(&buf, r)
-	os.Stdout = old
-	return buf.String()
+func newTestBuilder() *ClientImpl {
+	return &ClientImpl{
+		keychain: authn.DefaultKeychain,
+	}
 }
 
-func TestStreamPushOutput_Success(t *testing.T) {
-	input := `{"status":"Preparing","progress":"[=]  ","id":"abc123"}
-{"status":"Pushing","progress":"[=>]  ","id":"abc123"}
-{"status":"Pushed","id":"abc123"}
-{"status":"latest: digest: sha256:abc..."}
-`
-	reader := strings.NewReader(input)
+func TestBuild(t *testing.T) {
+	host := setupRegistry(t)
+	baseImage := seedBaseImage(t, host)
+	binary := fakeBinary(t)
 
-	var out string
-	captureStdout(func() {
-		out = captureStdout(func() {
-			err := streamPushOutput(reader)
-			require.NoError(t, err)
+	tests := []struct {
+		name       string
+		baseImage  string
+		binaryPath string
+		wantErr    bool
+	}{
+		{
+			name:       "happy path",
+			baseImage:  baseImage,
+			binaryPath: binary,
+		},
+		{
+			name:       "binary does not exist",
+			baseImage:  baseImage,
+			binaryPath: "/nonexistent/app",
+			wantErr:    true,
+		},
+		{
+			name:       "invalid base image ref",
+			baseImage:  ":::not-a-ref:::",
+			binaryPath: binary,
+			wantErr:    true,
+		},
+		{
+			name:       "base image not in registry",
+			baseImage:  host + "/doesnotexist:latest",
+			binaryPath: binary,
+			wantErr:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tarPath := filepath.Join(t.TempDir(), "image.tar")
+			builder := newTestBuilder()
+
+			err := builder.Build(context.Background(), tt.baseImage, tt.binaryPath, tarPath)
+
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("Build() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !tt.wantErr {
+				if _, err := os.Stat(tarPath); err != nil {
+					t.Errorf("expected tar to exist at %s: %v", tarPath, err)
+				}
+			}
 		})
-	})
-
-	assert.Contains(t, out, "abc123: Preparing [=]")
-	assert.Contains(t, out, "abc123: Pushing [=>]")
-	assert.Contains(t, out, "abc123: Pushed ")
-	assert.Contains(t, out, "latest: digest: sha256:abc...")
+	}
 }
 
-func TestStreamPushOutput_Error(t *testing.T) {
-	input := `{"status":"Preparing","id":"abc123"}
-{"error":"unauthorized: access denied"}
-`
-	reader := strings.NewReader(input)
+func TestPush(t *testing.T) {
+	host := setupRegistry(t)
+	baseImage := seedBaseImage(t, host)
+	binary := fakeBinary(t)
 
-	err := streamPushOutput(reader)
-	require.Error(t, err)
-	assert.EqualError(t, err, "push error: unauthorized: access denied")
-}
+	// build a real tar once and share it across push test cases
+	tarPath := filepath.Join(t.TempDir(), "image.tar")
+	builder := newTestBuilder()
+	if err := builder.Build(context.Background(), baseImage, binary, tarPath); err != nil {
+		t.Fatalf("setup Build: %v", err)
+	}
 
-func TestStreamPushOutput_BadJSON(t *testing.T) {
-	input := `{"status":"Preparing"}
-this is not json
-`
-	reader := strings.NewReader(input)
+	tests := []struct {
+		name     string
+		tarPath  string
+		imageTag string
+		wantErr  bool
+	}{
+		{
+			name:     "happy path",
+			tarPath:  tarPath,
+			imageTag: fmt.Sprintf("%s/myapp:abc1234", host),
+		},
+		{
+			name:     "tar does not exist",
+			tarPath:  "/nonexistent/image.tar",
+			imageTag: fmt.Sprintf("%s/myapp:abc1234", host),
+			wantErr:  true,
+		},
+		{
+			name:     "invalid image tag",
+			tarPath:  tarPath,
+			imageTag: ":::bad:::",
+			wantErr:  true,
+		},
+	}
 
-	err := streamPushOutput(reader)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid character") // json syntax error
-}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := builder.Push(context.Background(), tt.tarPath, tt.imageTag)
 
-func TestStreamPushOutput_EmptyStream(t *testing.T) {
-	reader := strings.NewReader("")
-	err := streamPushOutput(reader)
-	require.NoError(t, err) // EOF immediately returns nil
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("Push() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !tt.wantErr {
+				// pull it back and verify it actually landed
+				ref, _ := name.ParseReference(tt.imageTag, name.Insecure)
+				img, err := remote.Image(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+				if err != nil {
+					t.Fatalf("image not found in registry after push: %v", err)
+				}
+				layers, _ := img.Layers()
+				// base has 1 layer, we added 1, so expect 2
+				if len(layers) != 2 {
+					t.Errorf("expected 2 layers, got %d", len(layers))
+				}
+			}
+		})
+	}
 }
