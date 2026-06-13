@@ -41,6 +41,12 @@ func newCICmd() *cobra.Command {
 			}
 			defer garClient.Close()
 
+			cloudBuildClient, err := gcp.NewCloudBuildClient(cmd.Context())
+			if err != nil {
+				return err
+			}
+			defer cloudBuildClient.Close()
+
 			app, err := oam.Load(flagOAMFile)
 			if err != nil {
 				return err
@@ -49,7 +55,7 @@ func newCICmd() *cobra.Command {
 			onMain := os.Getenv("BRANCH_NAME") == "main"
 
 			for _, component := range app.Spec.Components {
-				componentPipeline, err := pipeline.For(component, dockerClient, garClient)
+				componentPipeline, err := pipeline.For(component, dockerClient, garClient, cloudBuildClient)
 				if err != nil {
 					return err
 				}

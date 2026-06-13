@@ -1,0 +1,5 @@
+substitutions:
+  _GIT_CLONE_URL: https://github.com/brianpipeline/test-cloudbuild-failure.git
+  _GIT_REPOSITORY_NAME: test-cloudbuild-failure
+  _GIT_REF: refs/heads/main
+  _GIT_HEAD_SHA: b3fa043e677500882e689fc1a978d96056d6702d

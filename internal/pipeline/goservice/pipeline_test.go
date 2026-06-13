@@ -61,9 +61,10 @@ func (m *MockGarClient) Close() error {
 
 func TestNewPipeline(t *testing.T) {
 	type args struct {
-		component oam.Component
-		client    docker.Client
-		garClient gcp.GarClient
+		component        oam.Component
+		client           docker.Client
+		garClient        gcp.GarClient
+		cloudBuildClient gcp.CloudBuildClient
 	}
 	tests := []struct {
 		name    string
@@ -86,7 +87,7 @@ func TestNewPipeline(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := New(tt.args.component, tt.args.client, tt.args.garClient)
+			got, err := New(tt.args.component, tt.args.client, tt.args.garClient, tt.args.cloudBuildClient)
 			if err != nil {
 				if tt.wantErr {
 					require.Error(t, err)
@@ -288,6 +289,8 @@ func TestPipeline_CI(t *testing.T) {
 
 			// Ensure all expected mock calls were made
 			mockRunner.AssertExpectations(t)
+			mockDockerClient.AssertExpectations(t)
+			mockGarClient.AssertExpectations(t)
 		})
 	}
 }
@@ -342,6 +345,9 @@ func TestPipeline_Analyze(t *testing.T) {
 
 			// Ensure all expected mock calls were made
 			mockRunner.AssertExpectations(t)
+			mockRunner.AssertExpectations(t)
+			mockDockerClient.AssertExpectations(t)
+			mockGarClient.AssertExpectations(t)
 		})
 	}
 }

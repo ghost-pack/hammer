@@ -20,7 +20,7 @@ func init() {
 	pipeline.Register("gocli", New)
 }
 
-func New(component oam.Component, dockerClient docker.Client, garClient gcp.GarClient) (pipeline.Pipeline, error) {
+func New(component oam.Component, dockerClient docker.Client, garClient gcp.GarClient, _ gcp.CloudBuildClient) (pipeline.Pipeline, error) {
 	if component.Type != "goservice" && component.Type != "gocli" {
 		return nil, fmt.Errorf("goservice component must be of type goservice")
 	}

@@ -62,9 +62,10 @@ func (m *MockGarClient) Close() error {
 
 func TestNewPipeline(t *testing.T) {
 	type args struct {
-		component oam.Component
-		client    docker.Client
-		garClient gcp.GarClient
+		component    oam.Component
+		client       docker.Client
+		garClient    gcp.GarClient
+		dockerClient gcp.CloudBuildClient
 	}
 	tests := []struct {
 		name    string
@@ -87,7 +88,7 @@ func TestNewPipeline(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := New(tt.args.component, tt.args.client, tt.args.garClient)
+			got, err := New(tt.args.component, tt.args.client, tt.args.garClient, tt.args.dockerClient)
 			if err != nil {
 				if tt.wantErr {
 					require.Error(t, err)
@@ -141,20 +142,21 @@ func TestPipeline_CI(t *testing.T) {
 		},
 		{
 			name: "FailedCIPipeline_apko_fails_and_with_bad_properties",
-			component: &oam.Component{Name: "testComponent", Type: "goservice", Properties: yaml.Node{
-				Kind: yaml.MappingNode,
-				Tag:  "!!map",
-				Content: []*yaml.Node{
-					{Kind: yaml.ScalarNode, Tag: "!!str", Value: "path"},
-					{
-						Kind: yaml.SequenceNode,
-						Tag:  "!!seq",
-						Content: []*yaml.Node{
-							{Kind: yaml.ScalarNode, Tag: "!!str", Value: "item"},
+			component: &oam.Component{Name: "testComponent", Type: "goservice",
+				Properties: yaml.Node{
+					Kind: yaml.MappingNode,
+					Tag:  "!!map",
+					Content: []*yaml.Node{
+						{Kind: yaml.ScalarNode, Tag: "!!str", Value: "path"},
+						{
+							Kind: yaml.SequenceNode,
+							Tag:  "!!seq",
+							Content: []*yaml.Node{
+								{Kind: yaml.ScalarNode, Tag: "!!str", Value: "item"},
+							},
 						},
 					},
 				},
-			},
 			},
 			setupMock: func(mockRunner *MockRunner, mockDockerClient *MockDockerClient, mockGarClient *MockGarClient) {
 			},
@@ -210,6 +212,8 @@ func TestPipeline_CI(t *testing.T) {
 
 			// Ensure all expected mock calls were made
 			mockRunner.AssertExpectations(t)
+			mockDockerClient.AssertExpectations(t)
+			mockGarClient.AssertExpectations(t)
 		})
 	}
 }
@@ -264,6 +268,8 @@ func TestPipeline_Analyze(t *testing.T) {
 
 			// Ensure all expected mock calls were made
 			mockRunner.AssertExpectations(t)
+			mockDockerClient.AssertExpectations(t)
+			mockGarClient.AssertExpectations(t)
 		})
 	}
 }

@@ -1,4 +1,4 @@
-steps:
+stepds:
   - name: "ubuntu"
     id: "test"
     entrypoint: "bash"

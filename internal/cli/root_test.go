@@ -19,7 +19,7 @@ func init() {
 }
 
 // The noop component is only used for testing.
-func New(component oam.Component, client docker.Client, garClient gcp.GarClient) (pipeline.Pipeline, error) {
+func New(component oam.Component, client docker.Client, garClient gcp.GarClient, cloudBuildClient gcp.CloudBuildClient) (pipeline.Pipeline, error) {
 	if component.Type != "noop" {
 		return nil, fmt.Errorf("noop component must be of type noop")
 	}
@@ -45,7 +45,7 @@ func (p *Pipeline) Analyze(ctx context.Context) error {
 	return nil
 }
 
-func NewBadPipeline(component oam.Component, client docker.Client, garClient gcp.GarClient) (pipeline.Pipeline, error) {
+func NewBadPipeline(component oam.Component, client docker.Client, garClient gcp.GarClient, cloudBuildClient gcp.CloudBuildClient) (pipeline.Pipeline, error) {
 	if component.Type != "bad" {
 		return nil, fmt.Errorf("bad component must be of type bad")
 	}

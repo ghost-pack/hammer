@@ -14,6 +14,7 @@ spec:
       type: cloudbuild
       properties:
         path: ./cloudbuild/cloudbuild.yaml
+        testPath: ./cloudbuild/cloudbuild_test.yaml
     - name: hammer-toolkit
       type: toolkit
       properties:

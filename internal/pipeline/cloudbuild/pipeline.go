@@ -18,18 +18,20 @@ func init() {
 	pipeline.Register("cloudbuild", New)
 }
 
-func New(component oam.Component, _ docker.Client, _ gcp.GarClient) (pipeline.Pipeline, error) {
+func New(component oam.Component, _ docker.Client, _ gcp.GarClient, cloudBuildClient gcp.CloudBuildClient) (pipeline.Pipeline, error) {
 	if component.Type != "cloudbuild" {
 		return nil, fmt.Errorf("cloudbuild component must be of type cloudbuild")
 	}
 
 	return &Pipeline{
-		component: &component,
+		component:        &component,
+		cloudBuildClient: cloudBuildClient,
 	}, nil
 }
 
 type Pipeline struct {
-	component *oam.Component
+	component        *oam.Component
+	cloudBuildClient gcp.CloudBuildClient
 }
 
 func (p *Pipeline) ComponentType() string {
@@ -46,6 +48,7 @@ func (p *Pipeline) CI(ctx context.Context) error {
 
 	phases = []phase{
 		{"lint", p.lint},
+		{"submittest", p.submitTest},
 	}
 
 	for _, ph := range phases {
@@ -66,6 +69,7 @@ func (p *Pipeline) Analyze(ctx context.Context) error {
 
 	phases := []phase{
 		{"lint", p.lint},
+		{"submittest", p.submitTest},
 	}
 
 	for _, ph := range phases {

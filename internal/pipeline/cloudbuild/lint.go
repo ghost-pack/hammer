@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/ghost-pack/hammer/internal/observability/tracing"
 	"github.com/santhosh-tekuri/jsonschema/v6"
+	otelCodes "go.opentelemetry.io/otel/codes"
 	"gopkg.in/yaml.v3"
 )
 
@@ -15,14 +17,20 @@ import (
 var cloudBuildSchema []byte
 
 type Properties struct {
-	Path string `yaml:"path"`
+	Path     string `yaml:"path"`
+	TestPath string `yaml:"testPath"`
 }
 
-func (p *Pipeline) lint(_ context.Context) error {
-	// TODO add span here.
+func (p *Pipeline) lint(ctx context.Context) error {
+	ctx, span := tracing.Tracer("cloudbuildlint").Start(ctx, "cloudbuildlint")
+	defer span.End()
+
 	var properties Properties
 	if err := p.component.Properties.Decode(&properties); err != nil {
-		return fmt.Errorf("decoding properties: %w", err)
+		errorDecodingProperties := fmt.Errorf("decoding properties: %w", err)
+		span.RecordError(errorDecodingProperties)
+		span.SetStatus(otelCodes.Error, errorDecodingProperties.Error())
+		return errorDecodingProperties
 	}
 	if properties.Path == "" {
 		properties.Path = "./cloudbuild.yaml"
@@ -30,6 +38,8 @@ func (p *Pipeline) lint(_ context.Context) error {
 
 	raw, err := os.ReadFile(properties.Path)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(otelCodes.Error, err.Error())
 		return err
 	}
 
@@ -45,12 +55,24 @@ func (p *Pipeline) lint(_ context.Context) error {
 
 	compiler := jsonschema.NewCompiler()
 	if err := compiler.AddResource("cloudbuild.json", schemaDoc); err != nil {
-		return fmt.Errorf("adding schema resource: %w", err)
+		errorLoadingCloudBuildSchema := fmt.Errorf("adding schema resource: %w", err)
+		span.RecordError(errorLoadingCloudBuildSchema)
+		span.SetStatus(otelCodes.Error, errorLoadingCloudBuildSchema.Error())
+		return errorLoadingCloudBuildSchema
 	}
 
 	schema, err := compiler.Compile("cloudbuild.json")
 	if err != nil {
-		return fmt.Errorf("compiling schema: %w", err)
+		cloudBuildSchemaCompilationFailure := fmt.Errorf("compiling schema: %w", err)
+		span.RecordError(cloudBuildSchemaCompilationFailure)
+		span.SetStatus(otelCodes.Error, cloudBuildSchemaCompilationFailure.Error())
+		return cloudBuildSchemaCompilationFailure
 	}
-	return schema.Validate(doc)
+	schemaValidationError := schema.Validate(doc)
+	if schemaValidationError != nil {
+		span.RecordError(schemaValidationError)
+		span.SetStatus(otelCodes.Error, schemaValidationError.Error())
+		return schemaValidationError
+	}
+	return nil
 }

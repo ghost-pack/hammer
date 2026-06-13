@@ -25,6 +25,20 @@ func (m *MockDockerClient) Push(ctx context.Context, tarPath, imageTag string) e
 	return callArgs.Error(0)
 }
 
+type MockCloudBuildClient struct {
+	mock.Mock
+}
+
+func (m *MockCloudBuildClient) TestCloudBuild(ctx context.Context, projectID, location, cloudbuildPath, cloudBuildTestPath string) error {
+	callArgs := m.Called(ctx, projectID, location, cloudbuildPath, cloudBuildTestPath)
+	return callArgs.Error(0)
+}
+
+func (m *MockCloudBuildClient) Close() error {
+	callArgs := m.Called()
+	return callArgs.Error(0)
+}
+
 type MockGarClient struct {
 	mock.Mock
 }
@@ -60,9 +74,10 @@ func (m *MockPipeline) Analyze(ctx context.Context) error {
 
 func TestFor(t *testing.T) {
 	type args struct {
-		component oam.Component
-		client    docker.Client
-		garClient gcp.GarClient
+		component        oam.Component
+		client           docker.Client
+		garClient        gcp.GarClient
+		cloudBuildClient gcp.CloudBuildClient
 	}
 	tests := []struct {
 		name    string
@@ -80,7 +95,7 @@ func TestFor(t *testing.T) {
 			},
 			want: &MockPipeline{},
 			setup: func() {
-				Register("goservice", func(component oam.Component, client docker.Client, garClient gcp.GarClient) (Pipeline, error) {
+				Register("goservice", func(component oam.Component, client docker.Client, garClient gcp.GarClient, cloudBuildClient gcp.CloudBuildClient) (Pipeline, error) {
 					return &MockPipeline{}, nil
 				})
 			},
@@ -113,7 +128,7 @@ func TestFor(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			registry = map[string]Factory{}
 			tt.setup()
-			got, err := For(tt.args.component, tt.args.client, tt.args.garClient)
+			got, err := For(tt.args.component, tt.args.client, tt.args.garClient, tt.args.cloudBuildClient)
 			if err != nil {
 				if tt.wantErr {
 					require.Error(t, err)
@@ -142,7 +157,7 @@ func TestRegister(t *testing.T) {
 			name: "SuccessRegister",
 			args: args{
 				componentType: "goservice",
-				f: func(component oam.Component, client docker.Client, garClient gcp.GarClient) (Pipeline, error) {
+				f: func(component oam.Component, client docker.Client, garClient gcp.GarClient, cloudBuildClient gcp.CloudBuildClient) (Pipeline, error) {
 					return &MockPipeline{}, nil
 				},
 			},
@@ -153,7 +168,7 @@ func TestRegister(t *testing.T) {
 			name: "FailedRegister_duplicate",
 			args: args{
 				componentType: "goservice",
-				f: func(component oam.Component, client docker.Client, garClient gcp.GarClient) (Pipeline, error) {
+				f: func(component oam.Component, client docker.Client, garClient gcp.GarClient, cloudBuildClient gcp.CloudBuildClient) (Pipeline, error) {
 					return &MockPipeline{}, nil
 				},
 			},
@@ -173,7 +188,7 @@ func TestRegister(t *testing.T) {
 			name: "FailedRegister_noComponentType",
 			args: args{
 				componentType: "",
-				f: func(component oam.Component, client docker.Client, garClient gcp.GarClient) (Pipeline, error) {
+				f: func(component oam.Component, client docker.Client, garClient gcp.GarClient, cloudBuildClient gcp.CloudBuildClient) (Pipeline, error) {
 					return &MockPipeline{}, nil
 				},
 			},
