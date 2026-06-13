@@ -7,6 +7,7 @@ import (
 
 	_ "github.com/ghost-pack/hammer/internal/pipeline/cloudbuild"
 	_ "github.com/ghost-pack/hammer/internal/pipeline/goservice"
+	_ "github.com/ghost-pack/hammer/internal/pipeline/toolkit"
 	"github.com/spf13/cobra"
 )
 

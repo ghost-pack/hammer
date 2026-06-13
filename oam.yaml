@@ -17,7 +17,7 @@ spec:
     - name: hammer-toolkit
       type: toolkit
       properties:
-        path:
+        path: ./wolfi-base.yaml
 #      properties:
 #        entrypoint: ./cmd/server
 #      traits:

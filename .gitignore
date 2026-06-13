@@ -3,3 +3,5 @@
 .tool-versions
 hammer
 localimage.tar
+apko-wolfi.tar
+sbom*.json
