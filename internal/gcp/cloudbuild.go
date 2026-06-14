@@ -13,6 +13,7 @@ import (
 
 type CloudBuildClient interface {
 	TestCloudBuild(ctx context.Context, projectID, location, cloudbuildPath, cloudBuildTestPath string) error
+	CreateOrUpdateCloudBuildTrigger(ctx context.Context, projectId, projectNumber, location, cloudBuildPath, triggerName string) error
 	Close() error
 }
 
@@ -41,6 +42,18 @@ type cloudBuildConfig struct {
 		Dir        string   `yaml:"dir"`
 		Env        []string `yaml:"env"`
 	} `yaml:"steps"`
+}
+
+type cloudBuildConfigFull struct {
+	Steps []struct {
+		Name       string   `yaml:"name"`
+		ID         string   `yaml:"id"`
+		Entrypoint string   `yaml:"entrypoint"`
+		Args       []string `yaml:"args"`
+		Dir        string   `yaml:"dir"`
+		Env        []string `yaml:"env"`
+	} `yaml:"steps"`
+	Substitutions map[string]string `yaml:"substitutions"`
 }
 
 type cloudBuildTestConfig struct {
@@ -116,4 +129,118 @@ func (c *CloudBuildClientImpl) TestCloudBuild(ctx context.Context, projectID, lo
 		}
 		time.Sleep(10 * time.Second)
 	}
+}
+
+func (c *CloudBuildClientImpl) CreateOrUpdateCloudBuildTrigger(ctx context.Context, projectID, projectNumber, location, cloudBuildPath, triggerName string) error {
+	buildData, err := os.ReadFile(cloudBuildPath)
+	if err != nil {
+		return fmt.Errorf("reading cloudbuild.yaml: %w", err)
+	}
+	var buildConfig cloudBuildConfigFull
+	if err := yaml.Unmarshal(buildData, &buildConfig); err != nil {
+		return fmt.Errorf("parsing cloudbuild.yaml: %w", err)
+	}
+
+	var steps []*cloudbuildpb.BuildStep
+	for _, s := range buildConfig.Steps {
+		steps = append(steps, &cloudbuildpb.BuildStep{
+			Name:       s.Name,
+			Id:         s.ID,
+			Entrypoint: s.Entrypoint,
+			Args:       s.Args,
+			Dir:        s.Dir,
+			Env:        s.Env,
+		})
+	}
+	secretResourceName := fmt.Sprintf(
+		"projects/%s/secrets/%s/versions/latest",
+		projectNumber,
+		"cloudbuild-webhook-secret",
+	)
+
+	serviceAccountName := fmt.Sprintf("projects/%s/serviceAccounts/%s", projectID, "sa-cloud-build@cloud-build-pipeline-396819.iam.gserviceaccount.com")
+
+	triggers, err := c.client.ListBuildTriggers(ctx, &cloudbuildpb.ListBuildTriggersRequest{
+		ProjectId: projectID,
+	})
+	if err != nil {
+		err := fmt.Errorf("listing triggers: %w", err)
+		return err
+	}
+
+	var existingTrigger *cloudbuildpb.BuildTrigger
+	for _, trigger := range triggers.Triggers {
+		if trigger.Name == triggerName {
+			existingTrigger = trigger
+		}
+	}
+
+	build := &cloudbuildpb.Build{
+		Steps:          steps,
+		Substitutions:  buildConfig.Substitutions,
+		ServiceAccount: serviceAccountName,
+		Options: &cloudbuildpb.BuildOptions{
+			SubstitutionOption: cloudbuildpb.BuildOptions_ALLOW_LOOSE,
+			Logging:            cloudbuildpb.BuildOptions_CLOUD_LOGGING_ONLY,
+		},
+	}
+
+	buildTrigger, err := makeTrigger(triggerName, "webhook", secretResourceName, "", build, buildConfig.Substitutions)
+	if err != nil {
+		return err
+	}
+
+	if existingTrigger == nil {
+		_, err = c.client.CreateBuildTrigger(ctx, &cloudbuildpb.CreateBuildTriggerRequest{
+			ProjectId: projectID,
+			Parent:    fmt.Sprintf("projects/%s/locations/%s", projectID, location),
+			Trigger:   buildTrigger,
+		})
+		if err != nil {
+			return fmt.Errorf("creating trigger: %w", err)
+		}
+	} else {
+		// Need to clear substitutions before updating.
+		_, err := c.client.UpdateBuildTrigger(ctx, &cloudbuildpb.UpdateBuildTriggerRequest{
+			ProjectId: projectID,
+			TriggerId: existingTrigger.Id,
+			Trigger:   buildTrigger,
+		})
+		if err != nil {
+			err := fmt.Errorf("error updating trigger: %w", err)
+			return err
+		}
+	}
+
+	return nil
+}
+
+func makeTrigger(
+	name, pipelineType, webhookSecret, pubSubTopic string,
+	build *cloudbuildpb.Build,
+	subs map[string]string,
+) (*cloudbuildpb.BuildTrigger, error) {
+	t := &cloudbuildpb.BuildTrigger{
+		Name:          name,
+		Substitutions: subs,
+		BuildTemplate: &cloudbuildpb.BuildTrigger_Build{Build: build},
+	}
+
+	switch pipelineType {
+	case "webhook":
+		t.WebhookConfig = &cloudbuildpb.WebhookConfig{
+			AuthMethod: &cloudbuildpb.WebhookConfig_Secret{
+				Secret: webhookSecret,
+			},
+		}
+	case "pubsub":
+		t.PubsubConfig = &cloudbuildpb.PubsubConfig{
+			Topic: pubSubTopic,
+		}
+	case "manual":
+		// No trigger source required.
+	default:
+		return nil, fmt.Errorf("unsupported pipeline type %q", pipelineType)
+	}
+	return t, nil
 }

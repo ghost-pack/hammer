@@ -23,6 +23,11 @@ func (m *MockCloudBuildClient) TestCloudBuild(ctx context.Context, projectID, lo
 	return callArgs.Error(0)
 }
 
+func (m *MockCloudBuildClient) CreateOrUpdateCloudBuildTrigger(ctx context.Context, projectID, location, cloudBuildPath, triggerName string) error {
+	callArgs := m.Called(ctx, projectID, location, cloudBuildPath, triggerName)
+	return callArgs.Error(0)
+}
+
 func (m *MockCloudBuildClient) Close() error {
 	callArgs := m.Called()
 	return callArgs.Error(0)
@@ -87,6 +92,8 @@ func TestPipeline_CI(t *testing.T) {
 			}},
 			setupMock: func(mockCloudBuildClient *MockCloudBuildClient) {
 				mockCloudBuildClient.On("TestCloudBuild", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockCloudBuildClient.On("CreateOrUpdateCloudBuildTrigger", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 			},
 			wantErr: false,

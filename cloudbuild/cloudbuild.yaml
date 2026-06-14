@@ -7,16 +7,11 @@ steps:
       - "pipefail"
       - "-c"
       - |-
-        echo "$_GIT_CLONE_URL"
-        echo "$_GIT_REPOSITORY_NAME"
-        echo "$_GIT_REF"
-        echo "$_GIT_HEAD_SHA"
+        echo "also hello I'm here now"
+        echo "$_HELLO"
 
 substitutions:
-  _GIT_REPOSITORY_NAME: $(body.repository.name)
-  _GIT_CLONE_URL: $(body.repository.clone_url)
-  _GIT_REF: $(body.ref)
-  _GIT_HEAD_SHA: $(body.head_commit.id)
+  _HELLO: "sup"
 
 options:
   substitutionOption: ALLOW_LOOSE
