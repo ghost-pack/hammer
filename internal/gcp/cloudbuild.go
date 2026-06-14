@@ -101,6 +101,7 @@ func createBuild(
 	steps []*cloudbuildpb.BuildStep,
 ) *cloudbuildpb.Build {
 	return &cloudbuildpb.Build{
+		ProjectId:     projectID,
 		Steps:         steps,
 		Substitutions: substitutions,
 		Options: &cloudbuildpb.BuildOptions{

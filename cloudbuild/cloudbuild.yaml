@@ -7,7 +7,6 @@ steps:
       - "pipefail"
       - "-c"
       - |-
-        echo "also hello I'm here now"
         echo "$_HELLO"
 
 substitutions:

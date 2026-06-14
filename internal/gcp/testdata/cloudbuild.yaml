@@ -1,0 +1,17 @@
+steps:
+  - name: "ubuntu"
+    id: "test"
+    entrypoint: "bash"
+    args:
+      - "-c"
+      - "echo \"$_GIT_CLONE_URL\""
+
+substitutions:
+  _GIT_REPOSITORY_NAME: $(body.repository.name)
+  _GIT_CLONE_URL: $(body.repository.clone_url)
+  _GIT_REF: $(body.ref)
+  _GIT_HEAD_SHA: $(body.head_commit.id)
+
+options:
+  substitutionOption: ALLOW_LOOSE
+  logging: CLOUD_LOGGING_ONLY
