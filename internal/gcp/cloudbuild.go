@@ -42,17 +42,6 @@ type cloudBuildConfig struct {
 		Dir        string   `yaml:"dir"`
 		Env        []string `yaml:"env"`
 	} `yaml:"steps"`
-}
-
-type cloudBuildConfigFull struct {
-	Steps []struct {
-		Name       string   `yaml:"name"`
-		ID         string   `yaml:"id"`
-		Entrypoint string   `yaml:"entrypoint"`
-		Args       []string `yaml:"args"`
-		Dir        string   `yaml:"dir"`
-		Env        []string `yaml:"env"`
-	} `yaml:"steps"`
 	Substitutions map[string]string `yaml:"substitutions"`
 }
 
@@ -136,7 +125,7 @@ func (c *CloudBuildClientImpl) CreateOrUpdateCloudBuildTrigger(ctx context.Conte
 	if err != nil {
 		return fmt.Errorf("reading cloudbuild.yaml: %w", err)
 	}
-	var buildConfig cloudBuildConfigFull
+	var buildConfig cloudBuildConfig
 	if err := yaml.Unmarshal(buildData, &buildConfig); err != nil {
 		return fmt.Errorf("parsing cloudbuild.yaml: %w", err)
 	}
@@ -200,14 +189,13 @@ func (c *CloudBuildClientImpl) CreateOrUpdateCloudBuildTrigger(ctx context.Conte
 			return fmt.Errorf("creating trigger: %w", err)
 		}
 	} else {
-		// Need to clear substitutions before updating.
 		_, err := c.client.UpdateBuildTrigger(ctx, &cloudbuildpb.UpdateBuildTriggerRequest{
 			ProjectId: projectID,
 			TriggerId: existingTrigger.Id,
 			Trigger:   buildTrigger,
 		})
 		if err != nil {
-			err := fmt.Errorf("error updating trigger: %w", err)
+			err := fmt.Errorf("updating trigger: %w", err)
 			return err
 		}
 	}

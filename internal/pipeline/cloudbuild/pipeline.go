@@ -71,7 +71,6 @@ func (p *Pipeline) Analyze(ctx context.Context) error {
 	phases := []phase{
 		{"lint", p.lint},
 		{"submittest", p.submitTest},
-		{"createOrUpdateTrigger", p.createOrUpdateTrigger},
 	}
 
 	for _, ph := range phases {
