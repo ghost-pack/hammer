@@ -25,13 +25,65 @@ func TestPipeline_submittest(t *testing.T) {
 				Content: []*yaml.Node{
 					{Kind: yaml.ScalarNode, Value: "path"},
 					{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild.yaml"},
-					{Kind: yaml.ScalarNode, Value: "testPath"},
-					{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild_test.yaml"},
+					{Kind: yaml.ScalarNode, Value: "tests"},
+					{
+						Kind: yaml.SequenceNode,
+						Content: []*yaml.Node{
+							{
+								Kind: yaml.MappingNode,
+								Content: []*yaml.Node{
+									{Kind: yaml.ScalarNode, Value: "path"},
+									{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild_test.yaml"},
+									{Kind: yaml.ScalarNode, Value: "required"},
+									{Kind: yaml.ScalarNode, Value: "true"},
+								},
+							},
+							{
+								Kind: yaml.MappingNode,
+								Content: []*yaml.Node{
+									{Kind: yaml.ScalarNode, Value: "path"},
+									{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild_test_2.yaml"},
+									{Kind: yaml.ScalarNode, Value: "required"},
+									{Kind: yaml.ScalarNode, Value: "true"},
+								},
+							},
+						},
+					},
 				},
 			}},
 			setupMock: func(mockCloudBuildClient *MockCloudBuildClient) {
 				mockCloudBuildClient.On("TestCloudBuild", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "SuccessfulSubmitTestPhase_failedpipeline",
+			component: &oam.Component{Name: "testComponent", Type: "cloudbuild", Properties: yaml.Node{
+				Kind: yaml.MappingNode,
+				Content: []*yaml.Node{
+					{Kind: yaml.ScalarNode, Value: "path"},
+					{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild.yaml"},
+					{Kind: yaml.ScalarNode, Value: "tests"},
+					{
+						Kind: yaml.SequenceNode,
+						Content: []*yaml.Node{
+							{
+								Kind: yaml.MappingNode,
+								Content: []*yaml.Node{
+									{Kind: yaml.ScalarNode, Value: "path"},
+									{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild_test_2.yaml"},
+									{Kind: yaml.ScalarNode, Value: "required"},
+									{Kind: yaml.ScalarNode, Value: "false"},
+								},
+							},
+						},
+					},
+				},
+			}},
+			setupMock: func(mockCloudBuildClient *MockCloudBuildClient) {
+				mockCloudBuildClient.On("TestCloudBuild", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(errors.New("test error"))
 			},
 			wantErr: false,
 		},
@@ -63,8 +115,21 @@ func TestPipeline_submittest(t *testing.T) {
 				Properties: yaml.Node{
 					Kind: yaml.MappingNode,
 					Content: []*yaml.Node{
-						{Kind: yaml.ScalarNode, Value: "testPath"},
-						{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild_test.yaml"},
+						{Kind: yaml.ScalarNode, Value: "tests"},
+						{
+							Kind: yaml.SequenceNode,
+							Content: []*yaml.Node{
+								{
+									Kind: yaml.MappingNode,
+									Content: []*yaml.Node{
+										{Kind: yaml.ScalarNode, Value: "path"},
+										{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild_test.yaml"},
+										{Kind: yaml.ScalarNode, Value: "required"},
+										{Kind: yaml.ScalarNode, Value: "true"},
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -78,11 +143,8 @@ func TestPipeline_submittest(t *testing.T) {
 			name: "FailedSubmitTestPipeline_failed_cloudbuild_test_read",
 			component: &oam.Component{Name: "testComponent", Type: "cloudbuild",
 				Properties: yaml.Node{
-					Kind: yaml.MappingNode,
-					Content: []*yaml.Node{
-						{Kind: yaml.ScalarNode, Value: "testPath"},
-						{Kind: yaml.ScalarNode, Value: ""},
-					},
+					Kind:    yaml.MappingNode,
+					Content: []*yaml.Node{},
 				},
 			},
 			setupMock: func(mockCloudBuildClient *MockCloudBuildClient) {
@@ -96,13 +158,56 @@ func TestPipeline_submittest(t *testing.T) {
 				Content: []*yaml.Node{
 					{Kind: yaml.ScalarNode, Value: "path"},
 					{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild.yaml"},
-					{Kind: yaml.ScalarNode, Value: "testPath"},
-					{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild_test.yaml"},
+					{Kind: yaml.ScalarNode, Value: "tests"},
+					{
+						Kind: yaml.SequenceNode,
+						Content: []*yaml.Node{
+							{
+								Kind: yaml.MappingNode,
+								Content: []*yaml.Node{
+									{Kind: yaml.ScalarNode, Value: "path"},
+									{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild_test.yaml"},
+									{Kind: yaml.ScalarNode, Value: "required"},
+									{Kind: yaml.ScalarNode, Value: "true"},
+								},
+							},
+						},
+					},
 				},
 			}},
 			setupMock: func(mockCloudBuildClient *MockCloudBuildClient) {
 				mockCloudBuildClient.On("TestCloudBuild", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(errors.New("test error"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "FailedSubmitTestPipeline_test_was_supposed_to_fail_but_doesnt",
+			component: &oam.Component{Name: "testComponent", Type: "cloudbuild", Properties: yaml.Node{
+				Kind: yaml.MappingNode,
+				Content: []*yaml.Node{
+					{Kind: yaml.ScalarNode, Value: "path"},
+					{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild.yaml"},
+					{Kind: yaml.ScalarNode, Value: "tests"},
+					{
+						Kind: yaml.SequenceNode,
+						Content: []*yaml.Node{
+							{
+								Kind: yaml.MappingNode,
+								Content: []*yaml.Node{
+									{Kind: yaml.ScalarNode, Value: "path"},
+									{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild_test.yaml"},
+									{Kind: yaml.ScalarNode, Value: "required"},
+									{Kind: yaml.ScalarNode, Value: "false"},
+								},
+							},
+						},
+					},
+				},
+			}},
+			setupMock: func(mockCloudBuildClient *MockCloudBuildClient) {
+				mockCloudBuildClient.On("TestCloudBuild", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
 			},
 			wantErr: true,
 		},

@@ -27,18 +27,26 @@ func (p *Pipeline) submitTest(ctx context.Context) error {
 	if properties.Path == "" {
 		properties.Path = "./cloudbuild.yaml"
 	}
-	if properties.TestPath == "" {
-		noCloudBuildTestErrors := fmt.Errorf("cloud build test required")
+	if properties.Tests == nil {
+		noCloudBuildTestErrors := fmt.Errorf("cloud build tests required")
 		span.RecordError(noCloudBuildTestErrors)
 		span.SetStatus(otelCodes.Error, noCloudBuildTestErrors.Error())
 		return noCloudBuildTestErrors
 	}
 
-	err := p.cloudBuildClient.TestCloudBuild(ctx, "cloud-build-pipeline-396819", "global", properties.Path, properties.TestPath)
-	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(otelCodes.Error, err.Error())
-		return err
+	for _, ph := range properties.Tests {
+		required := ph.Required != nil && *ph.Required
+		err := p.cloudBuildClient.TestCloudBuild(ctx, "cloud-build-pipeline-396819", "global", properties.Path, ph.Path)
+		if err != nil && required {
+			span.RecordError(err)
+			span.SetStatus(otelCodes.Error, err.Error())
+			return err
+		} else if err == nil && !required {
+			testFailureError := fmt.Errorf("test was supposed to fail")
+			span.RecordError(testFailureError)
+			span.SetStatus(otelCodes.Error, testFailureError.Error())
+			return testFailureError
+		}
 	}
 
 	span.SetStatus(otelCodes.Ok, "")

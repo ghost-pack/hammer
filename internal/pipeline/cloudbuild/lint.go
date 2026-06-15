@@ -17,8 +17,12 @@ import (
 var cloudBuildSchema []byte
 
 type Properties struct {
+	Path  string       `yaml:"path"`
+	Tests []TestConfig `yaml:"tests"`
+}
+type TestConfig struct {
 	Path     string `yaml:"path"`
-	TestPath string `yaml:"testPath"`
+	Required *bool  `yaml:"required"` // use pointer to detect if field was explicitly set
 }
 
 func (p *Pipeline) lint(ctx context.Context) error {

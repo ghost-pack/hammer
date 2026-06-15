@@ -7,20 +7,19 @@ metadata:
     description: "The hammer CLI."
 spec:
   components:
-#    - name: hammer
-#      type: gocli
-      # TODO: flesh out properties and traits and stuff eventually.
-#    - name: hammer-cicd
-#      type: cloudbuild
-#      properties:
-#        path: ./cloudbuild/cloudbuild.yaml
-#        testPath: ./cloudbuild/cloudbuild_test.yaml
-#    - name: hammer-toolkit
-#      type: toolkit
-#      properties:
-#        path: ./wolfi-base.yaml
-#      properties:
-#        entrypoint: ./cmd/server
+    - name: hammer
+      type: gocli
+    - name: hammer-cicd
+      type: cloudbuild
+      properties:
+        path: ./cloudbuild/cloudbuild.yaml
+        tests:
+          - path: ./cloudbuild/cloudbuild_test.yaml
+            required: true
+    - name: hammer-toolkit
+      type: toolkit
+      properties:
+        path: ./wolfi-base.yaml
 #      traits:
 #        - type: resources
 #          properties:

@@ -86,8 +86,21 @@ func TestPipeline_CI(t *testing.T) {
 				Content: []*yaml.Node{
 					{Kind: yaml.ScalarNode, Value: "path"},
 					{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild.yaml"},
-					{Kind: yaml.ScalarNode, Value: "testPath"},
-					{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild_test.yaml"},
+					{Kind: yaml.ScalarNode, Value: "tests"},
+					{
+						Kind: yaml.SequenceNode,
+						Content: []*yaml.Node{
+							{
+								Kind: yaml.MappingNode,
+								Content: []*yaml.Node{
+									{Kind: yaml.ScalarNode, Value: "path"},
+									{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild_test.yaml"},
+									{Kind: yaml.ScalarNode, Value: "required"},
+									{Kind: yaml.ScalarNode, Value: "true"},
+								},
+							},
+						},
+					},
 				},
 			}},
 			setupMock: func(mockCloudBuildClient *MockCloudBuildClient) {
@@ -127,7 +140,21 @@ func TestPipeline_CI(t *testing.T) {
 					Kind: yaml.MappingNode,
 					Content: []*yaml.Node{
 						{Kind: yaml.ScalarNode, Value: "testPath"},
-						{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild_test.yaml"},
+						{Kind: yaml.ScalarNode, Value: "tests"},
+						{
+							Kind: yaml.SequenceNode,
+							Content: []*yaml.Node{
+								{
+									Kind: yaml.MappingNode,
+									Content: []*yaml.Node{
+										{Kind: yaml.ScalarNode, Value: "path"},
+										{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild_test.yaml"},
+										{Kind: yaml.ScalarNode, Value: "required"},
+										{Kind: yaml.ScalarNode, Value: "true"},
+									},
+								},
+							},
+						},
 					},
 				}},
 			setupMock: func(mockCloudBuildClient *MockCloudBuildClient) {
@@ -141,8 +168,21 @@ func TestPipeline_CI(t *testing.T) {
 				Content: []*yaml.Node{
 					{Kind: yaml.ScalarNode, Value: "path"},
 					{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild_bad_yaml.yaml"},
-					{Kind: yaml.ScalarNode, Value: "testPath"},
-					{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild_test.yaml"},
+					{Kind: yaml.ScalarNode, Value: "tests"},
+					{
+						Kind: yaml.SequenceNode,
+						Content: []*yaml.Node{
+							{
+								Kind: yaml.MappingNode,
+								Content: []*yaml.Node{
+									{Kind: yaml.ScalarNode, Value: "path"},
+									{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild_test.yaml"},
+									{Kind: yaml.ScalarNode, Value: "required"},
+									{Kind: yaml.ScalarNode, Value: "true"},
+								},
+							},
+						},
+					},
 				},
 			}},
 			setupMock: func(mockCloudBuildClient *MockCloudBuildClient) {
@@ -156,8 +196,21 @@ func TestPipeline_CI(t *testing.T) {
 				Content: []*yaml.Node{
 					{Kind: yaml.ScalarNode, Value: "path"},
 					{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild_not_matching_schema.yaml"},
-					{Kind: yaml.ScalarNode, Value: "testPath"},
-					{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild_test.yaml"},
+					{Kind: yaml.ScalarNode, Value: "tests"},
+					{
+						Kind: yaml.SequenceNode,
+						Content: []*yaml.Node{
+							{
+								Kind: yaml.MappingNode,
+								Content: []*yaml.Node{
+									{Kind: yaml.ScalarNode, Value: "path"},
+									{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild_test.yaml"},
+									{Kind: yaml.ScalarNode, Value: "required"},
+									{Kind: yaml.ScalarNode, Value: "true"},
+								},
+							},
+						},
+					},
 				},
 			}},
 			setupMock: func(mockCloudBuildClient *MockCloudBuildClient) {
@@ -171,8 +224,21 @@ func TestPipeline_CI(t *testing.T) {
 				Content: []*yaml.Node{
 					{Kind: yaml.ScalarNode, Value: "path"},
 					{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild.yaml"},
-					{Kind: yaml.ScalarNode, Value: "testPath"},
-					{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild_test.yaml"},
+					{Kind: yaml.ScalarNode, Value: "tests"},
+					{
+						Kind: yaml.SequenceNode,
+						Content: []*yaml.Node{
+							{
+								Kind: yaml.MappingNode,
+								Content: []*yaml.Node{
+									{Kind: yaml.ScalarNode, Value: "path"},
+									{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild_test.yaml"},
+									{Kind: yaml.ScalarNode, Value: "required"},
+									{Kind: yaml.ScalarNode, Value: "true"},
+								},
+							},
+						},
+					},
 				},
 			}},
 			setupMock: func(mockCloudBuildClient *MockCloudBuildClient) {
@@ -219,8 +285,21 @@ func TestPipeline_Analyze(t *testing.T) {
 				Content: []*yaml.Node{
 					{Kind: yaml.ScalarNode, Value: "path"},
 					{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild.yaml"},
-					{Kind: yaml.ScalarNode, Value: "testPath"},
-					{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild_test.yaml"},
+					{Kind: yaml.ScalarNode, Value: "tests"},
+					{
+						Kind: yaml.SequenceNode,
+						Content: []*yaml.Node{
+							{
+								Kind: yaml.MappingNode,
+								Content: []*yaml.Node{
+									{Kind: yaml.ScalarNode, Value: "path"},
+									{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild_test.yaml"},
+									{Kind: yaml.ScalarNode, Value: "required"},
+									{Kind: yaml.ScalarNode, Value: "true"},
+								},
+							},
+						},
+					},
 				},
 			}},
 			setupMock: func(mockCloudBuildClient *MockCloudBuildClient) {
