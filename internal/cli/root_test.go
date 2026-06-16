@@ -16,6 +16,7 @@ import (
 func init() {
 	pipeline.Register("noop", New)
 	pipeline.Register("bad", NewBadPipeline)
+	pipeline.Register("GoodCiBadDeployPipeline", NewGoodCiBadDeployPipeline)
 }
 
 // The noop component is only used for testing.
@@ -38,6 +39,10 @@ func (p *Pipeline) ComponentType() string {
 }
 
 func (p *Pipeline) CI(ctx context.Context) error {
+	return nil
+}
+
+func (p *Pipeline) Deploy(ctx context.Context) error {
 	return nil
 }
 
@@ -67,7 +72,41 @@ func (p *BadPipeline) CI(ctx context.Context) error {
 	return fmt.Errorf("bad pipeline")
 }
 
+func (p *BadPipeline) Deploy(ctx context.Context) error {
+	return fmt.Errorf("bad pipeline")
+}
+
 func (p *BadPipeline) Analyze(ctx context.Context) error {
+	return fmt.Errorf("bad pipeline")
+}
+
+func NewGoodCiBadDeployPipeline(component oam.Component, client docker.Client, garClient gcp.GarClient, cloudBuildClient gcp.CloudBuildClient) (pipeline.Pipeline, error) {
+	if component.Type != "GoodCiBadDeployPipeline" {
+		return nil, fmt.Errorf("GoodCiBadDeployPipeline component must be of type GoodCiBadDeployPipeline")
+	}
+
+	return &GoodCiBadDeployPipeline{
+		component: &component,
+	}, nil
+}
+
+type GoodCiBadDeployPipeline struct {
+	component *oam.Component
+}
+
+func (p *GoodCiBadDeployPipeline) ComponentType() string {
+	return "bad"
+}
+
+func (p *GoodCiBadDeployPipeline) CI(ctx context.Context) error {
+	return nil
+}
+
+func (p *GoodCiBadDeployPipeline) Deploy(ctx context.Context) error {
+	return fmt.Errorf("bad pipeline")
+}
+
+func (p *GoodCiBadDeployPipeline) Analyze(ctx context.Context) error {
 	return fmt.Errorf("bad pipeline")
 }
 
@@ -111,6 +150,11 @@ func TestCI(t *testing.T) {
 		{
 			name:    "failed unparseable oam file",
 			oamFile: "testdata/oam_test_fail_ci_failure.yaml",
+			wantErr: true,
+		},
+		{
+			name:    "good ci bad deploy",
+			oamFile: "testdata/oam_test_fail_deploy_failure.yaml",
 			wantErr: true,
 		},
 	}

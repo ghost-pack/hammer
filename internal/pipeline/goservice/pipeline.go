@@ -105,3 +105,8 @@ type phase struct {
 	name string
 	run  func(context.Context) error
 }
+
+// Fill out for Goservice eventually
+func (p *Pipeline) Deploy(ctx context.Context) error {
+	return nil
+}

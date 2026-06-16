@@ -67,6 +67,11 @@ func (m *MockPipeline) CI(ctx context.Context) error {
 	return args.Error(0)
 }
 
+func (m *MockPipeline) Deploy(ctx context.Context) error {
+	args := m.Called(ctx)
+	return args.Error(0)
+}
+
 func (m *MockPipeline) Analyze(ctx context.Context) error {
 	args := m.Called(ctx)
 	return args.Error(0)

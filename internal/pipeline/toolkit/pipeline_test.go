@@ -273,3 +273,48 @@ func TestPipeline_Analyze(t *testing.T) {
 		})
 	}
 }
+
+func TestPipeline_Deploy(t *testing.T) {
+	tests := []struct {
+		name      string
+		component *oam.Component
+		setupMock func(*MockRunner, *MockDockerClient, *MockGarClient)
+		wantErr   bool
+	}{
+		{
+			name:      "SuccessfulDeployPipeline",
+			component: &oam.Component{Name: "testComponent", Type: "goservice"},
+			setupMock: func(mockRunner *MockRunner, mockDockerClient *MockDockerClient, mockGarClient *MockGarClient) {
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockRunner := new(MockRunner)
+			mockDockerClient := new(MockDockerClient)
+			mockGarClient := new(MockGarClient)
+			tt.setupMock(mockRunner, mockDockerClient, mockGarClient)
+
+			p := &Pipeline{
+				component:    tt.component,
+				runner:       mockRunner,
+				dockerClient: mockDockerClient,
+				garClient:    mockGarClient,
+			}
+
+			err := p.Deploy(context.Background())
+
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			// Ensure all expected mock calls were made
+			mockRunner.AssertExpectations(t)
+			mockDockerClient.AssertExpectations(t)
+			mockGarClient.AssertExpectations(t)
+		})
+	}
+}

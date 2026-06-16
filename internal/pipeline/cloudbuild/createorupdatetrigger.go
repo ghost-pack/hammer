@@ -2,7 +2,6 @@ package cloudbuild
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/ghost-pack/hammer/internal/observability/tracing"
 	"go.opentelemetry.io/otel/attribute"
@@ -18,17 +17,14 @@ func (p *Pipeline) createOrUpdateTrigger(ctx context.Context) error {
 	defer span.End()
 
 	var properties Properties
-	if err := p.component.Properties.Decode(&properties); err != nil {
-		errorDecodingOamProperties := fmt.Errorf("decoding properties: %w", err)
-		span.RecordError(errorDecodingOamProperties)
-		span.SetStatus(otelCodes.Error, errorDecodingOamProperties.Error())
-		return errorDecodingOamProperties
-	}
-	if properties.Path == "" {
-		properties.Path = "./cloudbuild.yaml"
+	err := parseCloudBuildPath(p, &properties)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(otelCodes.Error, err.Error())
+		return err
 	}
 
-	err := p.cloudBuildClient.CreateOrUpdateCloudBuildTrigger(ctx, "cloud-build-pipeline-396819", "212799175996", "global", properties.Path, p.component.Name)
+	err = p.cloudBuildClient.CreateOrUpdateCloudBuildTrigger(ctx, "cloud-build-pipeline-396819", "212799175996", "global", properties.Path, p.component.Name)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(otelCodes.Error, err.Error())

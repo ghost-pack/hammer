@@ -18,14 +18,9 @@ func (p *Pipeline) submitTest(ctx context.Context) error {
 	defer span.End()
 
 	var properties Properties
-	if err := p.component.Properties.Decode(&properties); err != nil {
-		errorDecodingOamProperties := fmt.Errorf("decoding properties: %w", err)
-		span.RecordError(errorDecodingOamProperties)
-		span.SetStatus(otelCodes.Error, errorDecodingOamProperties.Error())
-		return errorDecodingOamProperties
-	}
-	if properties.Path == "" {
-		properties.Path = "./cloudbuild.yaml"
+	err := parseCloudBuildPath(p, &properties)
+	if err != nil {
+		return err
 	}
 	if properties.Tests == nil {
 		noCloudBuildTestErrors := fmt.Errorf("cloud build tests required")
@@ -50,5 +45,15 @@ func (p *Pipeline) submitTest(ctx context.Context) error {
 	}
 
 	span.SetStatus(otelCodes.Ok, "")
+	return nil
+}
+
+func parseCloudBuildPath(p *Pipeline, properties *Properties) error {
+	if err := p.component.Properties.Decode(&properties); err != nil {
+		return fmt.Errorf("decoding properties: %w", err)
+	}
+	if properties.Path == "" {
+		properties.Path = "./cloudbuild.yaml"
+	}
 	return nil
 }

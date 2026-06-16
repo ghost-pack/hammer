@@ -106,8 +106,6 @@ func TestPipeline_CI(t *testing.T) {
 			setupMock: func(mockCloudBuildClient *MockCloudBuildClient) {
 				mockCloudBuildClient.On("TestCloudBuild", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
-				mockCloudBuildClient.On("CreateOrUpdateCloudBuildTrigger", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
 			},
 			wantErr: false,
 		},
@@ -350,6 +348,138 @@ func TestPipeline_Analyze(t *testing.T) {
 			}
 
 			// Ensure all expected mock calls were made
+			mockCloudBuildClient.AssertExpectations(t)
+		})
+	}
+}
+
+func TestPipeline_Deploy(t *testing.T) {
+	tests := []struct {
+		name      string
+		component *oam.Component
+		setupMock func(*MockCloudBuildClient)
+		noOutput  bool
+		wantErr   bool
+	}{
+		{
+			name: "SuccessfulDeployPipeline",
+			component: &oam.Component{Name: "testComponent", Type: "cloudbuild", Properties: yaml.Node{
+				Kind: yaml.MappingNode,
+				Content: []*yaml.Node{
+					{Kind: yaml.ScalarNode, Value: "path"},
+					{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild.yaml"},
+					{Kind: yaml.ScalarNode, Value: "tests"},
+					{
+						Kind: yaml.SequenceNode,
+						Content: []*yaml.Node{
+							{
+								Kind: yaml.MappingNode,
+								Content: []*yaml.Node{
+									{Kind: yaml.ScalarNode, Value: "path"},
+									{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild_test.yaml"},
+									{Kind: yaml.ScalarNode, Value: "required"},
+									{Kind: yaml.ScalarNode, Value: "true"},
+								},
+							},
+						},
+					},
+				},
+			}},
+			setupMock: func(mockCloudBuildClient *MockCloudBuildClient) {
+				mockCloudBuildClient.On("CreateOrUpdateCloudBuildTrigger", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+			},
+			noOutput: false,
+			wantErr:  false,
+		},
+		{
+			name: "FailedDeployPipeline",
+			component: &oam.Component{Name: "testComponent", Type: "cloudbuild", Properties: yaml.Node{
+				Kind: yaml.MappingNode,
+				Content: []*yaml.Node{
+					{Kind: yaml.ScalarNode, Value: "path"},
+					{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild.yaml"},
+					{Kind: yaml.ScalarNode, Value: "tests"},
+					{
+						Kind: yaml.SequenceNode,
+						Content: []*yaml.Node{
+							{
+								Kind: yaml.MappingNode,
+								Content: []*yaml.Node{
+									{Kind: yaml.ScalarNode, Value: "path"},
+									{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild_test.yaml"},
+									{Kind: yaml.ScalarNode, Value: "required"},
+									{Kind: yaml.ScalarNode, Value: "true"},
+								},
+							},
+						},
+					},
+				},
+			}},
+			setupMock: func(mockCloudBuildClient *MockCloudBuildClient) {
+				mockCloudBuildClient.On("CreateOrUpdateCloudBuildTrigger", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(errors.New("error"))
+			},
+			noOutput: false,
+			wantErr:  true,
+		},
+		{
+			name: "FailedDeployPipeline",
+			component: &oam.Component{Name: "testComponent", Type: "cloudbuild", Properties: yaml.Node{
+				Kind: yaml.MappingNode,
+				Content: []*yaml.Node{
+					{Kind: yaml.ScalarNode, Value: "path"},
+					{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild.yaml"},
+					{Kind: yaml.ScalarNode, Value: "tests"},
+					{
+						Kind: yaml.SequenceNode,
+						Content: []*yaml.Node{
+							{
+								Kind: yaml.MappingNode,
+								Content: []*yaml.Node{
+									{Kind: yaml.ScalarNode, Value: "path"},
+									{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild_test.yaml"},
+									{Kind: yaml.ScalarNode, Value: "required"},
+									{Kind: yaml.ScalarNode, Value: "true"},
+								},
+							},
+						},
+					},
+				},
+			}},
+			setupMock: func(mockCloudBuildClient *MockCloudBuildClient) {
+			},
+			noOutput: true,
+			wantErr:  true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockCloudBuildClient := new(MockCloudBuildClient)
+			tt.setupMock(mockCloudBuildClient)
+
+			var p *Pipeline
+			if tt.noOutput {
+				p = &Pipeline{
+					component:        tt.component,
+					cloudBuildClient: mockCloudBuildClient,
+				}
+			} else {
+				p = &Pipeline{
+					component:        tt.component,
+					cloudBuildClient: mockCloudBuildClient,
+					cioutput:         "whatever",
+				}
+			}
+
+			err := p.Deploy(context.Background())
+
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+
 			mockCloudBuildClient.AssertExpectations(t)
 		})
 	}

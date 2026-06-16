@@ -87,6 +87,10 @@ func (p *Pipeline) Analyze(ctx context.Context) error {
 	return nil
 }
 
+func (p *Pipeline) Deploy(ctx context.Context) error {
+	return nil
+}
+
 type phase struct {
 	name string
 	run  func(context.Context) error

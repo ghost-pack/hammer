@@ -11,6 +11,7 @@ import (
 	"github.com/ghost-pack/hammer/internal/observability/tracing"
 	"github.com/ghost-pack/hammer/internal/pipeline"
 	"go.opentelemetry.io/otel/attribute"
+	otelCodes "go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -32,6 +33,7 @@ func New(component oam.Component, _ docker.Client, _ gcp.GarClient, cloudBuildCl
 type Pipeline struct {
 	component        *oam.Component
 	cloudBuildClient gcp.CloudBuildClient
+	cioutput         string
 }
 
 func (p *Pipeline) ComponentType() string {
@@ -49,7 +51,6 @@ func (p *Pipeline) CI(ctx context.Context) error {
 	phases = []phase{
 		{"lint", p.lint},
 		{"submittest", p.submitTest},
-		{"createOrUpdateTrigger", p.createOrUpdateTrigger},
 	}
 
 	for _, ph := range phases {
@@ -59,6 +60,16 @@ func (p *Pipeline) CI(ctx context.Context) error {
 			return fmt.Errorf("phase %s error: %w", ph.name, err)
 		}
 	}
+
+	var properties Properties
+	err := parseCloudBuildPath(p, &properties)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(otelCodes.Error, err.Error())
+		return err
+	}
+
+	p.cioutput = properties.Path
 	return nil
 }
 
@@ -71,6 +82,34 @@ func (p *Pipeline) Analyze(ctx context.Context) error {
 	phases := []phase{
 		{"lint", p.lint},
 		{"submittest", p.submitTest},
+	}
+
+	for _, ph := range phases {
+		slog.InfoContext(ctx, "phase start", "phase", ph.name)
+		if err := ph.run(ctx); err != nil {
+			slog.ErrorContext(ctx, "phase error", "phase", ph.name, "error", err)
+			return fmt.Errorf("phase %s error: %w", ph.name, err)
+		}
+	}
+	return nil
+}
+
+func (p *Pipeline) Deploy(ctx context.Context) error {
+	ctx, span := tracing.Tracer(fmt.Sprintf("%s Deploy", p.ComponentType())).Start(ctx, fmt.Sprintf("%s Deploy", p.ComponentType()),
+		trace.WithAttributes(
+			attribute.String("cmd", fmt.Sprintf("%s Deploy", p.ComponentType()))))
+	defer span.End()
+	if p.cioutput == "" {
+		err := fmt.Errorf("no ci output")
+		span.RecordError(err)
+		span.SetStatus(otelCodes.Error, "no ci output")
+		return err
+	}
+
+	var phases []phase
+
+	phases = []phase{
+		{"createOrUpdateTrigger", p.createOrUpdateTrigger},
 	}
 
 	for _, ph := range phases {

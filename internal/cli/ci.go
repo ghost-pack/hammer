@@ -69,9 +69,16 @@ func newCICmd() *cobra.Command {
 				if err := run(ctx); err != nil {
 					return err
 				}
+
+				if onMain {
+					err := componentPipeline.Deploy(ctx)
+					if err != nil {
+						return err
+					}
+				}
 			}
 
-			slog.InfoContext(ctx, "ci complete (placeholder)")
+			slog.InfoContext(ctx, "ci complete")
 			return nil
 		},
 	}
