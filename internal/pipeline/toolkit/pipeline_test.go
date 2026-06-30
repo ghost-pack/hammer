@@ -88,7 +88,7 @@ func TestNewPipeline(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := New(tt.args.component, tt.args.client, tt.args.garClient, tt.args.dockerClient)
+			got, err := New(tt.args.component, pipeline.DependencyClients{DockerClient: tt.args.client, GarClient: tt.args.garClient, CloudBuild: tt.args.dockerClient})
 			if err != nil {
 				if tt.wantErr {
 					require.Error(t, err)

@@ -19,7 +19,7 @@ func init() {
 	pipeline.Register("toolkit", New)
 }
 
-func New(component oam.Component, dockerClient docker.Client, garClient gcp.GarClient, _ gcp.CloudBuildClient) (pipeline.Pipeline, error) {
+func New(component oam.Component, clients pipeline.DependencyClients) (pipeline.Pipeline, error) {
 	if component.Type != "toolkit" {
 		return nil, fmt.Errorf("toolkit component must be of type toolkit")
 	}
@@ -27,8 +27,8 @@ func New(component oam.Component, dockerClient docker.Client, garClient gcp.GarC
 	return &Pipeline{
 		component:    &component,
 		runner:       runner.New(),
-		garClient:    garClient,
-		dockerClient: dockerClient,
+		garClient:    clients.GarClient,
+		dockerClient: clients.DockerClient,
 	}, nil
 }
 

@@ -8,7 +8,13 @@ import (
 	"github.com/ghost-pack/hammer/internal/oam"
 )
 
-type Factory func(oam.Component, docker.Client, gcp.GarClient, gcp.CloudBuildClient) (Pipeline, error)
+type Factory func(oam.Component, DependencyClients) (Pipeline, error)
+
+type DependencyClients struct {
+	DockerClient docker.Client
+	GarClient    gcp.GarClient
+	CloudBuild   gcp.CloudBuildClient
+}
 
 var registry = map[string]Factory{}
 
@@ -34,5 +40,5 @@ func For(component oam.Component, dockerClient docker.Client, garClient gcp.GarC
 	if !ok {
 		return nil, fmt.Errorf("componentType %s is not registered", component.Type)
 	}
-	return f(component, dockerClient, garClient, cloudBuildClient)
+	return f(component, DependencyClients{DockerClient: dockerClient, GarClient: garClient, CloudBuild: cloudBuildClient})
 }

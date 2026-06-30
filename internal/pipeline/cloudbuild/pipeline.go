@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/ghost-pack/hammer/internal/docker"
 	"github.com/ghost-pack/hammer/internal/gcp"
 	"github.com/ghost-pack/hammer/internal/oam"
 	"github.com/ghost-pack/hammer/internal/observability/tracing"
@@ -19,14 +18,14 @@ func init() {
 	pipeline.Register("cloudbuild", New)
 }
 
-func New(component oam.Component, _ docker.Client, _ gcp.GarClient, cloudBuildClient gcp.CloudBuildClient) (pipeline.Pipeline, error) {
+func New(component oam.Component, clients pipeline.DependencyClients) (pipeline.Pipeline, error) {
 	if component.Type != "cloudbuild" {
 		return nil, fmt.Errorf("cloudbuild component must be of type cloudbuild")
 	}
 
 	return &Pipeline{
 		component:        &component,
-		cloudBuildClient: cloudBuildClient,
+		cloudBuildClient: clients.CloudBuild,
 	}, nil
 }
 
