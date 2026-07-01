@@ -14,6 +14,7 @@ type DependencyClients struct {
 	DockerClient docker.Client
 	GarClient    gcp.GarClient
 	CloudBuild   gcp.CloudBuildClient
+	CloudStorage gcp.CloudStorageClient
 }
 
 var registry = map[string]Factory{}
@@ -31,7 +32,7 @@ func Register(componentType string, f Factory) {
 	registry[componentType] = f
 }
 
-func For(component oam.Component, dockerClient docker.Client, garClient gcp.GarClient, cloudBuildClient gcp.CloudBuildClient) (Pipeline, error) {
+func For(component oam.Component, dependencies DependencyClients) (Pipeline, error) {
 	if component.Type == "" {
 		return nil, fmt.Errorf("componentType is nil")
 	}
@@ -40,5 +41,5 @@ func For(component oam.Component, dockerClient docker.Client, garClient gcp.GarC
 	if !ok {
 		return nil, fmt.Errorf("componentType %s is not registered", component.Type)
 	}
-	return f(component, DependencyClients{DockerClient: dockerClient, GarClient: garClient, CloudBuild: cloudBuildClient})
+	return f(component, dependencies)
 }

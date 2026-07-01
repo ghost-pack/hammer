@@ -20,6 +20,10 @@ spec:
       type: toolkit
       properties:
         path: ./wolfi-base.yaml
+    - name: hammer-opentofu
+      type: opentofu
+      properties:
+        path: ./opentofu
 #      traits:
 #        - type: resources
 #          properties:

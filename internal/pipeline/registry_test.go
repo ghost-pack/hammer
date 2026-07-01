@@ -83,6 +83,7 @@ func TestFor(t *testing.T) {
 		client           docker.Client
 		garClient        gcp.GarClient
 		cloudBuildClient gcp.CloudBuildClient
+		cloudStorage     gcp.CloudStorageClient
 	}
 	tests := []struct {
 		name    string
@@ -133,7 +134,7 @@ func TestFor(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			registry = map[string]Factory{}
 			tt.setup()
-			got, err := For(tt.args.component, tt.args.client, tt.args.garClient, tt.args.cloudBuildClient)
+			got, err := For(tt.args.component, DependencyClients{DockerClient: tt.args.client, GarClient: tt.args.garClient, CloudBuild: tt.args.cloudBuildClient, CloudStorage: tt.args.cloudStorage})
 			if err != nil {
 				if tt.wantErr {
 					require.Error(t, err)

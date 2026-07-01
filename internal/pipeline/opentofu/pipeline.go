@@ -1,13 +1,15 @@
-package cloudbuild
+package opentofu
 
 import (
 	"context"
 	"fmt"
 	"log/slog"
 
+	"github.com/ghost-pack/hammer/internal/gcp"
 	"github.com/ghost-pack/hammer/internal/oam"
 	"github.com/ghost-pack/hammer/internal/observability/tracing"
 	"github.com/ghost-pack/hammer/internal/pipeline"
+	"github.com/ghost-pack/hammer/internal/runner"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -22,12 +24,20 @@ func New(component oam.Component, client pipeline.DependencyClients) (pipeline.P
 	}
 
 	return &Pipeline{
-		component: &component,
+		component:          &component,
+		runner:             runner.New(),
+		cloudStorageClient: client.CloudStorage,
 	}, nil
 }
 
 type Pipeline struct {
-	component *oam.Component
+	component          *oam.Component
+	runner             runner.Runner
+	cloudStorageClient gcp.CloudStorageClient
+}
+
+type Properties struct {
+	Path string `yaml:"path"`
 }
 
 func (p *Pipeline) ComponentType() string {
@@ -42,19 +52,23 @@ func (p *Pipeline) CI(ctx context.Context) error {
 
 	var phases []phase
 
-	//phases = []phase{
-	//	{"format", p.lint},
-	//	{"validate", p.submitTest},
-	//	{"tflint", p.submitTest},
-	//	{"trivy", p.submitTest},
-	//	{"plan", p.submitTest},
-	//}
+	phases = []phase{
+		{"ensureBucketExists", p.ensureBucketExists},
+		{"format", p.format},
+		{"init", p.init},
+		{"validate", p.validate},
+		{"tflint", p.tflint},
+		{"checkov", p.checkov},
+		{"plan", p.plan},
+	}
 
-	for _, ph := range phases {
-		slog.InfoContext(ctx, "phase start", "phase", ph.name)
-		if err := ph.run(ctx); err != nil {
-			slog.ErrorContext(ctx, "phase error", "phase", ph.name, "error", err)
-			return fmt.Errorf("phase %s error: %w", ph.name, err)
+	for _, env := range []string{"dev", "prod"} {
+		for _, ph := range phases {
+			slog.InfoContext(ctx, "phase start", "phase", ph.name)
+			if err := ph.run(ctx, env); err != nil {
+				slog.ErrorContext(ctx, "phase error", "phase", ph.name, "error", err)
+				return fmt.Errorf("phase %s error: %w", ph.name, err)
+			}
 		}
 	}
 
@@ -112,5 +126,5 @@ func (p *Pipeline) Deploy(ctx context.Context) error {
 
 type phase struct {
 	name string
-	run  func(context.Context) error
+	run  func(context.Context, string) error
 }
