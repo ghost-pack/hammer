@@ -1,0 +1,6 @@
+apiVersion: platform.hammer.com/v1alpha1
+metadata:
+  name: acme-corpsadfasdfasdfojghiytfiytcfuytcfuyfcuycurtyfasdfasdfadsfjhbvohvsadofuhvasdofuyhgasdfuyghvasdofuyadgsfouygasdfouaysdgfoausdyfgoasduyfg
+spec:
+  environments:
+    - something

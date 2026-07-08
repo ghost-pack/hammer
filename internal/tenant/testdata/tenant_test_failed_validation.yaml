@@ -1,0 +1,3 @@
+apiVersion: platform.hammer.com/v1alpha1
+kind: Tenant
+spec:

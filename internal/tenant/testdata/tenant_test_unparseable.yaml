@@ -1,6 +1,6 @@
-apiVersion: core.oam.dev/v1beta1
-kind: Tenant
-metadata:
+apiVasdfsadfersion: platform.hammer.com/v1alpha1
+kinsdafsdfd: TenantsadadSFASDFSDFSAD
+metasdfasdfasdfadata:
   name: acme-corp
 spec:
   billingAccount: "ABCDE-12345-FGHIJ"
