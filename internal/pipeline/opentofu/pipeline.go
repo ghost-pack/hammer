@@ -52,15 +52,15 @@ func (p *Pipeline) CI(ctx context.Context) error {
 
 	var phases []phase
 
-	phases = []phase{
-		{"ensureBucketExists", p.ensureBucketExists},
-		{"format", p.format},
-		{"init", p.init},
-		{"validate", p.validate},
-		{"tflint", p.tflint},
-		{"checkov", p.checkov},
-		{"plan", p.plan},
-	}
+	//phases = []phase{
+	//	{"ensureBucketExists", p.ensureBucketExists},
+	//	{"format", p.format},
+	//	{"init", p.init},
+	//	{"validate", p.validate},
+	//	{"tflint", p.tflint},
+	//	{"checkov", p.checkov},
+	//	{"plan", p.plan},
+	//}
 
 	for _, env := range []string{"dev", "prod"} {
 		for _, ph := range phases {

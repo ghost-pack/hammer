@@ -60,8 +60,6 @@ func newCICmd() *cobra.Command {
 
 			onMain := os.Getenv("BRANCH_NAME") == "main"
 
-			// TODO: CREATE GCP PROJECTS FOR TENANT HERE.
-
 			for _, component := range app.Spec.Components {
 				componentPipeline, err := pipeline.For(component, pipeline.DependencyClients{DockerClient: dockerClient, GarClient: garClient, CloudBuild: cloudBuildClient, CloudStorage: cloudStorageClient})
 				if err != nil {

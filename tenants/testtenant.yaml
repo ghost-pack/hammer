@@ -1,0 +1,23 @@
+apiVersion: platform.hammer.com/v1alpha1
+kind: Tenant
+metadata:
+  name: acme-corp
+spec:
+  billingAccount: "ABCDE-12345-FGHIJ"
+  parentFolder: "folders/123456789"   # or orgId
+  allowedAPIs:
+    - run.googleapis.com
+    - artifactregistry.googleapis.com
+    - cloudbuild.googleapis.com
+    - secretmanager.googleapis.com
+    - logging.googleapis.com
+    - monitoring.googleapis.com
+  environments:
+    - name: dev
+      projectId: acme-corp-dev-a1b2    # deterministic or generated
+    - name: prod
+      projectId: acme-corp-prod-a1b2
+  # Org policies to enforce on both projects
+  orgPolicies:
+    - constraints/compute.requireOsLogin
+    - constraints/iam.disableServiceAccountKeyCreation
