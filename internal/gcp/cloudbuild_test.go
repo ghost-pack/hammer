@@ -188,7 +188,7 @@ func Test_createBuildTrigger(t *testing.T) {
 						ServiceAccount: fmt.Sprintf(
 							"projects/%s/serviceAccounts/%s",
 							"project",
-							"sa-cloud-build@cloud-build-pipeline-396819.iam.gserviceaccount.com",
+							"sa-cloud-build@hammer-bootstrap.iam.gserviceaccount.com",
 						),
 						Substitutions: map[string]string{
 							"_ENV":     "dev",
@@ -248,7 +248,7 @@ func Test_makeTrigger(t *testing.T) {
 					ServiceAccount: fmt.Sprintf(
 						"projects/%s/serviceAccounts/%s",
 						"project",
-						"sa-cloud-build@cloud-build-pipeline-396819.iam.gserviceaccount.com",
+						"sa-cloud-build@hammer-bootstrap.iam.gserviceaccount.com",
 					),
 					Substitutions: map[string]string{
 						"_ENV":     "dev",
@@ -288,7 +288,7 @@ func Test_makeTrigger(t *testing.T) {
 						ServiceAccount: fmt.Sprintf(
 							"projects/%s/serviceAccounts/%s",
 							"project",
-							"sa-cloud-build@cloud-build-pipeline-396819.iam.gserviceaccount.com",
+							"sa-cloud-build@hammer-bootstrap.iam.gserviceaccount.com",
 						),
 						Substitutions: map[string]string{
 							"_ENV":     "dev",
@@ -324,7 +324,7 @@ func Test_makeTrigger(t *testing.T) {
 					ServiceAccount: fmt.Sprintf(
 						"projects/%s/serviceAccounts/%s",
 						"project",
-						"sa-cloud-build@cloud-build-pipeline-396819.iam.gserviceaccount.com",
+						"sa-cloud-build@hammer-bootstrap.iam.gserviceaccount.com",
 					),
 					Substitutions: map[string]string{
 						"_ENV":     "dev",
@@ -361,7 +361,7 @@ func Test_makeTrigger(t *testing.T) {
 						ServiceAccount: fmt.Sprintf(
 							"projects/%s/serviceAccounts/%s",
 							"project",
-							"sa-cloud-build@cloud-build-pipeline-396819.iam.gserviceaccount.com",
+							"sa-cloud-build@hammer-bootstrap.iam.gserviceaccount.com",
 						),
 						Substitutions: map[string]string{
 							"_ENV":     "dev",
@@ -397,7 +397,7 @@ func Test_makeTrigger(t *testing.T) {
 					ServiceAccount: fmt.Sprintf(
 						"projects/%s/serviceAccounts/%s",
 						"project",
-						"sa-cloud-build@cloud-build-pipeline-396819.iam.gserviceaccount.com",
+						"sa-cloud-build@hammer-bootstrap.iam.gserviceaccount.com",
 					),
 					Substitutions: map[string]string{
 						"_ENV":     "dev",

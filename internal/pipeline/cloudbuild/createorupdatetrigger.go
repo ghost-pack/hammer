@@ -24,7 +24,7 @@ func (p *Pipeline) createOrUpdateTrigger(ctx context.Context) error {
 		return err
 	}
 
-	err = p.cloudBuildClient.CreateOrUpdateCloudBuildTrigger(ctx, "cloud-build-pipeline-396819", "212799175996", "global", properties.Path, p.component.Name)
+	err = p.cloudBuildClient.CreateOrUpdateCloudBuildTrigger(ctx, "hammer-bootstrap", "212799175996", "global", properties.Path, p.component.Name)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(otelCodes.Error, err.Error())

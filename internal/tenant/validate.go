@@ -67,10 +67,6 @@ func Validate(app *Tenant) error {
 		errs.Add("parentFolder", "is required")
 	}
 
-	if len(app.Spec.OrgPolicies) == 0 {
-		errs.Add("orgPolicies", "is required")
-	}
-
 	if len(errs) > 0 {
 		return errs
 	}

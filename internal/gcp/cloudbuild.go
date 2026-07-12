@@ -247,7 +247,7 @@ func createBuildTrigger(
 	serviceAccountName := fmt.Sprintf(
 		"projects/%s/serviceAccounts/%s",
 		projectID,
-		"sa-cloud-build@cloud-build-pipeline-396819.iam.gserviceaccount.com",
+		"sa-cloud-build@hammer-bootstrap.iam.gserviceaccount.com",
 	)
 
 	build := &cloudbuildpb.Build{

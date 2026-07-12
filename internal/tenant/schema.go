@@ -17,5 +17,4 @@ type Spec struct {
 	ParentFolder   string   `yaml:"parentFolder"`
 	AllowedApis    []string `yaml:"allowedAPIs"`
 	Environments   []string `yaml:"environments"`
-	OrgPolicies    []string `yaml:"orgPolicies"`
 }

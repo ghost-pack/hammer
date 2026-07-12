@@ -1,4 +1,4 @@
-apiVersion: platform.hammer.com/v1alpha1
+apiVersion: platform.hammerplatform.dev/v1alpha1
 metadata:
   name: acme-corpsadfasdfasdfojghiytfiytcfuytcfuyfcuycurtyfasdfasdfadsfjhbvohvsadofuhvasdofuyhgasdfuyghvasdofuyadgsfouygasdfouaysdgfoausdyfgoasduyfg
 spec:

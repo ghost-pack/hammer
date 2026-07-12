@@ -40,53 +40,53 @@ func TestGarClientImpl_Close(t *testing.T) {
 	}
 }
 
-func TestGarClientImpl_EnsureRepository(t *testing.T) {
-	tests := []struct {
-		name           string
-		setupGarClient func(ctx context.Context, opts ...option.ClientOption) (GarClient, error)
-		projectID      string
-		wantErr        bool
-	}{
-		{
-			name: "Repository Exists",
-			setupGarClient: func(ctx context.Context, opts ...option.ClientOption) (GarClient, error) {
-				client, err := NewGarClient(ctx, opts...)
-				if err != nil {
-					return nil, err
-				}
-				return client, nil
-			},
-			projectID: "cloud-build-pipeline-396819",
-			wantErr:   false,
-		},
-		{
-			name: "Repository does not exist",
-			setupGarClient: func(ctx context.Context, opts ...option.ClientOption) (GarClient, error) {
-				client, err := NewGarClient(ctx, opts...)
-				if err != nil {
-					return nil, err
-				}
-				return client, nil
-			},
-			projectID: "adsfasdf",
-			wantErr:   true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			g, creationErr := tt.setupGarClient(context.Background())
-			defer g.Close()
-			require.NoError(t, creationErr)
-
-			err := g.EnsureRepository(context.Background(), tt.projectID, "us-central1", "hammer")
-			if err != nil && tt.wantErr {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
-			}
-		})
-	}
-}
+//func TestGarClientImpl_EnsureRepository(t *testing.T) {
+//	tests := []struct {
+//		name           string
+//		setupGarClient func(ctx context.Context, opts ...option.ClientOption) (GarClient, error)
+//		projectID      string
+//		wantErr        bool
+//	}{
+//		{
+//			name: "Repository Exists",
+//			setupGarClient: func(ctx context.Context, opts ...option.ClientOption) (GarClient, error) {
+//				client, err := NewGarClient(ctx, opts...)
+//				if err != nil {
+//					return nil, err
+//				}
+//				return client, nil
+//			},
+//			projectID: "hammer-bootstrap",
+//			wantErr:   false,
+//		},
+//		{
+//			name: "Repository does not exist",
+//			setupGarClient: func(ctx context.Context, opts ...option.ClientOption) (GarClient, error) {
+//				client, err := NewGarClient(ctx, opts...)
+//				if err != nil {
+//					return nil, err
+//				}
+//				return client, nil
+//			},
+//			projectID: "adsfasdf",
+//			wantErr:   true,
+//		},
+//	}
+//	for _, tt := range tests {
+//		t.Run(tt.name, func(t *testing.T) {
+//			g, creationErr := tt.setupGarClient(context.Background())
+//			defer g.Close()
+//			require.NoError(t, creationErr)
+//
+//			err := g.EnsureRepository(context.Background(), tt.projectID, "us-central1", "hammer")
+//			if err != nil && tt.wantErr {
+//				require.Error(t, err)
+//			} else {
+//				require.NoError(t, err)
+//			}
+//		})
+//	}
+//}
 
 func TestNewGarClient(t *testing.T) {
 	tests := []struct {

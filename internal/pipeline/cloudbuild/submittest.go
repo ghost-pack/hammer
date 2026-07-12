@@ -31,7 +31,7 @@ func (p *Pipeline) submitTest(ctx context.Context) error {
 
 	for _, ph := range properties.Tests {
 		required := ph.Required != nil && *ph.Required
-		err := p.cloudBuildClient.TestCloudBuild(ctx, "cloud-build-pipeline-396819", "global", properties.Path, ph.Path)
+		err := p.cloudBuildClient.TestCloudBuild(ctx, "hammer-bootstrap", "global", properties.Path, ph.Path)
 		if err != nil && required {
 			span.RecordError(err)
 			span.SetStatus(otelCodes.Error, err.Error())

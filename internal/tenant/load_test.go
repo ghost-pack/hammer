@@ -18,7 +18,7 @@ func TestLoad(t *testing.T) {
 			path:    "testdata/tenant_test_success.yaml",
 			wantErr: false,
 			want: &Tenant{
-				APIVersion: "core.oam.dev/v1beta1",
+				APIVersion: "platform.hammerplatform.dev/v1alpha1",
 				Kind:       "Tenant",
 				Metadata: Metadata{
 					Name: "acme-corp",
@@ -28,7 +28,6 @@ func TestLoad(t *testing.T) {
 					ParentFolder:   "folders/123456789",
 					AllowedApis:    []string{"run.googleapis.com", "artifactregistry.googleapis.com", "logging.googleapis.com", "monitoring.googleapis.com"},
 					Environments:   []string{"dev", "prod"},
-					OrgPolicies:    []string{"constraints/compute.requireOsLogin", "constraints/iam.disableServiceAccountKeyCreation"},
 				},
 			},
 		},

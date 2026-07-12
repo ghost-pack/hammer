@@ -1,9 +1,13 @@
 package cli
 
 import (
+	"fmt"
 	"log/slog"
+	"os"
+	"path/filepath"
 
 	"github.com/ghost-pack/hammer/internal/observability/tracing"
+	"github.com/ghost-pack/hammer/internal/tenant"
 	"github.com/spf13/cobra"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -22,61 +26,35 @@ func newTenantCmd() *cobra.Command {
 			defer span.End()
 
 			slog.InfoContext(ctx, "tenant start",
-				"file", flagTenantFile,
-				"env", flagEnv,
+				"folder", flagTenantFolder,
 			)
 
-			// Just giving this to every pipeline for now.
-			//dockerClient := docker.NewClient()
-			//
-			//garClient, err := gcp.NewGarClient(cmd.Context())
-			//if err != nil {
-			//	return err
-			//}
-			//defer garClient.Close()
-			//
-			//cloudBuildClient, err := gcp.NewCloudBuildClient(cmd.Context())
-			//if err != nil {
-			//	return err
-			//}
-			//defer cloudBuildClient.Close()
-			//
-			//cloudStorageClient, err := gcp.NewCloudStorageClient(cmd.Context())
-			//if err != nil {
-			//	return err
-			//}
-			//defer cloudStorageClient.Close()
-			//
-			//app, err := oam.Load(flagOAMFile)
-			//if err != nil {
-			//	return err
-			//}
-			//
-			//onMain := os.Getenv("BRANCH_NAME") == "main"
-			//
-			//for _, component := range app.Spec.Components {
-			//	componentPipeline, err := pipeline.For(component, pipeline.DependencyClients{DockerClient: dockerClient, GarClient: garClient, CloudBuild: cloudBuildClient, CloudStorage: cloudStorageClient})
-			//	if err != nil {
-			//		return err
-			//	}
-			//	var run func(context.Context) error
-			//	if onMain {
-			//		run = componentPipeline.CI
-			//	} else {
-			//		run = componentPipeline.Analyze
-			//	}
-			//
-			//	if err := run(ctx); err != nil {
-			//		return err
-			//	}
-			//
-			//	if onMain {
-			//		err := componentPipeline.Deploy(ctx)
-			//		if err != nil {
-			//			return err
-			//		}
-			//	}
-			//}
+			onMain := os.Getenv("BRANCH_NAME") == "main"
+			if !onMain {
+				slog.InfoContext(ctx, "tenant flow short-circuited as we are not on main")
+				return nil
+			}
+
+			entries, err := os.ReadDir(flagTenantFolder)
+			if err != nil {
+				return fmt.Errorf("reading tenants dir: %w", err)
+			}
+
+			for _, entry := range entries {
+				if entry.IsDir() {
+					continue
+				}
+				if filepath.Ext(entry.Name()) != ".yaml" {
+					continue
+				}
+
+				path := filepath.Join("tenants", entry.Name())
+				_, err := tenant.Load(path)
+				if err != nil {
+					return err
+				}
+				// interpret tenant.
+			}
 
 			slog.InfoContext(ctx, "tenant flow complete")
 			return nil
