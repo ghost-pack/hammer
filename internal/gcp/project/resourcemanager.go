@@ -79,6 +79,7 @@ func newResourceManagerWithAPI(api projectsAPI, api2 foldersAPI) *ResourceManage
 
 func (c *ResourceManagerClientImpl) Close() error {
 	if err := c.folders.Close(); err != nil {
+		c.projects.Close()
 		return err
 	}
 	return c.projects.Close()

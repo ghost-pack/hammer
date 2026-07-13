@@ -7,7 +7,6 @@ import (
 
 	"cloud.google.com/go/iam/admin/apiv1/adminpb"
 	"cloud.google.com/go/iam/apiv1/iampb"
-	resourcemanager "cloud.google.com/go/resourcemanager/apiv3"
 	"cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
 	gax "github.com/googleapis/gax-go/v2"
 	"github.com/stretchr/testify/mock"
@@ -39,6 +38,18 @@ func (m *MockIamAPI) Close() error {
 	return args.Error(0)
 }
 
+type MockCreateProjectOperation struct {
+	mock.Mock
+}
+
+func (m *MockCreateProjectOperation) Wait(ctx context.Context, opts ...gax.CallOption) (*resourcemanagerpb.Project, error) {
+	args := m.Called(ctx)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*resourcemanagerpb.Project), args.Error(1)
+}
+
 type MockProjectsAPI struct {
 	mock.Mock
 }
@@ -61,9 +72,9 @@ func (m *MockProjectsAPI) GetProject(ctx context.Context, req *resourcemanagerpb
 	return op, args.Error(1)
 }
 
-func (m *MockProjectsAPI) CreateProject(ctx context.Context, req *resourcemanagerpb.CreateProjectRequest, opts ...gax.CallOption) (*resourcemanager.CreateProjectOperation, error) {
+func (m *MockProjectsAPI) CreateProject(ctx context.Context, req *resourcemanagerpb.CreateProjectRequest, opts ...gax.CallOption) (createProjectOperation, error) {
 	args := m.Called(ctx, req)
-	op, _ := args.Get(0).(*resourcemanager.CreateProjectOperation)
+	op, _ := args.Get(0).(createProjectOperation)
 	return op, args.Error(1)
 }
 

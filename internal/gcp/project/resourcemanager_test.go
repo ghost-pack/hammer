@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"testing"
 
-	"cloud.google.com/go/iam/admin/apiv1/adminpb"
-	"cloud.google.com/go/iam/apiv1/iampb"
 	"cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
 	"github.com/googleapis/gax-go/v2"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/api/iterator"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
@@ -88,98 +87,251 @@ func TestEnsureFolderExists(t *testing.T) {
 		mockOp.AssertExpectations(t)
 	})
 
-	t.Run("fail to create service accounts", func(t *testing.T) {
-		mockIamApi := &MockIamAPI{}
-		mockIamApi.On("GetServiceAccount", mock.Anything, mock.MatchedBy(func(req *adminpb.GetServiceAccountRequest) bool {
-			return req.Name == "projects/my-project/serviceAccounts/sa-cldrun@my-project.iam.gserviceaccount.com"
-		})).Return(nil, status.Error(codes.NotFound, "policy not found"))
+	t.Run("successfully find folder", func(t *testing.T) {
+		mockIter := &MockFolderIterator{}
+		// first call returns a folder that doesn't match
+		mockIter.On("Next").Return(&resourcemanagerpb.Folder{
+			Name:        "folders/111",
+			DisplayName: "other-folder",
+		}, nil).Once()
+		// second call returns the one we're looking for
+		mockIter.On("Next").Return(&resourcemanagerpb.Folder{
+			Name:        "folders/123456789",
+			DisplayName: "my-display-name",
+		}, nil).Once()
 
-		mockIamApi.On("CreateServiceAccount", mock.Anything, mock.MatchedBy(func(req *adminpb.CreateServiceAccountRequest) bool {
-			return req.Name == "projects/my-project" &&
-				req.AccountId == "sa-cldrun" &&
-				req.ServiceAccount.DisplayName == "sa-cldrun"
-		})).Return(nil, fmt.Errorf("some error"))
+		mockFoldersApi := &MockFoldersAPI{}
+		mockFoldersApi.On("CreateFolder", mock.Anything, mock.MatchedBy(func(req *resourcemanagerpb.CreateFolderRequest) bool {
+			expected := &resourcemanagerpb.CreateFolderRequest{
+				Folder: &resourcemanagerpb.Folder{
+					Parent:      "my-parent",
+					DisplayName: "my-display-name",
+				},
+			}
+			return proto.Equal(expected, req)
+		})).Return(nil, status.Error(codes.AlreadyExists, "already exists"))
 
-		client := newIamClientWithAPI(mockIamApi, &MockProjectsAPI{})
-		email, err := client.EnsureServiceAccountExists(context.Background(), "my-project", "sa-cldrun", "sa-cldrun")
-		require.Error(t, err)
-		require.Empty(t, email)
+		mockFoldersApi.On("ListFolders", mock.Anything, mock.Anything).
+			Return(mockIter)
 
-		mockIamApi.AssertExpectations(t)
-	})
+		client := newResourceManagerWithAPI(nil, mockFoldersApi)
+		name, err := client.EnsureFolderExists(context.Background(), "my-display-name", "my-parent")
 
-	t.Run("successfully find service accounts", func(t *testing.T) {
-		mockIamApi := &MockIamAPI{}
-		mockIamApi.On("GetServiceAccount", mock.Anything, mock.MatchedBy(func(req *adminpb.GetServiceAccountRequest) bool {
-			return req.Name == "projects/my-project/serviceAccounts/sa-cldrun@my-project.iam.gserviceaccount.com"
-		})).Return(&adminpb.ServiceAccount{Email: "sa-cldrun@my-project.iam.gserviceaccount.com"}, nil)
-
-		client := newIamClientWithAPI(mockIamApi, &MockProjectsAPI{})
-		email, err := client.EnsureServiceAccountExists(context.Background(), "my-project", "sa-cldrun", "sa-cldrun")
 		require.NoError(t, err)
-		require.Equal(t, "sa-cldrun@my-project.iam.gserviceaccount.com", email)
-
-		mockIamApi.AssertExpectations(t)
+		require.Equal(t, "folders/123456789", name)
+		mockFoldersApi.AssertExpectations(t)
+		mockIter.AssertExpectations(t)
 	})
 
-	t.Run("fail on find service accounts", func(t *testing.T) {
-		mockIamApi := &MockIamAPI{}
-		mockIamApi.On("GetServiceAccount", mock.Anything, mock.MatchedBy(func(req *adminpb.GetServiceAccountRequest) bool {
-			return req.Name == "projects/my-project/serviceAccounts/sa-cldrun@my-project.iam.gserviceaccount.com"
+	t.Run("returns error when folder not found in list", func(t *testing.T) {
+		mockIter := &MockFolderIterator{}
+		mockIter.On("Next").Return(nil, iterator.Done)
+
+		mockFolders := &MockFoldersAPI{}
+		mockFolders.On("CreateFolder", mock.Anything, mock.Anything).
+			Return(nil, status.Error(codes.AlreadyExists, "already exists"))
+		mockFolders.On("ListFolders", mock.Anything, mock.Anything).
+			Return(mockIter)
+
+		client := newResourceManagerWithAPI(nil, mockFolders)
+		_, err := client.EnsureFolderExists(context.Background(), "my-display-name", "my-parent")
+
+		require.Error(t, err)
+		require.ErrorContains(t, err, "not found")
+	})
+
+	t.Run("returns weird error during iterate", func(t *testing.T) {
+		mockIter := &MockFolderIterator{}
+		mockIter.On("Next").Return(nil, fmt.Errorf("some error"))
+
+		mockFolders := &MockFoldersAPI{}
+		mockFolders.On("CreateFolder", mock.Anything, mock.Anything).
+			Return(nil, status.Error(codes.AlreadyExists, "already exists"))
+		mockFolders.On("ListFolders", mock.Anything, mock.Anything).
+			Return(mockIter)
+
+		client := newResourceManagerWithAPI(nil, mockFolders)
+		_, err := client.EnsureFolderExists(context.Background(), "my-display-name", "my-parent")
+
+		require.Error(t, err)
+		require.ErrorContains(t, err, "some error")
+	})
+
+	t.Run("fail to create folder", func(t *testing.T) {
+		mockFoldersApi := &MockFoldersAPI{}
+		mockFoldersApi.On("CreateFolder", mock.Anything, mock.MatchedBy(func(req *resourcemanagerpb.CreateFolderRequest) bool {
+			expected := &resourcemanagerpb.CreateFolderRequest{
+				Folder: &resourcemanagerpb.Folder{
+					Parent:      "my-parent",
+					DisplayName: "my-display-name",
+				},
+			}
+			return proto.Equal(expected, req)
 		})).Return(nil, fmt.Errorf("some error"))
 
-		client := newIamClientWithAPI(mockIamApi, &MockProjectsAPI{})
-		email, err := client.EnsureServiceAccountExists(context.Background(), "my-project", "sa-cldrun", "sa-cldrun")
-		require.Error(t, err)
-		require.Empty(t, email)
+		client := newResourceManagerWithAPI(nil, mockFoldersApi)
+		name, err := client.EnsureFolderExists(context.Background(), "my-display-name", "my-parent")
 
-		mockIamApi.AssertExpectations(t)
+		require.Error(t, err)
+		require.Empty(t, name)
+		mockFoldersApi.AssertExpectations(t)
 	})
 
+	t.Run("failed while creating folder", func(t *testing.T) {
+		mockOp := &MockCreateFolderOperation{}
+		mockOp.On("Wait", mock.Anything).Return(nil, fmt.Errorf("some error"))
+
+		mockFoldersApi := &MockFoldersAPI{}
+		mockFoldersApi.On("CreateFolder", mock.Anything, mock.MatchedBy(func(req *resourcemanagerpb.CreateFolderRequest) bool {
+			expected := &resourcemanagerpb.CreateFolderRequest{
+				Folder: &resourcemanagerpb.Folder{
+					Parent:      "my-parent",
+					DisplayName: "my-display-name",
+				},
+			}
+			return proto.Equal(expected, req)
+		})).Return(mockOp, nil)
+
+		client := newResourceManagerWithAPI(nil, mockFoldersApi)
+		name, err := client.EnsureFolderExists(context.Background(), "my-display-name", "my-parent")
+
+		require.Error(t, err)
+		require.Empty(t, name)
+		mockFoldersApi.AssertExpectations(t)
+		mockOp.AssertExpectations(t)
+	})
 }
 
 func TestEnsureProjectExists(t *testing.T) {
-	t.Run("fail to get iam policy", func(t *testing.T) {
-		mockIamApi := &MockIamAPI{}
-		mockProjectsAPI := &MockProjectsAPI{}
-		mockProjectsAPI.On("GetIamPolicy", mock.Anything, mock.MatchedBy(func(req *iampb.GetIamPolicyRequest) bool {
-			return req.Resource == "projects/my-project"
-		})).Return(nil, fmt.Errorf("some error"))
+	t.Run("successfully get project", func(t *testing.T) {
+		mockProjectsApi := &MockProjectsAPI{}
+		mockProjectsApi.On("GetProject", mock.Anything, mock.MatchedBy(func(req *resourcemanagerpb.GetProjectRequest) bool {
+			return req.Name == "projects/my-project"
+		})).Return(nil, nil)
 
-		client := newIamClientWithAPI(mockIamApi, mockProjectsAPI)
-		err := client.BindProjectRoles(context.Background(), "my-project", "sa-cldrun@my-project.iam.gserviceaccount.com", []string{"my-role"})
-		require.Error(t, err)
+		client := newResourceManagerWithAPI(mockProjectsApi, nil)
+		err := client.EnsureProjectExists(context.Background(), "my-project", "my-parent", "123456789")
 
-		mockIamApi.AssertExpectations(t)
+		require.NoError(t, err)
+		mockProjectsApi.AssertExpectations(t)
 	})
 
+	t.Run("fail to get project with non-notfound error", func(t *testing.T) {
+		mockProjectsApi := &MockProjectsAPI{}
+		mockProjectsApi.On("GetProject", mock.Anything, mock.MatchedBy(func(req *resourcemanagerpb.GetProjectRequest) bool {
+			return req.Name == "projects/my-project"
+		})).Return(nil, fmt.Errorf("some error"))
+
+		client := newResourceManagerWithAPI(mockProjectsApi, nil)
+		err := client.EnsureProjectExists(context.Background(), "my-project", "my-parent", "123456789")
+
+		require.Error(t, err)
+		mockProjectsApi.AssertExpectations(t)
+	})
+
+	t.Run("successfully create project", func(t *testing.T) {
+		mockOp := &MockCreateProjectOperation{}
+		mockOp.On("Wait", mock.Anything).Return(&resourcemanagerpb.Project{
+			ProjectId: "my-project",
+		}, nil)
+
+		mockProjectsApi := &MockProjectsAPI{}
+		mockProjectsApi.On("GetProject", mock.Anything, mock.MatchedBy(func(req *resourcemanagerpb.GetProjectRequest) bool {
+			return req.Name == "projects/my-project"
+		})).Return(nil, status.Error(codes.NotFound, "not found"))
+		mockProjectsApi.On("CreateProject", mock.Anything, mock.MatchedBy(func(req *resourcemanagerpb.CreateProjectRequest) bool {
+			return proto.Equal(&resourcemanagerpb.CreateProjectRequest{
+				Project: &resourcemanagerpb.Project{
+					ProjectId:   "my-project",
+					DisplayName: "My Project",
+					Parent:      "folders/123",
+				},
+			}, req)
+		})).Return(mockOp, nil)
+
+		client := newResourceManagerWithAPI(mockProjectsApi, nil)
+		err := client.EnsureProjectExists(context.Background(), "my-project", "My Project", "folders/123")
+
+		require.NoError(t, err)
+		mockProjectsApi.AssertExpectations(t)
+		mockOp.AssertExpectations(t)
+	})
+
+	t.Run("failed create project", func(t *testing.T) {
+		mockProjectsApi := &MockProjectsAPI{}
+		mockProjectsApi.On("GetProject", mock.Anything, mock.MatchedBy(func(req *resourcemanagerpb.GetProjectRequest) bool {
+			return req.Name == "projects/my-project"
+		})).Return(nil, status.Error(codes.NotFound, "not found"))
+		mockProjectsApi.On("CreateProject", mock.Anything, mock.MatchedBy(func(req *resourcemanagerpb.CreateProjectRequest) bool {
+			return proto.Equal(&resourcemanagerpb.CreateProjectRequest{
+				Project: &resourcemanagerpb.Project{
+					ProjectId:   "my-project",
+					DisplayName: "My Project",
+					Parent:      "folders/123",
+				},
+			}, req)
+		})).Return(nil, fmt.Errorf("some error"))
+
+		client := newResourceManagerWithAPI(mockProjectsApi, nil)
+		err := client.EnsureProjectExists(context.Background(), "my-project", "My Project", "folders/123")
+
+		require.Error(t, err)
+		mockProjectsApi.AssertExpectations(t)
+	})
+
+	t.Run("failed create project wait", func(t *testing.T) {
+		mockOp := &MockCreateProjectOperation{}
+		mockOp.On("Wait", mock.Anything).Return(nil, fmt.Errorf("some error"))
+
+		mockProjectsApi := &MockProjectsAPI{}
+		mockProjectsApi.On("GetProject", mock.Anything, mock.MatchedBy(func(req *resourcemanagerpb.GetProjectRequest) bool {
+			return req.Name == "projects/my-project"
+		})).Return(nil, status.Error(codes.NotFound, "not found"))
+		mockProjectsApi.On("CreateProject", mock.Anything, mock.MatchedBy(func(req *resourcemanagerpb.CreateProjectRequest) bool {
+			return proto.Equal(&resourcemanagerpb.CreateProjectRequest{
+				Project: &resourcemanagerpb.Project{
+					ProjectId:   "my-project",
+					DisplayName: "My Project",
+					Parent:      "folders/123",
+				},
+			}, req)
+		})).Return(mockOp, nil)
+
+		client := newResourceManagerWithAPI(mockProjectsApi, nil)
+		err := client.EnsureProjectExists(context.Background(), "my-project", "My Project", "folders/123")
+
+		require.Error(t, err)
+		mockProjectsApi.AssertExpectations(t)
+		mockOp.AssertExpectations(t)
+	})
 }
 
 func TestResourceManagerClose(t *testing.T) {
 	t.Run("successfully close", func(t *testing.T) {
-		mockIamApi := &MockIamAPI{}
+		mockFoldersApi := &MockFoldersAPI{}
 		mockProjectsAPI := &MockProjectsAPI{}
-		mockIamApi.On("Close").Return(nil)
+		mockFoldersApi.On("Close").Return(nil)
 		mockProjectsAPI.On("Close").Return(nil)
 
-		client := newIamClientWithAPI(mockIamApi, mockProjectsAPI)
+		client := newResourceManagerWithAPI(mockProjectsAPI, mockFoldersApi)
 		err := client.Close()
 		require.NoError(t, err)
 
-		mockIamApi.AssertExpectations(t)
+		mockFoldersApi.AssertExpectations(t)
 		mockProjectsAPI.AssertExpectations(t)
 	})
 
 	t.Run("fail close", func(t *testing.T) {
-		mockIamApi := &MockIamAPI{}
+		mockFoldersApi := &MockFoldersAPI{}
 		mockProjectsAPI := &MockProjectsAPI{}
-		mockIamApi.On("Close").Return(fmt.Errorf("error"))
+		mockFoldersApi.On("Close").Return(fmt.Errorf("some error"))
+		mockProjectsAPI.On("Close").Return(nil)
 
-		client := newIamClientWithAPI(mockIamApi, mockProjectsAPI)
+		client := newResourceManagerWithAPI(mockProjectsAPI, mockFoldersApi)
 		err := client.Close()
 		require.Error(t, err)
 
-		mockIamApi.AssertExpectations(t)
+		mockFoldersApi.AssertExpectations(t)
 		mockProjectsAPI.AssertExpectations(t)
 	})
 }

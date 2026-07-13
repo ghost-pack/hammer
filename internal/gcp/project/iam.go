@@ -43,11 +43,15 @@ func (a *iamAdapter) Close() error {
 	return a.client.Close()
 }
 
+type createProjectOperation interface {
+	Wait(ctx context.Context, opts ...gax.CallOption) (*resourcemanagerpb.Project, error)
+}
+
 type projectsAPI interface {
 	GetIamPolicy(ctx context.Context, req *iampb.GetIamPolicyRequest, opts ...gax.CallOption) (*iampb.Policy, error)
 	SetIamPolicy(ctx context.Context, req *iampb.SetIamPolicyRequest, opts ...gax.CallOption) (*iampb.Policy, error)
 	GetProject(ctx context.Context, req *resourcemanagerpb.GetProjectRequest, opts ...gax.CallOption) (*resourcemanagerpb.Project, error)
-	CreateProject(ctx context.Context, req *resourcemanagerpb.CreateProjectRequest, opts ...gax.CallOption) (*resourcemanager.CreateProjectOperation, error)
+	CreateProject(ctx context.Context, req *resourcemanagerpb.CreateProjectRequest, opts ...gax.CallOption) (createProjectOperation, error) // ← changed
 	Close() error
 }
 
@@ -67,7 +71,7 @@ func (a *projectsAdapter) GetProject(ctx context.Context, req *resourcemanagerpb
 	return a.client.GetProject(ctx, req, opts...)
 }
 
-func (a *projectsAdapter) CreateProject(ctx context.Context, req *resourcemanagerpb.CreateProjectRequest, opts ...gax.CallOption) (*resourcemanager.CreateProjectOperation, error) {
+func (a *projectsAdapter) CreateProject(ctx context.Context, req *resourcemanagerpb.CreateProjectRequest, opts ...gax.CallOption) (createProjectOperation, error) {
 	return a.client.CreateProject(ctx, req, opts...)
 }
 
@@ -90,7 +94,7 @@ func NewIAMClient(ctx context.Context) (*IAMClientImpl, error) {
 		iamClient.Close()
 		return nil, fmt.Errorf("creating projects client for iam: %w", err)
 	}
-	return &IAMClientImpl{iam: &iamAdapter{client: iamClient}, projects: projectsClient}, nil
+	return &IAMClientImpl{iam: &iamAdapter{client: iamClient}, projects: &projectsAdapter{client: projectsClient}}, nil
 }
 
 func newIamClientWithAPI(api iamAPI, api2 projectsAPI) *IAMClientImpl {
