@@ -1,12 +1,299 @@
 package gcp
 
 import (
+	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	"cloud.google.com/go/cloudbuild/apiv1/v2/cloudbuildpb"
+	"cloud.google.com/go/longrunning/autogen/longrunningpb"
+	"github.com/googleapis/gax-go/v2"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/types/known/anypb"
 )
+
+func makeTestOperation(t *testing.T, buildID string) *longrunningpb.Operation {
+	t.Helper()
+	meta := &cloudbuildpb.BuildOperationMetadata{
+		Build: &cloudbuildpb.Build{
+			Id: buildID,
+		},
+	}
+	anyMeta, err := anypb.New(meta)
+	require.NoError(t, err)
+	return &longrunningpb.Operation{
+		Metadata: anyMeta,
+	}
+}
+
+type MockCloudBuildApi struct {
+	mock.Mock
+}
+
+func (m *MockCloudBuildApi) CreateBuild(ctx context.Context, req *cloudbuildpb.CreateBuildRequest, opts ...gax.CallOption) (*longrunningpb.Operation, error) {
+	args := m.Called(ctx, req)
+	op, _ := args.Get(0).(*longrunningpb.Operation)
+	return op, args.Error(1)
+}
+
+func (m *MockCloudBuildApi) GetBuild(ctx context.Context, req *cloudbuildpb.GetBuildRequest, opts ...gax.CallOption) (*cloudbuildpb.Build, error) {
+	args := m.Called(ctx, req)
+	op, _ := args.Get(0).(*cloudbuildpb.Build)
+	return op, args.Error(1)
+}
+
+func (m *MockCloudBuildApi) ListBuildTriggers(ctx context.Context, req *cloudbuildpb.ListBuildTriggersRequest, opts ...gax.CallOption) (*cloudbuildpb.ListBuildTriggersResponse, error) {
+	args := m.Called(ctx, req)
+	op, _ := args.Get(0).(*cloudbuildpb.ListBuildTriggersResponse)
+	return op, args.Error(1)
+}
+
+func (m *MockCloudBuildApi) CreateBuildTrigger(ctx context.Context, req *cloudbuildpb.CreateBuildTriggerRequest, opts ...gax.CallOption) (*cloudbuildpb.BuildTrigger, error) {
+	args := m.Called(ctx, req)
+	op, _ := args.Get(0).(*cloudbuildpb.BuildTrigger)
+	return op, args.Error(1)
+}
+
+func (m *MockCloudBuildApi) UpdateBuildTrigger(ctx context.Context, req *cloudbuildpb.UpdateBuildTriggerRequest, opts ...gax.CallOption) (*cloudbuildpb.BuildTrigger, error) {
+	args := m.Called(ctx, req)
+	op, _ := args.Get(0).(*cloudbuildpb.BuildTrigger)
+	return op, args.Error(1)
+}
+
+func (m *MockCloudBuildApi) Close() error {
+	args := m.Called()
+	return args.Error(0)
+}
+
+func TestTestCloudBuild(t *testing.T) {
+	t.Run("succeeds when build completes successfully", func(t *testing.T) {
+		mockAPI := &MockCloudBuildApi{}
+		mockAPI.On("CreateBuild", mock.Anything, mock.Anything).
+			Return(makeTestOperation(t, "build-123"), nil)
+		mockAPI.On("GetBuild", mock.Anything, mock.MatchedBy(func(req *cloudbuildpb.GetBuildRequest) bool {
+			return strings.Contains(req.Name, "build-123")
+		})).Return(&cloudbuildpb.Build{
+			Status: cloudbuildpb.Build_SUCCESS,
+		}, nil)
+
+		client := newCloudBuildClientWithAPI(mockAPI)
+		err := client.TestCloudBuild(context.Background(), "my-project", "us-central1", "testdata/cloudbuild.yaml", "testdata/cloudbuild_test.yaml")
+
+		require.NoError(t, err)
+		mockAPI.AssertExpectations(t)
+	})
+
+	t.Run("fails when unable to parse cloud build yaml", func(t *testing.T) {
+		mockAPI := &MockCloudBuildApi{}
+		client := newCloudBuildClientWithAPI(mockAPI)
+		err := client.TestCloudBuild(context.Background(), "my-project", "us-central1", "testdata/cloudbuild_bad_yaml.yaml", "testdata/cloudbuild_test.yaml")
+
+		require.Error(t, err)
+		mockAPI.AssertExpectations(t)
+	})
+
+	t.Run("fails when unable to parse cloud build test yaml", func(t *testing.T) {
+		mockAPI := &MockCloudBuildApi{}
+		client := newCloudBuildClientWithAPI(mockAPI)
+		err := client.TestCloudBuild(context.Background(), "my-project", "us-central1", "testdata/cloudbuild.yaml", "testdata/cloudbuild_test_bad_yaml.yaml")
+
+		require.Error(t, err)
+		mockAPI.AssertExpectations(t)
+	})
+
+	t.Run("fails when create build fials", func(t *testing.T) {
+		mockAPI := &MockCloudBuildApi{}
+		mockAPI.On("CreateBuild", mock.Anything, mock.Anything).
+			Return(nil, fmt.Errorf("some error"))
+
+		client := newCloudBuildClientWithAPI(mockAPI)
+		err := client.TestCloudBuild(context.Background(), "my-project", "us-central1", "testdata/cloudbuild.yaml", "testdata/cloudbuild_test.yaml")
+
+		require.Error(t, err)
+		mockAPI.AssertExpectations(t)
+	})
+
+	t.Run("fails when unmarshal fails", func(t *testing.T) {
+		mockAPI := &MockCloudBuildApi{}
+		mockAPI.On("CreateBuild", mock.Anything, mock.Anything).
+			Return(&longrunningpb.Operation{}, nil)
+
+		client := newCloudBuildClientWithAPI(mockAPI)
+		err := client.TestCloudBuild(context.Background(), "my-project", "us-central1", "testdata/cloudbuild.yaml", "testdata/cloudbuild_test.yaml")
+
+		require.Error(t, err)
+		mockAPI.AssertExpectations(t)
+	})
+
+	t.Run("fails when can't get build status", func(t *testing.T) {
+		mockAPI := &MockCloudBuildApi{}
+		mockAPI.On("CreateBuild", mock.Anything, mock.Anything).
+			Return(makeTestOperation(t, "build-123"), nil)
+		mockAPI.On("GetBuild", mock.Anything, mock.MatchedBy(func(req *cloudbuildpb.GetBuildRequest) bool {
+			return strings.Contains(req.Name, "build-123")
+		})).Return(nil, fmt.Errorf("some error"))
+
+		client := newCloudBuildClientWithAPI(mockAPI)
+		err := client.TestCloudBuild(context.Background(), "my-project", "us-central1", "testdata/cloudbuild.yaml", "testdata/cloudbuild_test.yaml")
+
+		require.Error(t, err)
+		mockAPI.AssertExpectations(t)
+	})
+
+	t.Run("fails when build status is bad", func(t *testing.T) {
+		mockAPI := &MockCloudBuildApi{}
+		mockAPI.On("CreateBuild", mock.Anything, mock.Anything).
+			Return(makeTestOperation(t, "build-123"), nil)
+		mockAPI.On("GetBuild", mock.Anything, mock.MatchedBy(func(req *cloudbuildpb.GetBuildRequest) bool {
+			return strings.Contains(req.Name, "build-123")
+		})).Return(&cloudbuildpb.Build{
+			Status: cloudbuildpb.Build_FAILURE,
+		}, nil)
+
+		client := newCloudBuildClientWithAPI(mockAPI)
+		err := client.TestCloudBuild(context.Background(), "my-project", "us-central1", "testdata/cloudbuild.yaml", "testdata/cloudbuild_test.yaml")
+
+		require.Error(t, err)
+		mockAPI.AssertExpectations(t)
+	})
+
+	t.Run("succeeds when checking build twice", func(t *testing.T) {
+		mockAPI := &MockCloudBuildApi{}
+		mockAPI.On("CreateBuild", mock.Anything, mock.Anything).
+			Return(makeTestOperation(t, "build-123"), nil)
+		mockAPI.On("GetBuild", mock.Anything, mock.MatchedBy(func(req *cloudbuildpb.GetBuildRequest) bool {
+			return strings.Contains(req.Name, "build-123")
+		})).Return(&cloudbuildpb.Build{
+			Status: cloudbuildpb.Build_WORKING,
+		}, nil).Once()
+
+		mockAPI.On("GetBuild", mock.Anything, mock.MatchedBy(func(req *cloudbuildpb.GetBuildRequest) bool {
+			return strings.Contains(req.Name, "build-123")
+		})).Return(&cloudbuildpb.Build{
+			Status: cloudbuildpb.Build_SUCCESS,
+		}, nil)
+
+		client := newCloudBuildClientWithAPI(mockAPI)
+		err := client.TestCloudBuild(context.Background(), "my-project", "us-central1", "testdata/cloudbuild.yaml", "testdata/cloudbuild_test.yaml")
+
+		require.NoError(t, err)
+		mockAPI.AssertExpectations(t)
+	})
+
+}
+
+func TestCreateOrUpdateCloudBuildTrigger(t *testing.T) {
+	t.Run("fails to parse cloud build yaml", func(t *testing.T) {
+		mockAPI := &MockCloudBuildApi{}
+
+		client := newCloudBuildClientWithAPI(mockAPI)
+		err := client.CreateOrUpdateCloudBuildTrigger(context.Background(), "my-project", "12345", "us-central1", "testdata/cloudbuild_bad_yaml.yaml", "webhook", "my_trigger")
+
+		require.Error(t, err)
+		mockAPI.AssertExpectations(t)
+	})
+
+	t.Run("fails to create trigger due to bad trigger type", func(t *testing.T) {
+		mockAPI := &MockCloudBuildApi{}
+
+		client := newCloudBuildClientWithAPI(mockAPI)
+		err := client.CreateOrUpdateCloudBuildTrigger(context.Background(), "my-project", "12345", "us-central1", "testdata/cloudbuild.yaml", "asdfoydfs", "my_trigger")
+
+		require.Error(t, err)
+		mockAPI.AssertExpectations(t)
+	})
+
+	t.Run("fails to find trigger", func(t *testing.T) {
+		mockAPI := &MockCloudBuildApi{}
+
+		mockAPI.On("ListBuildTriggers", mock.Anything, mock.Anything).
+			Return(nil, fmt.Errorf("some error"))
+
+		client := newCloudBuildClientWithAPI(mockAPI)
+		err := client.CreateOrUpdateCloudBuildTrigger(context.Background(), "my-project", "12345", "us-central1", "testdata/cloudbuild.yaml", "webhook", "my_trigger")
+
+		require.Error(t, err)
+		mockAPI.AssertExpectations(t)
+	})
+
+	t.Run("fails to update existing trigger", func(t *testing.T) {
+		mockAPI := &MockCloudBuildApi{}
+
+		mockAPI.On("ListBuildTriggers", mock.Anything, mock.Anything).
+			Return(&cloudbuildpb.ListBuildTriggersResponse{
+				Triggers: []*cloudbuildpb.BuildTrigger{
+					{Name: "my_trigger"},
+				},
+			}, nil)
+
+		mockAPI.On("UpdateBuildTrigger", mock.Anything, mock.Anything).
+			Return(nil, fmt.Errorf("some error"))
+
+		client := newCloudBuildClientWithAPI(mockAPI)
+		err := client.CreateOrUpdateCloudBuildTrigger(context.Background(), "my-project", "12345", "us-central1", "testdata/cloudbuild.yaml", "webhook", "my_trigger")
+
+		require.Error(t, err)
+		mockAPI.AssertExpectations(t)
+	})
+
+	t.Run("successfully update existing trigger", func(t *testing.T) {
+		mockAPI := &MockCloudBuildApi{}
+
+		mockAPI.On("ListBuildTriggers", mock.Anything, mock.Anything).
+			Return(&cloudbuildpb.ListBuildTriggersResponse{
+				Triggers: []*cloudbuildpb.BuildTrigger{
+					{Name: "my_trigger"},
+				},
+			}, nil)
+
+		mockAPI.On("UpdateBuildTrigger", mock.Anything, mock.Anything).
+			Return(nil, nil)
+
+		client := newCloudBuildClientWithAPI(mockAPI)
+		err := client.CreateOrUpdateCloudBuildTrigger(context.Background(), "my-project", "12345", "us-central1", "testdata/cloudbuild.yaml", "webhook", "my_trigger")
+
+		require.NoError(t, err)
+		mockAPI.AssertExpectations(t)
+	})
+
+	t.Run("fails to create new trigger", func(t *testing.T) {
+		mockAPI := &MockCloudBuildApi{}
+
+		mockAPI.On("ListBuildTriggers", mock.Anything, mock.Anything).
+			Return(&cloudbuildpb.ListBuildTriggersResponse{
+				Triggers: []*cloudbuildpb.BuildTrigger{},
+			}, nil)
+
+		mockAPI.On("CreateBuildTrigger", mock.Anything, mock.Anything).
+			Return(nil, fmt.Errorf("some error"))
+
+		client := newCloudBuildClientWithAPI(mockAPI)
+		err := client.CreateOrUpdateCloudBuildTrigger(context.Background(), "my-project", "12345", "us-central1", "testdata/cloudbuild.yaml", "webhook", "my_trigger")
+
+		require.Error(t, err)
+		mockAPI.AssertExpectations(t)
+	})
+
+	t.Run("successfully create new trigger", func(t *testing.T) {
+		mockAPI := &MockCloudBuildApi{}
+
+		mockAPI.On("ListBuildTriggers", mock.Anything, mock.Anything).
+			Return(&cloudbuildpb.ListBuildTriggersResponse{
+				Triggers: []*cloudbuildpb.BuildTrigger{},
+			}, nil)
+
+		mockAPI.On("CreateBuildTrigger", mock.Anything, mock.Anything).
+			Return(nil, nil)
+
+		client := newCloudBuildClientWithAPI(mockAPI)
+		err := client.CreateOrUpdateCloudBuildTrigger(context.Background(), "my-project", "12345", "us-central1", "testdata/cloudbuild.yaml", "webhook", "my_trigger")
+
+		require.NoError(t, err)
+		mockAPI.AssertExpectations(t)
+	})
+}
 
 func Test_buildSteps(t *testing.T) {
 	type args struct {
@@ -216,7 +503,7 @@ func Test_createBuildTrigger(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, _ := createBuildTrigger(tt.args.projectID, tt.args.projectNumber, tt.args.triggerName, tt.args.cfg)
+			got, _ := createBuildTrigger(tt.args.projectID, tt.args.projectNumber, tt.args.triggerName, "webhook", tt.args.cfg)
 			require.Equal(t, tt.want, got)
 		})
 	}

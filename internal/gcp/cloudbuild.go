@@ -9,17 +9,55 @@ import (
 	cloudbuild "cloud.google.com/go/cloudbuild/apiv1"
 	"cloud.google.com/go/cloudbuild/apiv1/v2/cloudbuildpb"
 	"cloud.google.com/go/longrunning/autogen/longrunningpb"
+	"github.com/googleapis/gax-go/v2"
 	"gopkg.in/yaml.v3"
 )
 
+type cloudBuildApi interface {
+	CreateBuild(ctx context.Context, req *cloudbuildpb.CreateBuildRequest, opts ...gax.CallOption) (*longrunningpb.Operation, error)
+	GetBuild(ctx context.Context, req *cloudbuildpb.GetBuildRequest, opts ...gax.CallOption) (*cloudbuildpb.Build, error)
+	ListBuildTriggers(ctx context.Context, req *cloudbuildpb.ListBuildTriggersRequest, opts ...gax.CallOption) (*cloudbuildpb.ListBuildTriggersResponse, error)
+	CreateBuildTrigger(ctx context.Context, req *cloudbuildpb.CreateBuildTriggerRequest, opts ...gax.CallOption) (*cloudbuildpb.BuildTrigger, error)
+	UpdateBuildTrigger(ctx context.Context, req *cloudbuildpb.UpdateBuildTriggerRequest, opts ...gax.CallOption) (*cloudbuildpb.BuildTrigger, error)
+	// TODO: Probably get delete trigger too, for reconciliation purposes.
+	Close() error
+}
+type cloudBuildAdapter struct {
+	client *cloudbuild.Client
+}
+
+func (a *cloudBuildAdapter) CreateBuild(ctx context.Context, req *cloudbuildpb.CreateBuildRequest, opts ...gax.CallOption) (*longrunningpb.Operation, error) {
+	return a.client.CreateBuild(ctx, req, opts...)
+}
+
+func (a *cloudBuildAdapter) GetBuild(ctx context.Context, req *cloudbuildpb.GetBuildRequest, opts ...gax.CallOption) (*cloudbuildpb.Build, error) {
+	return a.client.GetBuild(ctx, req, opts...)
+}
+
+func (a *cloudBuildAdapter) ListBuildTriggers(ctx context.Context, req *cloudbuildpb.ListBuildTriggersRequest, opts ...gax.CallOption) (*cloudbuildpb.ListBuildTriggersResponse, error) {
+	return a.client.ListBuildTriggers(ctx, req, opts...)
+}
+
+func (a *cloudBuildAdapter) CreateBuildTrigger(ctx context.Context, req *cloudbuildpb.CreateBuildTriggerRequest, opts ...gax.CallOption) (*cloudbuildpb.BuildTrigger, error) {
+	return a.client.CreateBuildTrigger(ctx, req, opts...)
+}
+
+func (a *cloudBuildAdapter) UpdateBuildTrigger(ctx context.Context, req *cloudbuildpb.UpdateBuildTriggerRequest, opts ...gax.CallOption) (*cloudbuildpb.BuildTrigger, error) {
+	return a.client.UpdateBuildTrigger(ctx, req, opts...)
+}
+
+func (a *cloudBuildAdapter) Close() error {
+	return a.client.Close()
+}
+
 type CloudBuildClient interface {
 	TestCloudBuild(ctx context.Context, projectID, location, cloudbuildPath, cloudBuildTestPath string) error
-	CreateOrUpdateCloudBuildTrigger(ctx context.Context, projectId, projectNumber, location, cloudBuildPath, triggerName string) error
+	CreateOrUpdateCloudBuildTrigger(ctx context.Context, projectId, projectNumber, location, cloudBuildPath, triggerType, triggerName string) error
 	Close() error
 }
 
 type CloudBuildClientImpl struct {
-	client *cloudbuild.Client
+	client cloudBuildApi
 }
 
 func NewCloudBuildClient(ctx context.Context) (*CloudBuildClientImpl, error) {
@@ -27,7 +65,13 @@ func NewCloudBuildClient(ctx context.Context) (*CloudBuildClientImpl, error) {
 	if err != nil {
 		return nil, fmt.Errorf("creating cloud build client: %w", err)
 	}
-	return &CloudBuildClientImpl{client: client}, nil
+	return &CloudBuildClientImpl{
+		client: &cloudBuildAdapter{client: client},
+	}, nil
+}
+
+func newCloudBuildClientWithAPI(api cloudBuildApi) *CloudBuildClientImpl {
+	return &CloudBuildClientImpl{client: api}
 }
 
 func (c *CloudBuildClientImpl) Close() error {
@@ -152,6 +196,7 @@ func (c *CloudBuildClientImpl) CreateOrUpdateCloudBuildTrigger(
 	projectNumber,
 	location,
 	cloudBuildPath,
+	triggerType,
 	triggerName string,
 ) error {
 	buildConfig, err := parseCloudBuild(cloudBuildPath)
@@ -163,6 +208,7 @@ func (c *CloudBuildClientImpl) CreateOrUpdateCloudBuildTrigger(
 		projectID,
 		projectNumber,
 		triggerName,
+		triggerType,
 		buildConfig,
 	)
 	if err != nil {
@@ -235,7 +281,8 @@ func (c *CloudBuildClientImpl) waitForBuild(
 func createBuildTrigger(
 	projectID,
 	projectNumber,
-	triggerName string,
+	triggerName,
+	triggerType string,
 	cfg *cloudBuildConfig,
 ) (*cloudbuildpb.BuildTrigger, error) {
 	secretResourceName := fmt.Sprintf(
@@ -262,7 +309,7 @@ func createBuildTrigger(
 
 	return makeTrigger(
 		triggerName,
-		"webhook",
+		triggerType,
 		secretResourceName,
 		"",
 		build,
@@ -339,7 +386,7 @@ func (c *CloudBuildClientImpl) updateTrigger(
 }
 
 func makeTrigger(
-	name, pipelineType, webhookSecret, pubSubTopic string,
+	name, triggerType, webhookSecret, pubSubTopic string,
 	build *cloudbuildpb.Build,
 	subs map[string]string,
 ) (*cloudbuildpb.BuildTrigger, error) {
@@ -349,7 +396,7 @@ func makeTrigger(
 		BuildTemplate: &cloudbuildpb.BuildTrigger_Build{Build: build},
 	}
 
-	switch pipelineType {
+	switch triggerType {
 	case "webhook":
 		t.WebhookConfig = &cloudbuildpb.WebhookConfig{
 			AuthMethod: &cloudbuildpb.WebhookConfig_Secret{
@@ -363,7 +410,7 @@ func makeTrigger(
 	case "manual":
 		// No trigger source required.
 	default:
-		return nil, fmt.Errorf("unsupported pipeline type %q", pipelineType)
+		return nil, fmt.Errorf("unsupported pipeline type %q", triggerType)
 	}
 	return t, nil
 }
