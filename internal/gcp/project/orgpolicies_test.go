@@ -63,6 +63,26 @@ func TestEnforcePolicy(t *testing.T) {
 		mockAPI.AssertExpectations(t)
 	})
 
+	t.Run("successfully update enforced policy", func(t *testing.T) {
+		mockAPI := &MockOrgPoliciesAPI{}
+		mockAPI.On("GetPolicy", mock.Anything, mock.MatchedBy(func(req *orgpolicypb.GetPolicyRequest) bool {
+			return req.Name == "projects/my-project/policies/constraints/iam.disableServiceAccountKeyCreation"
+		})).Return(&orgpolicypb.Policy{Etag: "1"}, nil)
+
+		mockAPI.On("UpdatePolicy", mock.Anything, mock.MatchedBy(func(req *orgpolicypb.UpdatePolicyRequest) bool {
+			return req.Policy != nil &&
+				req.Policy.Name == "projects/my-project/policies/constraints/iam.disableServiceAccountKeyCreation" &&
+				len(req.Policy.Spec.GetRules()) == 1 &&
+				req.Policy.Spec.GetRules()[0].GetEnforce() == true
+		})).Return(nil, nil)
+
+		client := newOrgPolicyClientWithAPI(mockAPI)
+		err := client.EnforcePolicy(context.Background(), "projects/my-project", "constraints/iam.disableServiceAccountKeyCreation")
+		require.NoError(t, err)
+
+		mockAPI.AssertExpectations(t)
+	})
+
 	t.Run("Fail to create enforced policy", func(t *testing.T) {
 		mockAPI := &MockOrgPoliciesAPI{}
 		mockAPI.On("GetPolicy", mock.Anything, mock.MatchedBy(func(req *orgpolicypb.GetPolicyRequest) bool {
