@@ -13,6 +13,16 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type CloudBuildClient interface {
+	TestCloudBuild(ctx context.Context, projectID, location, cloudbuildPath, cloudBuildTestPath string) error
+	CreateOrUpdateCloudBuildTrigger(ctx context.Context, projectId, projectNumber, location, cloudBuildPath, triggerType, triggerName string) error
+	Close() error
+}
+
+type CloudBuildClientImpl struct {
+	client cloudBuildApi
+}
+
 type cloudBuildApi interface {
 	CreateBuild(ctx context.Context, req *cloudbuildpb.CreateBuildRequest, opts ...gax.CallOption) (*longrunningpb.Operation, error)
 	GetBuild(ctx context.Context, req *cloudbuildpb.GetBuildRequest, opts ...gax.CallOption) (*cloudbuildpb.Build, error)
@@ -22,6 +32,7 @@ type cloudBuildApi interface {
 	// TODO: Probably get delete trigger too, for reconciliation purposes.
 	Close() error
 }
+
 type cloudBuildAdapter struct {
 	client *cloudbuild.Client
 }
@@ -48,16 +59,6 @@ func (a *cloudBuildAdapter) UpdateBuildTrigger(ctx context.Context, req *cloudbu
 
 func (a *cloudBuildAdapter) Close() error {
 	return a.client.Close()
-}
-
-type CloudBuildClient interface {
-	TestCloudBuild(ctx context.Context, projectID, location, cloudbuildPath, cloudBuildTestPath string) error
-	CreateOrUpdateCloudBuildTrigger(ctx context.Context, projectId, projectNumber, location, cloudBuildPath, triggerType, triggerName string) error
-	Close() error
-}
-
-type CloudBuildClientImpl struct {
-	client cloudBuildApi
 }
 
 func NewCloudBuildClient(ctx context.Context) (*CloudBuildClientImpl, error) {
