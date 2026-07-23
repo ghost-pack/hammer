@@ -7,7 +7,11 @@ import (
 
 	orgpolicy "cloud.google.com/go/orgpolicy/apiv2"
 	orgpolicypb "cloud.google.com/go/orgpolicy/apiv2/orgpolicypb"
+	"github.com/ghost-pack/hammer/internal/observability/tracing"
 	"github.com/googleapis/gax-go/v2"
+	"go.opentelemetry.io/otel/attribute"
+	otelCodes "go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -68,10 +72,18 @@ func (c *OrgPolicyClientImpl) Close() error {
 // resource is e.g. "projects/my-project-id" or "folders/123456"
 // constraint is e.g. "constraints/iam.disableServiceAccountKeyCreation"
 func (c *OrgPolicyClientImpl) EnforcePolicy(ctx context.Context, resource, constraint string) error {
+	ctx, span := tracing.Tracer("enforce org policy").Start(ctx, "enforce org policy",
+		trace.WithAttributes(
+			attribute.String("resource", resource),
+			attribute.String("constraint", constraint)))
+	defer span.End()
+
 	name := fmt.Sprintf("%s/policies/%s", resource, constraint)
 
 	existing, err := c.client.GetPolicy(ctx, &orgpolicypb.GetPolicyRequest{Name: name})
 	if err != nil && status.Code(err) != codes.NotFound {
+		span.RecordError(err)
+		span.SetStatus(otelCodes.Error, err.Error())
 		return fmt.Errorf("checking policy %s: %w", constraint, err)
 	}
 
@@ -101,9 +113,12 @@ func (c *OrgPolicyClientImpl) EnforcePolicy(ctx context.Context, resource, const
 		})
 	}
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(otelCodes.Error, err.Error())
 		return fmt.Errorf("enforcing policy %s on %s: %w", constraint, resource, err)
 	}
 
 	slog.InfoContext(ctx, "org policy enforced", "resource", resource, "constraint", constraint)
+	span.SetStatus(otelCodes.Ok, "policy enforced")
 	return nil
 }

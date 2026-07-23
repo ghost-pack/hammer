@@ -8,7 +8,11 @@ import (
 
 	resourcemanager "cloud.google.com/go/resourcemanager/apiv3"
 	resourcemanagerpb "cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
+	"github.com/ghost-pack/hammer/internal/observability/tracing"
 	"github.com/googleapis/gax-go/v2"
+	"go.opentelemetry.io/otel/attribute"
+	otelCodes "go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc/codes"
@@ -86,6 +90,11 @@ func (c *ResourceManagerClientImpl) Close() error {
 	return c.projects.Close()
 }
 func (c *ResourceManagerClientImpl) EnsureFolderExists(ctx context.Context, displayName, parent string) (string, error) {
+	ctx, span := tracing.Tracer("ensure folder exists").Start(ctx, "ensure folder exists",
+		trace.WithAttributes(
+			attribute.String("folder name", displayName)))
+	defer span.End()
+
 	op, err := c.folders.CreateFolder(ctx, &resourcemanagerpb.CreateFolderRequest{
 		Folder: &resourcemanagerpb.Folder{
 			Parent:      parent,
@@ -94,15 +103,21 @@ func (c *ResourceManagerClientImpl) EnsureFolderExists(ctx context.Context, disp
 	})
 	if err != nil {
 		if status.Code(err) != codes.AlreadyExists {
+			span.RecordError(err)
+			span.SetStatus(otelCodes.Error, err.Error())
 			return "", fmt.Errorf("creating folder %s: %w", displayName, err)
 		}
+		span.SetStatus(otelCodes.Ok, "folder already exists")
 		return c.findFolder(ctx, displayName, parent)
 	}
 	folder, err := op.Wait(ctx)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(otelCodes.Error, err.Error())
 		return "", fmt.Errorf("waiting for folder %s: %w", displayName, err)
 	}
 	slog.InfoContext(ctx, "folder created", "name", folder.Name)
+	span.SetStatus(otelCodes.Ok, "folder created")
 	return folder.Name, nil
 }
 
@@ -128,14 +143,21 @@ func (c *ResourceManagerClientImpl) findFolder(ctx context.Context, displayName,
 
 // EnsureProjectExists creates a project if it doesn't exist
 func (c *ResourceManagerClientImpl) EnsureProjectExists(ctx context.Context, projectID, displayName, parent string) error {
+	ctx, span := tracing.Tracer("ensure project exists").Start(ctx, "ensure project exists",
+		trace.WithAttributes(
+			attribute.String("project ID", projectID)))
+	defer span.End()
 	_, err := c.projects.GetProject(ctx, &resourcemanagerpb.GetProjectRequest{
 		Name: "projects/" + projectID,
 	})
 	if err == nil {
 		slog.InfoContext(ctx, "project already exists", "projectID", projectID)
+		span.SetStatus(otelCodes.Ok, "project already exists")
 		return nil
 	}
 	if status.Code(err) != codes.NotFound {
+		span.RecordError(err)
+		span.SetStatus(otelCodes.Error, err.Error())
 		return fmt.Errorf("checking project %s: %w", projectID, err)
 	}
 
@@ -147,11 +169,16 @@ func (c *ResourceManagerClientImpl) EnsureProjectExists(ctx context.Context, pro
 		},
 	})
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(otelCodes.Error, err.Error())
 		return fmt.Errorf("creating project %s: %w", projectID, err)
 	}
 	if _, err := op.Wait(ctx); err != nil {
+		span.RecordError(err)
+		span.SetStatus(otelCodes.Error, err.Error())
 		return fmt.Errorf("waiting for project %s: %w", projectID, err)
 	}
 	slog.InfoContext(ctx, "project created", "projectID", projectID)
+	span.SetStatus(otelCodes.Ok, "project created")
 	return nil
 }

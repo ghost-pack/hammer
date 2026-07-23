@@ -7,7 +7,11 @@ import (
 
 	billing "cloud.google.com/go/billing/apiv1"
 	billingpb "cloud.google.com/go/billing/apiv1/billingpb"
+	"github.com/ghost-pack/hammer/internal/observability/tracing"
 	"github.com/googleapis/gax-go/v2"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/api/option"
 )
 
@@ -53,6 +57,11 @@ func (c *BillingClientImpl) Close() error {
 }
 
 func (c *BillingClientImpl) LinkBillingAccount(ctx context.Context, projectID, billingAccount string) error {
+	ctx, span := tracing.Tracer("link billing account").Start(ctx, "link billing account",
+		trace.WithAttributes(
+			attribute.String("project", projectID),
+			attribute.String("billingAccount", billingAccount)))
+	defer span.End()
 	_, err := c.client.UpdateProjectBillingInfo(ctx, &billingpb.UpdateProjectBillingInfoRequest{
 		Name: "projects/" + projectID,
 		ProjectBillingInfo: &billingpb.ProjectBillingInfo{
@@ -60,8 +69,11 @@ func (c *BillingClientImpl) LinkBillingAccount(ctx context.Context, projectID, b
 		},
 	})
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("linking billing account to %s: %w", projectID, err)
 	}
 	slog.InfoContext(ctx, "billing account linked", "projectID", projectID, "billingAccount", billingAccount)
+	span.SetStatus(codes.Ok, "billing account linked")
 	return nil
 }

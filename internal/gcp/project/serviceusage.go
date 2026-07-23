@@ -4,10 +4,15 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	serviceusage "cloud.google.com/go/serviceusage/apiv1"
 	serviceusagepb "cloud.google.com/go/serviceusage/apiv1/serviceusagepb"
+	"github.com/ghost-pack/hammer/internal/observability/tracing"
 	gax "github.com/googleapis/gax-go/v2"
+	"go.opentelemetry.io/otel/attribute"
+	otelCodes "go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/api/option"
 )
 
@@ -62,6 +67,12 @@ func (c *ServiceUsageClientImpl) Close() error {
 }
 
 func (c *ServiceUsageClientImpl) EnableAPIs(ctx context.Context, projectID string, apis []string) error {
+	ctx, span := tracing.Tracer("enable apis").Start(ctx, "enable apis",
+		trace.WithAttributes(
+			attribute.String("project ID", projectID),
+			attribute.String("apis", strings.Join(apis, ","))))
+	defer span.End()
+
 	serviceNames := make([]string, len(apis))
 	for i, api := range apis {
 		serviceNames[i] = fmt.Sprintf("projects/%s/services/%s", projectID, api)
@@ -72,11 +83,16 @@ func (c *ServiceUsageClientImpl) EnableAPIs(ctx context.Context, projectID strin
 		ServiceIds: serviceNames,
 	})
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(otelCodes.Error, err.Error())
 		return fmt.Errorf("enabling APIs on %s: %w", projectID, err)
 	}
 	if _, err := op.Wait(ctx); err != nil {
+		span.RecordError(err)
+		span.SetStatus(otelCodes.Error, err.Error())
 		return fmt.Errorf("waiting for API enablement on %s: %w", projectID, err)
 	}
 	slog.InfoContext(ctx, "APIs enabled", "projectID", projectID, "apis", apis)
+	span.SetStatus(otelCodes.Ok, "APIs enabled")
 	return nil
 }

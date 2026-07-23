@@ -10,7 +10,11 @@ import (
 	iampb "cloud.google.com/go/iam/apiv1/iampb"
 	resourcemanager "cloud.google.com/go/resourcemanager/apiv3"
 	"cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
+	"github.com/ghost-pack/hammer/internal/observability/tracing"
 	"github.com/googleapis/gax-go/v2"
+	"go.opentelemetry.io/otel/attribute"
+	otelCodes "go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -111,14 +115,23 @@ func (c *IAMClientImpl) Close() error {
 
 // EnsureServiceAccountExists creates a SA if it doesn't exist, returns its email
 func (c *IAMClientImpl) EnsureServiceAccountExists(ctx context.Context, projectID, name, displayName string) (string, error) {
+	ctx, span := tracing.Tracer("ensure service account exists").Start(ctx, "ensure service account",
+		trace.WithAttributes(
+			attribute.String("project", projectID),
+			attribute.String("serviceAccountDisplayName", displayName)))
+	defer span.End()
+
 	resource := fmt.Sprintf("projects/%s/serviceAccounts/%s@%s.iam.gserviceaccount.com", projectID, name, projectID)
 
 	sa, err := c.iam.GetServiceAccount(ctx, &adminpb.GetServiceAccountRequest{Name: resource})
 	if err == nil {
 		slog.InfoContext(ctx, "service account already exists", "email", sa.Email)
+		span.SetStatus(otelCodes.Ok, "service account already exists")
 		return sa.Email, nil
 	}
 	if status.Code(err) != codes.NotFound {
+		span.RecordError(err)
+		span.SetStatus(otelCodes.Error, err.Error())
 		return "", fmt.Errorf("checking service account %s: %w", name, err)
 	}
 
@@ -130,13 +143,22 @@ func (c *IAMClientImpl) EnsureServiceAccountExists(ctx context.Context, projectI
 		},
 	})
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(otelCodes.Error, err.Error())
 		return "", fmt.Errorf("creating service account %s: %w", name, err)
 	}
 	slog.InfoContext(ctx, "service account created", "email", sa.Email)
+	span.SetStatus(otelCodes.Ok, "service account created")
 	return sa.Email, nil
 }
 
 func (c *IAMClientImpl) BindProjectRoles(ctx context.Context, projectID, saEmail string, roles []string) error {
+	ctx, span := tracing.Tracer("bind service account roles").Start(ctx, "bind service account roles",
+		trace.WithAttributes(
+			attribute.String("project", projectID),
+			attribute.String("serviceAccountEmail", saEmail)))
+	defer span.End()
+
 	projectName := "projects/" + projectID
 	member := "serviceAccount:" + saEmail
 
@@ -144,6 +166,8 @@ func (c *IAMClientImpl) BindProjectRoles(ctx context.Context, projectID, saEmail
 		Resource: projectName,
 	})
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(otelCodes.Error, err.Error())
 		return fmt.Errorf("getting IAM policy for %s: %w", projectID, err)
 	}
 
@@ -156,9 +180,12 @@ func (c *IAMClientImpl) BindProjectRoles(ctx context.Context, projectID, saEmail
 		Policy:   policy,
 	})
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(otelCodes.Error, err.Error())
 		return fmt.Errorf("setting IAM policy for %s: %w", projectID, err)
 	}
 	slog.InfoContext(ctx, "roles bound", "projectID", projectID, "sa", saEmail, "roles", roles)
+	span.SetStatus(otelCodes.Ok, "roles bound")
 	return nil
 }
 

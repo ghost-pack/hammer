@@ -4,16 +4,11 @@ import (
 	"context"
 
 	"github.com/ghost-pack/hammer/internal/observability/tracing"
-	"go.opentelemetry.io/otel/attribute"
 	otelCodes "go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/trace"
 )
 
 func (p *Pipeline) createOrUpdateTrigger(ctx context.Context) error {
-	ctx, span := tracing.Tracer("gcloud builds triggers").Start(ctx, "gcloud builds triggers",
-		trace.WithAttributes(
-			attribute.String("cmd", "gcloud"),
-			attribute.StringSlice("args", []string{"builds", "triggers"})))
+	ctx, span := tracing.Tracer("creating cloud build trigger").Start(ctx, "creating cloud build trigger")
 	defer span.End()
 
 	var properties Properties
@@ -24,7 +19,7 @@ func (p *Pipeline) createOrUpdateTrigger(ctx context.Context) error {
 		return err
 	}
 
-	err = p.cloudBuildClient.CreateOrUpdateCloudBuildTrigger(ctx, "hammer-bootstrap", "212799175996", "global", properties.Path, "webhook", p.component.Name)
+	err = p.cloudBuildClient.CreateOrUpdateCloudBuildTrigger(ctx, "hammer-bootstrap", "40324185623", "global", properties.Path, "webhook", p.component.Name)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(otelCodes.Error, err.Error())

@@ -9,7 +9,11 @@ import (
 	cloudbuild "cloud.google.com/go/cloudbuild/apiv1"
 	"cloud.google.com/go/cloudbuild/apiv1/v2/cloudbuildpb"
 	"cloud.google.com/go/longrunning/autogen/longrunningpb"
+	"github.com/ghost-pack/hammer/internal/observability/tracing"
 	"github.com/googleapis/gax-go/v2"
+	"go.opentelemetry.io/otel/attribute"
+	otelCodes "go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/api/option"
 	"gopkg.in/yaml.v3"
 )
@@ -164,13 +168,23 @@ func (c *CloudBuildClientImpl) TestCloudBuild(
 	cloudBuildPath,
 	cloudBuildTestPath string,
 ) error {
+	ctx, span := tracing.Tracer("gcloud builds submit test").Start(ctx, "gcloud builds submit test",
+		trace.WithAttributes(
+			attribute.String("cmd", "gcloud"),
+			attribute.StringSlice("args", []string{"builds", "submit"})))
+	defer span.End()
+
 	buildConfig, err := parseCloudBuild(cloudBuildPath)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(otelCodes.Error, err.Error())
 		return err
 	}
 
 	testConfig, err := parseCloudBuildTest(cloudBuildTestPath)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(otelCodes.Error, err.Error())
 		return err
 	}
 
@@ -186,10 +200,20 @@ func (c *CloudBuildClientImpl) TestCloudBuild(
 		Build:     build,
 	})
 	if err != nil {
-		return fmt.Errorf("submitting build: %w", err)
+		buildSubmissionError := fmt.Errorf("submitting build: %w", err)
+		span.RecordError(buildSubmissionError)
+		span.SetStatus(otelCodes.Error, buildSubmissionError.Error())
+		return buildSubmissionError
 	}
 
-	return c.waitForBuild(ctx, projectID, location, op)
+	err = c.waitForBuild(ctx, projectID, location, op)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(otelCodes.Error, err.Error())
+		return err
+	}
+	span.SetStatus(otelCodes.Ok, "")
+	return nil
 }
 
 func (c *CloudBuildClientImpl) CreateOrUpdateCloudBuildTrigger(
@@ -201,8 +225,15 @@ func (c *CloudBuildClientImpl) CreateOrUpdateCloudBuildTrigger(
 	triggerType,
 	triggerName string,
 ) error {
+	ctx, span := tracing.Tracer("gcloud builds triggers").Start(ctx, "gcloud builds triggers",
+		trace.WithAttributes(
+			attribute.String("cmd", "gcloud"),
+			attribute.StringSlice("args", []string{"builds", "triggers"})))
+	defer span.End()
 	buildConfig, err := parseCloudBuild(cloudBuildPath)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(otelCodes.Error, err.Error())
 		return err
 	}
 
@@ -214,11 +245,15 @@ func (c *CloudBuildClientImpl) CreateOrUpdateCloudBuildTrigger(
 		buildConfig,
 	)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(otelCodes.Error, err.Error())
 		return err
 	}
 
 	existingTrigger, err := c.findTrigger(ctx, projectID, triggerName)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(otelCodes.Error, err.Error())
 		return err
 	}
 
@@ -231,12 +266,19 @@ func (c *CloudBuildClientImpl) CreateOrUpdateCloudBuildTrigger(
 		)
 	}
 
-	return c.updateTrigger(
+	err = c.updateTrigger(
 		ctx,
 		projectID,
 		existingTrigger.Id,
 		trigger,
 	)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(otelCodes.Error, err.Error())
+		return err
+	}
+	span.SetStatus(otelCodes.Ok, "")
+	return nil
 }
 
 func (c *CloudBuildClientImpl) waitForBuild(

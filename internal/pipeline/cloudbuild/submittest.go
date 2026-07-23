@@ -5,21 +5,18 @@ import (
 	"fmt"
 
 	"github.com/ghost-pack/hammer/internal/observability/tracing"
-	"go.opentelemetry.io/otel/attribute"
 	otelCodes "go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/trace"
 )
 
 func (p *Pipeline) submitTest(ctx context.Context) error {
-	ctx, span := tracing.Tracer("gcloud builds submit test").Start(ctx, "gcloud builds submit test",
-		trace.WithAttributes(
-			attribute.String("cmd", "gcloud"),
-			attribute.StringSlice("args", []string{"builds", "submit"})))
+	ctx, span := tracing.Tracer("testing cloud build pipelines").Start(ctx, "testing cloud build pipelines")
 	defer span.End()
 
 	var properties Properties
 	err := parseCloudBuildPath(p, &properties)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(otelCodes.Error, err.Error())
 		return err
 	}
 	if properties.Tests == nil {
