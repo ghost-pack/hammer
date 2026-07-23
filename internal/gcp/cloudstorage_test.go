@@ -11,6 +11,7 @@ import (
 	"cloud.google.com/go/storage"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/api/option"
 )
 
 type MockStorageClientAPI struct{ mock.Mock }
@@ -272,4 +273,34 @@ func TestEnsureBucketExists(t *testing.T) {
 		require.ErrorContains(t, err, "creating bucket")
 		require.ErrorContains(t, err, "quota exceeded")
 	})
+}
+
+func TestNewCloudStorageClient(t *testing.T) {
+	tests := []struct {
+		name                    string
+		setupCloudStorageClient func(ctx context.Context, opts ...option.ClientOption) (CloudStorageClient, error)
+		wantErr                 bool
+	}{
+		{
+			name: "failed client creation",
+			setupCloudStorageClient: func(ctx context.Context, opts ...option.ClientOption) (CloudStorageClient, error) {
+				client, err := NewCloudStorageClient(ctx, opts...)
+				if err != nil {
+					return nil, err
+				}
+				return client, nil
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, creationErr := tt.setupCloudStorageClient(context.Background(), option.WithCredentialsFile("/nonexistent/credentials.json"))
+			if creationErr != nil && tt.wantErr {
+				require.Error(t, creationErr)
+			} else {
+				require.NoError(t, creationErr)
+			}
+		})
+	}
 }

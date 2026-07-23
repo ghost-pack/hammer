@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/api/iterator"
+	"google.golang.org/api/option"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
@@ -334,4 +335,34 @@ func TestResourceManagerClose(t *testing.T) {
 		mockFoldersApi.AssertExpectations(t)
 		mockProjectsAPI.AssertExpectations(t)
 	})
+}
+
+func TestNewResourceManangerClient(t *testing.T) {
+	tests := []struct {
+		name                       string
+		setupResourceManagerClient func(ctx context.Context, opts ...option.ClientOption) (ResourceManagerClient, error)
+		wantErr                    bool
+	}{
+		{
+			name: "failed client creation",
+			setupResourceManagerClient: func(ctx context.Context, opts ...option.ClientOption) (ResourceManagerClient, error) {
+				client, err := NewResourceManagerClient(ctx, opts...)
+				if err != nil {
+					return nil, err
+				}
+				return client, nil
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, creationErr := tt.setupResourceManagerClient(context.Background(), option.WithCredentialsFile("/nonexistent/credentials.json"))
+			if creationErr != nil && tt.wantErr {
+				require.Error(t, creationErr)
+			} else {
+				require.NoError(t, creationErr)
+			}
+		})
+	}
 }

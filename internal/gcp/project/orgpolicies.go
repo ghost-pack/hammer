@@ -8,6 +8,7 @@ import (
 	orgpolicy "cloud.google.com/go/orgpolicy/apiv2"
 	orgpolicypb "cloud.google.com/go/orgpolicy/apiv2/orgpolicypb"
 	"github.com/googleapis/gax-go/v2"
+	"google.golang.org/api/option"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -47,8 +48,8 @@ type OrgPolicyClientImpl struct {
 	client orgPolicyAPI
 }
 
-func NewOrgPolicyClient(ctx context.Context) (*OrgPolicyClientImpl, error) {
-	client, err := orgpolicy.NewClient(ctx)
+func NewOrgPolicyClient(ctx context.Context, opts ...option.ClientOption) (*OrgPolicyClientImpl, error) {
+	client, err := orgpolicy.NewClient(ctx, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("creating org policy client: %w", err)
 	}

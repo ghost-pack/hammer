@@ -9,6 +9,7 @@ import (
 	gax "github.com/googleapis/gax-go/v2"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/api/option"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -151,4 +152,34 @@ func TestOrgPolicyClientClose(t *testing.T) {
 		mockAPI.AssertExpectations(t)
 	})
 
+}
+
+func TestNewOrgPoliciesClient(t *testing.T) {
+	tests := []struct {
+		name                   string
+		setupOrgPoliciesClient func(ctx context.Context, opts ...option.ClientOption) (OrgPolicyClient, error)
+		wantErr                bool
+	}{
+		{
+			name: "failed client creation",
+			setupOrgPoliciesClient: func(ctx context.Context, opts ...option.ClientOption) (OrgPolicyClient, error) {
+				client, err := NewOrgPolicyClient(ctx, opts...)
+				if err != nil {
+					return nil, err
+				}
+				return client, nil
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, creationErr := tt.setupOrgPoliciesClient(context.Background(), option.WithCredentialsFile("/nonexistent/credentials.json"))
+			if creationErr != nil && tt.wantErr {
+				require.Error(t, creationErr)
+			} else {
+				require.NoError(t, creationErr)
+			}
+		})
+	}
 }

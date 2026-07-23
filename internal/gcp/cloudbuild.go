@@ -10,6 +10,7 @@ import (
 	"cloud.google.com/go/cloudbuild/apiv1/v2/cloudbuildpb"
 	"cloud.google.com/go/longrunning/autogen/longrunningpb"
 	"github.com/googleapis/gax-go/v2"
+	"google.golang.org/api/option"
 	"gopkg.in/yaml.v3"
 )
 
@@ -61,8 +62,8 @@ func (a *cloudBuildAdapter) Close() error {
 	return a.client.Close()
 }
 
-func NewCloudBuildClient(ctx context.Context) (*CloudBuildClientImpl, error) {
-	client, err := cloudbuild.NewClient(ctx)
+func NewCloudBuildClient(ctx context.Context, opts ...option.ClientOption) (*CloudBuildClientImpl, error) {
+	client, err := cloudbuild.NewClient(ctx, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("creating cloud build client: %w", err)
 	}

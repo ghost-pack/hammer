@@ -10,6 +10,7 @@ import (
 	resourcemanagerpb "cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
 	"github.com/googleapis/gax-go/v2"
 	"google.golang.org/api/iterator"
+	"google.golang.org/api/option"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -57,12 +58,12 @@ type ResourceManagerClientImpl struct {
 	projects projectsAPI
 }
 
-func NewResourceManagerClient(ctx context.Context) (*ResourceManagerClientImpl, error) {
-	folders, err := resourcemanager.NewFoldersClient(ctx)
+func NewResourceManagerClient(ctx context.Context, opts ...option.ClientOption) (*ResourceManagerClientImpl, error) {
+	folders, err := resourcemanager.NewFoldersClient(ctx, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("creating folders client: %w", err)
 	}
-	projects, err := resourcemanager.NewProjectsClient(ctx)
+	projects, err := resourcemanager.NewProjectsClient(ctx, opts...)
 	if err != nil {
 		folders.Close()
 		return nil, fmt.Errorf("creating projects client: %w", err)

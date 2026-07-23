@@ -11,6 +11,7 @@ import (
 	gax "github.com/googleapis/gax-go/v2"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/api/option"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
@@ -291,4 +292,34 @@ func TestIAMClientClose(t *testing.T) {
 		mockIamApi.AssertExpectations(t)
 		mockProjectsAPI.AssertExpectations(t)
 	})
+}
+
+func TestNewIamClient(t *testing.T) {
+	tests := []struct {
+		name           string
+		setupIamClient func(ctx context.Context, opts ...option.ClientOption) (IAMClient, error)
+		wantErr        bool
+	}{
+		{
+			name: "failed client creation",
+			setupIamClient: func(ctx context.Context, opts ...option.ClientOption) (IAMClient, error) {
+				client, err := NewIAMClient(ctx, opts...)
+				if err != nil {
+					return nil, err
+				}
+				return client, nil
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, creationErr := tt.setupIamClient(context.Background(), option.WithCredentialsFile("/nonexistent/credentials.json"))
+			if creationErr != nil && tt.wantErr {
+				require.Error(t, creationErr)
+			} else {
+				require.NoError(t, creationErr)
+			}
+		})
+	}
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/googleapis/gax-go/v2"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/api/option"
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
@@ -847,6 +848,36 @@ func Test_parseCloudBuildTest(t *testing.T) {
 				require.Error(t, err)
 			}
 			require.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestNewCloudBuildClient(t *testing.T) {
+	tests := []struct {
+		name                  string
+		setupCloudBuildClient func(ctx context.Context, opts ...option.ClientOption) (CloudBuildClient, error)
+		wantErr               bool
+	}{
+		{
+			name: "failed client creation",
+			setupCloudBuildClient: func(ctx context.Context, opts ...option.ClientOption) (CloudBuildClient, error) {
+				client, err := NewCloudBuildClient(ctx, opts...)
+				if err != nil {
+					return nil, err
+				}
+				return client, nil
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, creationErr := tt.setupCloudBuildClient(context.Background(), option.WithCredentialsFile("/nonexistent/credentials.json"))
+			if creationErr != nil && tt.wantErr {
+				require.Error(t, creationErr)
+			} else {
+				require.NoError(t, creationErr)
+			}
 		})
 	}
 }

@@ -7,6 +7,7 @@ import (
 	artifactregistry "cloud.google.com/go/artifactregistry/apiv1"
 	"cloud.google.com/go/artifactregistry/apiv1/artifactregistrypb"
 	"github.com/ghost-pack/hammer/internal/observability/tracing"
+	"github.com/googleapis/gax-go/v2"
 	"go.opentelemetry.io/otel/attribute"
 	otelCodes "go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
@@ -20,16 +21,42 @@ type GarClient interface {
 	Close() error
 }
 
-type GarClientImpl struct {
+type garAPI interface {
+	GetRepository(ctx context.Context, req *artifactregistrypb.GetRepositoryRequest, opts ...gax.CallOption) (*artifactregistrypb.Repository, error)
+	CreateRepository(ctx context.Context, req *artifactregistrypb.CreateRepositoryRequest, opts ...gax.CallOption) (*artifactregistry.CreateRepositoryOperation, error)
+	Close() error
+}
+
+type garAdapter struct {
 	client *artifactregistry.Client
 }
 
-func NewGarClient(ctx context.Context, opts ...option.ClientOption) (GarClient, error) {
+func (a *garAdapter) GetRepository(ctx context.Context, req *artifactregistrypb.GetRepositoryRequest, opts ...gax.CallOption) (*artifactregistrypb.Repository, error) {
+	return a.client.GetRepository(ctx, req, opts...)
+}
+
+func (a *garAdapter) CreateRepository(ctx context.Context, req *artifactregistrypb.CreateRepositoryRequest, opts ...gax.CallOption) (*artifactregistry.CreateRepositoryOperation, error) {
+	return a.client.CreateRepository(ctx, req, opts...)
+}
+
+func (a *garAdapter) Close() error {
+	return a.client.Close()
+}
+
+type GarClientImpl struct {
+	client garAPI
+}
+
+func NewGarClient(ctx context.Context, opts ...option.ClientOption) (*GarClientImpl, error) {
 	client, err := artifactregistry.NewClient(ctx, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("creating artifact registry client: %w", err)
 	}
-	return &GarClientImpl{client: client}, nil
+	return &GarClientImpl{client: &garAdapter{client}}, nil
+}
+
+func newGarClientWithAPI(api garAPI) *GarClientImpl {
+	return &GarClientImpl{client: api}
 }
 
 func (g *GarClientImpl) Close() error {
@@ -70,7 +97,6 @@ func (g *GarClientImpl) EnsureRepository(ctx context.Context, projectID, locatio
 
 	_, err = g.client.CreateRepository(ctx, createReq)
 	if err != nil {
-		// Defensive coding in case another build is creating the repository
 		if status.Code(err) == codes.AlreadyExists {
 			span.SetStatus(otelCodes.Ok, "")
 			return nil

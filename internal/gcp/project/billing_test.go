@@ -9,6 +9,7 @@ import (
 	gax "github.com/googleapis/gax-go/v2"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/api/option"
 )
 
 // MockServiceUsageAPI mocks the internal GCP client interface
@@ -69,4 +70,34 @@ func TestBillingClientClose(t *testing.T) {
 		mockAPI.AssertExpectations(t)
 	})
 
+}
+
+func TestNewBillingClient(t *testing.T) {
+	tests := []struct {
+		name               string
+		setupBillingClient func(ctx context.Context, opts ...option.ClientOption) (BillingClient, error)
+		wantErr            bool
+	}{
+		{
+			name: "failed client creation",
+			setupBillingClient: func(ctx context.Context, opts ...option.ClientOption) (BillingClient, error) {
+				client, err := NewBillingClient(ctx, opts...)
+				if err != nil {
+					return nil, err
+				}
+				return client, nil
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, creationErr := tt.setupBillingClient(context.Background(), option.WithCredentialsFile("/nonexistent/credentials.json"))
+			if creationErr != nil && tt.wantErr {
+				require.Error(t, creationErr)
+			} else {
+				require.NoError(t, creationErr)
+			}
+		})
+	}
 }

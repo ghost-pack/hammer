@@ -11,6 +11,7 @@ import (
 	resourcemanager "cloud.google.com/go/resourcemanager/apiv3"
 	"cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
 	"github.com/googleapis/gax-go/v2"
+	"google.golang.org/api/option"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -84,12 +85,12 @@ type IAMClientImpl struct {
 	projects projectsAPI
 }
 
-func NewIAMClient(ctx context.Context) (*IAMClientImpl, error) {
-	iamClient, err := iam.NewIamClient(ctx)
+func NewIAMClient(ctx context.Context, opts ...option.ClientOption) (*IAMClientImpl, error) {
+	iamClient, err := iam.NewIamClient(ctx, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("creating iam client: %w", err)
 	}
-	projectsClient, err := resourcemanager.NewProjectsClient(ctx)
+	projectsClient, err := resourcemanager.NewProjectsClient(ctx, opts...)
 	if err != nil {
 		iamClient.Close()
 		return nil, fmt.Errorf("creating projects client for iam: %w", err)

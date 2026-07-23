@@ -8,6 +8,7 @@ import (
 	"log/slog"
 
 	"cloud.google.com/go/storage"
+	"google.golang.org/api/option"
 )
 
 // -- interfaces for each level of the chain --
@@ -102,8 +103,8 @@ type CloudStorageClientImpl struct {
 	client storageClientAPI // ← interface now, not *storage.Client
 }
 
-func NewCloudStorageClient(ctx context.Context) (*CloudStorageClientImpl, error) {
-	client, err := storage.NewClient(ctx)
+func NewCloudStorageClient(ctx context.Context, opts ...option.ClientOption) (*CloudStorageClientImpl, error) {
+	client, err := storage.NewClient(ctx, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("creating cloud storage client: %w", err)
 	}

@@ -46,6 +46,7 @@ func (p *Provisioner) Apply(ctx context.Context) error {
 
 	phases := []phase{
 		{"Ensure GCP Bucket Exists", p.ensureBucketExists},
+		// TODO: probably still need reconcile step. If only to restrict the terraform service account from doing stuff.
 		//{"Ensure Project Exists", p.build},
 		//{"Link billing account", p.build},
 		//{"Ensure Org Policies Exists", p.build},

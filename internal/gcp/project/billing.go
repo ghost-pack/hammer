@@ -8,6 +8,7 @@ import (
 	billing "cloud.google.com/go/billing/apiv1"
 	billingpb "cloud.google.com/go/billing/apiv1/billingpb"
 	"github.com/googleapis/gax-go/v2"
+	"google.golang.org/api/option"
 )
 
 type billingAPI interface {
@@ -35,8 +36,8 @@ type BillingClientImpl struct {
 	client billingAPI
 }
 
-func NewBillingClient(ctx context.Context) (*BillingClientImpl, error) {
-	client, err := billing.NewCloudBillingClient(ctx)
+func NewBillingClient(ctx context.Context, opts ...option.ClientOption) (*BillingClientImpl, error) {
+	client, err := billing.NewCloudBillingClient(ctx, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("creating billing client: %w", err)
 	}

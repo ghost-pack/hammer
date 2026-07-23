@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/api/option"
 )
 
 // MockBatchEnableOperation mocks the operation returned by BatchEnableServices
@@ -123,4 +124,34 @@ func TestClose(t *testing.T) {
 		mockOp.AssertExpectations(t)
 	})
 
+}
+
+func TestNewServiceUsageClient(t *testing.T) {
+	tests := []struct {
+		name                    string
+		setupServiceUsageClient func(ctx context.Context, opts ...option.ClientOption) (ServiceUsageClient, error)
+		wantErr                 bool
+	}{
+		{
+			name: "failed client creation",
+			setupServiceUsageClient: func(ctx context.Context, opts ...option.ClientOption) (ServiceUsageClient, error) {
+				client, err := NewServiceUsageClient(ctx, opts...)
+				if err != nil {
+					return nil, err
+				}
+				return client, nil
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, creationErr := tt.setupServiceUsageClient(context.Background(), option.WithCredentialsFile("/nonexistent/credentials.json"))
+			if creationErr != nil && tt.wantErr {
+				require.Error(t, creationErr)
+			} else {
+				require.NoError(t, creationErr)
+			}
+		})
+	}
 }

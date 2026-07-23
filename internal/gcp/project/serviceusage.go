@@ -8,6 +8,7 @@ import (
 	serviceusage "cloud.google.com/go/serviceusage/apiv1"
 	serviceusagepb "cloud.google.com/go/serviceusage/apiv1/serviceusagepb"
 	gax "github.com/googleapis/gax-go/v2"
+	"google.golang.org/api/option"
 )
 
 // batchEnableOperation wraps the concrete operation so it can be mocked
@@ -42,8 +43,8 @@ type ServiceUsageClientImpl struct {
 	client serviceUsageAPI
 }
 
-func NewServiceUsageClient(ctx context.Context) (*ServiceUsageClientImpl, error) {
-	client, err := serviceusage.NewClient(ctx)
+func NewServiceUsageClient(ctx context.Context, opts ...option.ClientOption) (*ServiceUsageClientImpl, error) {
+	client, err := serviceusage.NewClient(ctx, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("creating service usage client: %w", err)
 	}
