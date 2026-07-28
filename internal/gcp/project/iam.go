@@ -23,6 +23,7 @@ import (
 type IAMClient interface {
 	EnsureServiceAccountExists(ctx context.Context, projectID, name, displayName string) (string, error)
 	BindProjectRoles(ctx context.Context, projectID, saEmail string, roles []string) error
+	UnbindProjectRoles(ctx context.Context, projectID, saEmail string, roles []string) error
 	Close() error
 }
 
@@ -205,4 +206,63 @@ func addBinding(policy *iampb.Policy, role, member string) {
 		Role:    role,
 		Members: []string{member},
 	})
+}
+
+func (c *IAMClientImpl) UnbindProjectRoles(ctx context.Context, projectID, saEmail string, roles []string) error {
+	ctx, span := tracing.Tracer("unbind service account roles").Start(ctx, "unbind service account roles",
+		trace.WithAttributes(
+			attribute.String("project", projectID),
+			attribute.String("serviceAccountEmail", saEmail)))
+	defer span.End()
+
+	projectName := "projects/" + projectID
+	member := "serviceAccount:" + saEmail
+
+	policy, err := c.projects.GetIamPolicy(ctx, &iampb.GetIamPolicyRequest{
+		Resource: projectName,
+	})
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(otelCodes.Error, err.Error())
+		return fmt.Errorf("getting IAM policy for %s: %w", projectID, err)
+	}
+
+	for _, role := range roles {
+		removeBinding(policy, role, member)
+	}
+
+	_, err = c.projects.SetIamPolicy(ctx, &iampb.SetIamPolicyRequest{
+		Resource: projectName,
+		Policy:   policy,
+	})
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(otelCodes.Error, err.Error())
+		return fmt.Errorf("removing IAM roles for %s: %w", projectID, err)
+	}
+	slog.InfoContext(ctx, "roles unbound", "projectID", projectID, "sa", saEmail, "roles", roles)
+	span.SetStatus(otelCodes.Ok, "roles unbound")
+	return nil
+}
+
+func removeBinding(policy *iampb.Policy, role, member string) {
+	for i, binding := range policy.Bindings {
+		if binding.Role != role {
+			continue
+		}
+		// remove the member from this binding
+		members := make([]string, 0, len(binding.Members))
+		for _, m := range binding.Members {
+			if m != member {
+				members = append(members, m)
+			}
+		}
+		if len(members) == 0 {
+			// no members left — remove the binding entirely
+			policy.Bindings = append(policy.Bindings[:i], policy.Bindings[i+1:]...)
+		} else {
+			binding.Members = members
+		}
+		return
+	}
 }

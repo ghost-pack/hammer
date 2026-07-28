@@ -16,42 +16,55 @@ func init() {
 	tenantpipeline.Register("Tenant", New)
 }
 
-func New(t *tenant.Tenant, clients tenantpipeline.DependencyClients) (tenantpipeline.Provisioner, error) {
+func New(t *tenant.Tenant, clients *tenantpipeline.DependencyClients) (tenantpipeline.Provisioner, error) {
 	return &Provisioner{
-		tenant:  t,
-		clients: clients,
+		tenant:           t,
+		clients:          clients,
+		registryBucket:   "hammer-platform-registry",
+		platformProject:  "hammer-bootstrap",
+		defaultRegion:    "us-central1",
+		newState:         &TenantState{},
+		lastAppliedState: &TenantState{},
 	}, nil
 }
 
 type Provisioner struct {
-	tenant         *tenant.Tenant
-	clients        tenantpipeline.DependencyClients
-	registryBucket string
+	// config — set at construction, never changes
+	tenant          *tenant.Tenant
+	clients         *tenantpipeline.DependencyClients
+	registryBucket  string
+	platformProject string
+	defaultRegion   string
+
+	// loaded from GCS at start of run — nil if first run
+	lastAppliedState *TenantState
+
+	// computed during reconcile phase, consumed by later phases
+	apisToAdd    []string
+	apisToRemove []string
+
+	// built up during reconcile, applied as we go along
+	newState *TenantState
 }
 
 func (p *Provisioner) Apply(ctx context.Context) error {
-	// create folder, projects, enable APIs, org policies, SAs...
-	// Phase 1: Create GCP Bucket if it doesn't exist.
-	// Phase 2: Grab latest state from bucket (if it exists) and reconcile it.
-	// Phase 3: Create project, I guess.
-	// Phase 4: Link billing account and parent folder.
-	// Phase 5: Apply org policies to project.
-	// Phase 6: Create service accounts.
-	// Phase 7: Write OAM file to bucket.
-	// If any steps fail during this,
 	ctx, span := tracing.Tracer(fmt.Sprintf("%s tenant", p.tenant.Metadata.Name)).Start(ctx, fmt.Sprintf("%s tenant", p.tenant.Metadata.Name),
 		trace.WithAttributes(
 			attribute.String("cmd", fmt.Sprintf("%s tenant", p.tenant.Metadata.Name))))
 	defer span.End()
 
 	phases := []phase{
-		{"Ensure GCP Bucket Exists", p.ensureBucketExists},
-		// TODO: probably still need reconcile step. If only to restrict the terraform service account from doing stuff.
-		//{"Ensure Project Exists", p.build},
-		//{"Link billing account", p.build},
-		//{"Ensure Org Policies Exists", p.build},
-		//{"Ensure Service Accounts Exist", p.build},
-		//{"Write OAM file", p.build},
+		{"Ensure GCS Bucket Exists", p.ensureBucketExists},
+		{"Load Last Applied State", p.loadLastAppliedState},
+		{"Reconcile", p.reconcile},
+		{"Ensure Folder Exists", p.ensureFolderExists},
+		{"Ensure Projects Exist", p.ensureProjectsExists},
+		{"Link Billing Accounts", p.linkBillingAccounts},
+		{"Apply Org Policies", p.applyOrgPolicies},
+		{"Enable APIs", p.enableApis},
+		{"Ensure Service Accounts", p.ensureServiceAccounts},
+		{"Apply Role Changes", p.applyRoleChanges},
+		{"Write State to Registry", p.writeStateToRegistry},
 	}
 
 	for _, ph := range phases {

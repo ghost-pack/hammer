@@ -1,11 +1,13 @@
-package gcp
+package project
 
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	artifactregistry "cloud.google.com/go/artifactregistry/apiv1"
 	"cloud.google.com/go/artifactregistry/apiv1/artifactregistrypb"
+	"cloud.google.com/go/iam/apiv1/iampb"
 	"github.com/ghost-pack/hammer/internal/observability/tracing"
 	"github.com/googleapis/gax-go/v2"
 	"go.opentelemetry.io/otel/attribute"
@@ -18,12 +20,15 @@ import (
 
 type GarClient interface {
 	EnsureRepository(ctx context.Context, projectID, location, repoID string) error
+	GrantRepositoryReader(ctx context.Context, projectID, location, repoID, saEmail string) error
 	Close() error
 }
 
 type garAPI interface {
 	GetRepository(ctx context.Context, req *artifactregistrypb.GetRepositoryRequest, opts ...gax.CallOption) (*artifactregistrypb.Repository, error)
 	CreateRepository(ctx context.Context, req *artifactregistrypb.CreateRepositoryRequest, opts ...gax.CallOption) (*artifactregistry.CreateRepositoryOperation, error)
+	GetIamPolicy(ctx context.Context, req *iampb.GetIamPolicyRequest, opts ...gax.CallOption) (*iampb.Policy, error)
+	SetIamPolicy(ctx context.Context, req *iampb.SetIamPolicyRequest, opts ...gax.CallOption) (*iampb.Policy, error)
 	Close() error
 }
 
@@ -37,6 +42,14 @@ func (a *garAdapter) GetRepository(ctx context.Context, req *artifactregistrypb.
 
 func (a *garAdapter) CreateRepository(ctx context.Context, req *artifactregistrypb.CreateRepositoryRequest, opts ...gax.CallOption) (*artifactregistry.CreateRepositoryOperation, error) {
 	return a.client.CreateRepository(ctx, req, opts...)
+}
+
+func (a *garAdapter) GetIamPolicy(ctx context.Context, req *iampb.GetIamPolicyRequest, opts ...gax.CallOption) (*iampb.Policy, error) {
+	return a.client.GetIamPolicy(ctx, req, opts...)
+}
+
+func (a *garAdapter) SetIamPolicy(ctx context.Context, req *iampb.SetIamPolicyRequest, opts ...gax.CallOption) (*iampb.Policy, error) {
+	return a.client.SetIamPolicy(ctx, req, opts...)
 }
 
 func (a *garAdapter) Close() error {
@@ -107,5 +120,42 @@ func (g *GarClientImpl) EnsureRepository(ctx context.Context, projectID, locatio
 		return repositoryCreationFailedError
 	}
 	span.SetStatus(otelCodes.Ok, "")
+	return nil
+}
+
+func (g *GarClientImpl) GrantRepositoryReader(ctx context.Context, projectID, location, repoID, saEmail string) error {
+	ctx, span := tracing.Tracer("grant repository reader").Start(ctx, "grant repository reader",
+		trace.WithAttributes(
+			attribute.String("project", projectID),
+			attribute.String("repo", repoID),
+			attribute.String("sa", saEmail)))
+	defer span.End()
+
+	resource := fmt.Sprintf("projects/%s/locations/%s/repositories/%s", projectID, location, repoID)
+
+	policy, err := g.client.GetIamPolicy(ctx, &iampb.GetIamPolicyRequest{
+		Resource: resource,
+	})
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(otelCodes.Error, err.Error())
+		return fmt.Errorf("getting IAM policy for repository %s: %w", repoID, err)
+	}
+
+	member := "serviceAccount:" + saEmail
+	addBinding(policy, "roles/artifactregistry.reader", member)
+
+	_, err = g.client.SetIamPolicy(ctx, &iampb.SetIamPolicyRequest{
+		Resource: resource,
+		Policy:   policy,
+	})
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(otelCodes.Error, err.Error())
+		return fmt.Errorf("setting IAM policy for repository %s: %w", repoID, err)
+	}
+
+	slog.InfoContext(ctx, "repository reader granted", "repo", repoID, "sa", saEmail)
+	span.SetStatus(otelCodes.Ok, "repository reader granted")
 	return nil
 }

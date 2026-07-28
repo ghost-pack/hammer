@@ -6,7 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/ghost-pack/hammer/internal/docker"
-	"github.com/ghost-pack/hammer/internal/gcp"
+	"github.com/ghost-pack/hammer/internal/gcp/project"
 	"github.com/ghost-pack/hammer/internal/oam"
 	"github.com/ghost-pack/hammer/internal/observability/tracing"
 	"github.com/ghost-pack/hammer/internal/pipeline"
@@ -35,7 +35,7 @@ func New(component oam.Component, clients pipeline.DependencyClients) (pipeline.
 type Pipeline struct {
 	component    *oam.Component
 	runner       runner.Runner
-	garClient    gcp.GarClient
+	garClient    project.GarClient
 	dockerClient docker.Client
 }
 

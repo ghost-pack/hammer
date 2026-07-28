@@ -1,4 +1,4 @@
-package gcp
+package project
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 
 	artifactregistry "cloud.google.com/go/artifactregistry/apiv1"
 	"cloud.google.com/go/artifactregistry/apiv1/artifactregistrypb"
+	"cloud.google.com/go/iam/apiv1/iampb"
 	"github.com/googleapis/gax-go/v2"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -28,6 +29,18 @@ func (m *MockGarAPI) GetRepository(ctx context.Context, req *artifactregistrypb.
 func (m *MockGarAPI) CreateRepository(ctx context.Context, req *artifactregistrypb.CreateRepositoryRequest, opts ...gax.CallOption) (*artifactregistry.CreateRepositoryOperation, error) {
 	args := m.Called(ctx, req)
 	op, _ := args.Get(0).(*artifactregistry.CreateRepositoryOperation)
+	return op, args.Error(1)
+}
+
+func (m *MockGarAPI) GetIamPolicy(ctx context.Context, req *iampb.GetIamPolicyRequest, opts ...gax.CallOption) (*iampb.Policy, error) {
+	args := m.Called(ctx, req)
+	op, _ := args.Get(0).(*iampb.Policy)
+	return op, args.Error(1)
+}
+
+func (m *MockGarAPI) SetIamPolicy(ctx context.Context, req *iampb.SetIamPolicyRequest, opts ...gax.CallOption) (*iampb.Policy, error) {
+	args := m.Called(ctx, req)
+	op, _ := args.Get(0).(*iampb.Policy)
 	return op, args.Error(1)
 }
 
@@ -120,6 +133,51 @@ func TestEnsureRepository(t *testing.T) {
 		mockAPI.AssertExpectations(t)
 	})
 
+}
+
+func TestGrantRepositoryReader(t *testing.T) {
+	t.Run("successfully grant repository reader", func(t *testing.T) {
+		mockAPI := &MockGarAPI{}
+		mockAPI.On("GetIamPolicy", mock.Anything, mock.MatchedBy(func(req *iampb.GetIamPolicyRequest) bool {
+			return req.Resource == fmt.Sprintf("projects/%s/locations/%s/repositories/%s", "my-project", "us-central1", "my-repo")
+		})).Return(&iampb.Policy{}, nil)
+
+		mockAPI.On("SetIamPolicy", mock.Anything, mock.Anything).Return(nil, nil)
+
+		client := newGarClientWithAPI(mockAPI)
+		err := client.GrantRepositoryReader(context.Background(), "my-project", "us-central1", "my-repo", "sa-pipeline@hammer-bootstrap.iam.gserviceaccount.com")
+		require.NoError(t, err)
+
+		mockAPI.AssertExpectations(t)
+	})
+
+	t.Run("fail to get policy", func(t *testing.T) {
+		mockAPI := &MockGarAPI{}
+		mockAPI.On("GetIamPolicy", mock.Anything, mock.MatchedBy(func(req *iampb.GetIamPolicyRequest) bool {
+			return req.Resource == fmt.Sprintf("projects/%s/locations/%s/repositories/%s", "my-project", "us-central1", "my-repo")
+		})).Return(nil, fmt.Errorf("some error"))
+
+		client := newGarClientWithAPI(mockAPI)
+		err := client.GrantRepositoryReader(context.Background(), "my-project", "us-central1", "my-repo", "sa-pipeline@hammer-bootstrap.iam.gserviceaccount.com")
+		require.Error(t, err)
+
+		mockAPI.AssertExpectations(t)
+	})
+
+	t.Run("fail to set policy", func(t *testing.T) {
+		mockAPI := &MockGarAPI{}
+		mockAPI.On("GetIamPolicy", mock.Anything, mock.MatchedBy(func(req *iampb.GetIamPolicyRequest) bool {
+			return req.Resource == fmt.Sprintf("projects/%s/locations/%s/repositories/%s", "my-project", "us-central1", "my-repo")
+		})).Return(&iampb.Policy{}, nil)
+
+		mockAPI.On("SetIamPolicy", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("some error"))
+
+		client := newGarClientWithAPI(mockAPI)
+		err := client.GrantRepositoryReader(context.Background(), "my-project", "us-central1", "my-repo", "sa-pipeline@hammer-bootstrap.iam.gserviceaccount.com")
+		require.Error(t, err)
+
+		mockAPI.AssertExpectations(t)
+	})
 }
 
 func TestNewGarClient(t *testing.T) {

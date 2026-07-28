@@ -1,0 +1,257 @@
+package gcp
+
+import (
+	"context"
+	"testing"
+
+	"cloud.google.com/go/storage"
+	"github.com/ghost-pack/hammer/internal/tenant"
+	"github.com/ghost-pack/hammer/internal/tenantpipeline"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+)
+
+type MockResourceManager struct {
+	mock.Mock
+}
+
+func (m *MockResourceManager) EnsureFolderExists(ctx context.Context, displayName, parent string) (string, error) {
+	callArgs := m.Called(ctx, displayName, parent)
+	res, _ := callArgs.Get(0).(string)
+	return res, callArgs.Error(1)
+}
+
+func (m *MockResourceManager) EnsureProjectExists(ctx context.Context, projectID, displayName, parent string) error {
+	callArgs := m.Called(ctx, projectID, displayName, parent)
+	return callArgs.Error(0)
+}
+
+func (m *MockResourceManager) Close() error {
+	callArgs := m.Called()
+	return callArgs.Error(0)
+}
+
+type MockServiceUsage struct {
+	mock.Mock
+}
+
+func (m *MockServiceUsage) EnableAPIs(ctx context.Context, projectID string, apis []string) error {
+	callArgs := m.Called(ctx, projectID, apis)
+	return callArgs.Error(0)
+}
+
+func (m *MockServiceUsage) Close() error {
+	callArgs := m.Called()
+	return callArgs.Error(0)
+}
+
+type MockOrgPolicy struct {
+	mock.Mock
+}
+
+func (m *MockOrgPolicy) EnforcePolicy(ctx context.Context, resource, constraint string) error {
+	callArgs := m.Called(ctx, resource, constraint)
+	return callArgs.Error(0)
+}
+
+func (m *MockOrgPolicy) Close() error {
+	callArgs := m.Called()
+	return callArgs.Error(0)
+}
+
+type MockIam struct {
+	mock.Mock
+}
+
+func (m *MockIam) EnsureServiceAccountExists(ctx context.Context, projectID, name, displayName string) (string, error) {
+	callArgs := m.Called(ctx, projectID, name, displayName)
+	res, _ := callArgs.Get(0).(string)
+	return res, callArgs.Error(1)
+}
+
+func (m *MockIam) BindProjectRoles(ctx context.Context, projectID, saEmail string, roles []string) error {
+	callArgs := m.Called(ctx, projectID, projectID, saEmail, roles)
+	return callArgs.Error(0)
+}
+
+func (m *MockIam) UnbindProjectRoles(ctx context.Context, projectID, saEmail string, roles []string) error {
+	callArgs := m.Called(ctx, projectID, projectID, saEmail, roles)
+	return callArgs.Error(0)
+}
+
+func (m *MockIam) Close() error {
+	callArgs := m.Called()
+	return callArgs.Error(0)
+}
+
+type MockCloudStorage struct {
+	mock.Mock
+}
+
+func (m *MockCloudStorage) EnsureBucketExists(ctx context.Context, projectId, location, bucketName string) error {
+	callArgs := m.Called(ctx, projectId, location, bucketName)
+	return callArgs.Error(0)
+}
+
+func (m *MockCloudStorage) GetObject(ctx context.Context, bucket, object string) ([]byte, error) {
+	callArgs := m.Called(ctx, bucket, object)
+	res, _ := callArgs.Get(0).([]byte)
+	return res, callArgs.Error(1)
+}
+
+func (m *MockCloudStorage) WriteObject(ctx context.Context, bucket, object string, data []byte, metadata map[string]string) error {
+	callArgs := m.Called(ctx, bucket, object, data, metadata)
+	return callArgs.Error(0)
+}
+
+func (m *MockCloudStorage) Close() error {
+	callArgs := m.Called()
+	return callArgs.Error(0)
+}
+
+type MockBilling struct {
+	mock.Mock
+}
+
+func (m *MockBilling) LinkBillingAccount(ctx context.Context, projectID, billingAccount string) error {
+	callArgs := m.Called(ctx, projectID, billingAccount)
+	return callArgs.Error(0)
+}
+
+func (m *MockBilling) Close() error {
+	callArgs := m.Called()
+	return callArgs.Error(0)
+}
+
+func TestNewProvisioner(t *testing.T) {
+	type args struct {
+		tenant *tenant.Tenant
+		client *tenantpipeline.DependencyClients
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    tenantpipeline.Provisioner
+		wantErr bool
+	}{
+		{
+			name: "SuccessfulNewProvisioner",
+			args: args{tenant: &tenant.Tenant{Metadata: tenant.Metadata{Name: "acme-corp"}}, client: &tenantpipeline.DependencyClients{}},
+			want: &Provisioner{
+				tenant:           &tenant.Tenant{Metadata: tenant.Metadata{Name: "acme-corp"}},
+				clients:          &tenantpipeline.DependencyClients{},
+				registryBucket:   "hammer-platform-registry",
+				platformProject:  "hammer-bootstrap",
+				defaultRegion:    "us-central1",
+				newState:         &TenantState{},
+				lastAppliedState: &TenantState{},
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := New(tt.args.tenant, &tenantpipeline.DependencyClients{})
+			if err != nil {
+				if tt.wantErr {
+					require.Error(t, err)
+				} else {
+					t.Errorf("New() error = %v, wantErr %v", err, tt.wantErr)
+				}
+			}
+			require.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestProvisionerApply(t *testing.T) {
+	tests := []struct {
+		name      string
+		tenant    *tenant.Tenant
+		setupMock func(*MockResourceManager, *MockServiceUsage, *MockOrgPolicy, *MockIam, *MockBilling, *MockCloudStorage)
+		wantErr   bool
+	}{
+		{
+			name: "Successful Apply",
+			tenant: &tenant.Tenant{
+				APIVersion: "core.oam.dev/v1beta1",
+				Kind:       "Tenant",
+				Metadata:   tenant.Metadata{Name: "acme-corp"},
+				Spec: tenant.Spec{
+					BillingAccount: "ABCDE-12345-FGHIJ",
+					ParentFolder:   "937506553540",
+					AllowedApis: []string{
+						"run.googleapis.com",
+						"artifactregistry.googleapis.com",
+						"logging.googleapis.com",
+						"monitoring.googleapis.com",
+					},
+					Environments: []string{
+						"dev",
+						"prod",
+					},
+				},
+			},
+			setupMock: func(mockResourceManager *MockResourceManager, mockServiceUsage *MockServiceUsage, mockOrgPolicy *MockOrgPolicy, mockIam *MockIam, mockBilling *MockBilling, mockCloudStorage *MockCloudStorage) {
+				mockCloudStorage.On("EnsureBucketExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockCloudStorage.On("GetObject", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, storage.ErrObjectNotExist)
+				mockResourceManager.On("EnsureFolderExists", mock.Anything, mock.Anything, mock.Anything).
+					Return("acme-corp", nil)
+				mockResourceManager.On("EnsureProjectExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockOrgPolicy.On("EnforcePolicy", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockServiceUsage.On("EnableAPIs", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return("sa-pipeline@acme-corp-dev.iam.gserviceaccount.com", nil).Once()
+				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return("sa-pipeline@acme-corp-prod.iam.gserviceaccount.com", nil).Once()
+				mockIam.On("BindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockCloudStorage.On("WriteObject", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockCloudStorage := new(MockCloudStorage)
+			mockResourceManager := new(MockResourceManager)
+			mockBilling := new(MockBilling)
+			mockOrgPolicy := new(MockOrgPolicy)
+			mockServiceUsage := new(MockServiceUsage)
+			mockIam := new(MockIam)
+			tt.setupMock(mockResourceManager, mockServiceUsage, mockOrgPolicy, mockIam, mockBilling, mockCloudStorage)
+
+			provisioner, _ := New(tt.tenant, &tenantpipeline.DependencyClients{
+				CloudStorage:    mockCloudStorage,
+				ResourceManager: mockResourceManager,
+				Billing:         mockBilling,
+				OrgPolicy:       mockOrgPolicy,
+				ServiceUsage:    mockServiceUsage,
+				IAM:             mockIam,
+			})
+
+			err := provisioner.Apply(context.Background())
+
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+
+			mockCloudStorage.AssertExpectations(t)
+			mockResourceManager.AssertExpectations(t)
+			mockBilling.AssertExpectations(t)
+			mockOrgPolicy.AssertExpectations(t)
+			mockServiceUsage.AssertExpectations(t)
+			mockIam.AssertExpectations(t)
+		})
+	}
+}

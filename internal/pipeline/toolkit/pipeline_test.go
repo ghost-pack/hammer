@@ -7,10 +7,10 @@ import (
 
 	"github.com/ghost-pack/hammer/internal/docker"
 	"github.com/ghost-pack/hammer/internal/gcp"
+	"github.com/ghost-pack/hammer/internal/gcp/project"
 	"github.com/ghost-pack/hammer/internal/oam"
 	"github.com/ghost-pack/hammer/internal/pipeline"
 	"github.com/ghost-pack/hammer/internal/runner"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -55,6 +55,11 @@ func (m *MockGarClient) EnsureRepository(ctx context.Context, projectID, locatio
 	return callArgs.Error(0)
 }
 
+func (m *MockGarClient) GrantRepositoryReader(ctx context.Context, projectID, location, repoID, saEmail string) error {
+	callArgs := m.Called(ctx, projectID, location, repoID, saEmail)
+	return callArgs.Error(0)
+}
+
 func (m *MockGarClient) Close() error {
 	callArgs := m.Called()
 	return callArgs.Error(0)
@@ -64,7 +69,7 @@ func TestNewPipeline(t *testing.T) {
 	type args struct {
 		component    oam.Component
 		client       docker.Client
-		garClient    gcp.GarClient
+		garClient    project.GarClient
 		dockerClient gcp.CloudBuildClient
 	}
 	tests := []struct {
@@ -205,9 +210,9 @@ func TestPipeline_CI(t *testing.T) {
 			err := p.CI(context.Background())
 
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 
 			// Ensure all expected mock calls were made
@@ -261,9 +266,9 @@ func TestPipeline_Analyze(t *testing.T) {
 			err := p.Analyze(context.Background())
 
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 
 			// Ensure all expected mock calls were made
@@ -306,9 +311,9 @@ func TestPipeline_Deploy(t *testing.T) {
 			err := p.Deploy(context.Background())
 
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 
 			// Ensure all expected mock calls were made

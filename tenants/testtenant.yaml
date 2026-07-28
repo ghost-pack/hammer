@@ -4,7 +4,7 @@ metadata:
   name: acme-corp
 spec:
   billingAccount: "ABCDE-12345-FGHIJ"
-  parentFolder: "folders/123456789"   # or orgId
+  parentFolder: "937506553540"   # or orgId
   allowedAPIs:
     - run.googleapis.com
     - artifactregistry.googleapis.com

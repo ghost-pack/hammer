@@ -5,6 +5,7 @@ import (
 
 	"github.com/ghost-pack/hammer/internal/docker"
 	"github.com/ghost-pack/hammer/internal/gcp"
+	"github.com/ghost-pack/hammer/internal/gcp/project"
 	"github.com/ghost-pack/hammer/internal/oam"
 )
 
@@ -12,7 +13,7 @@ type Factory func(oam.Component, DependencyClients) (Pipeline, error)
 
 type DependencyClients struct {
 	DockerClient docker.Client
-	GarClient    gcp.GarClient
+	GarClient    project.GarClient
 	CloudBuild   gcp.CloudBuildClient
 	CloudStorage gcp.CloudStorageClient
 }

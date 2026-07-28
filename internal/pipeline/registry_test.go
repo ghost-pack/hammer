@@ -6,6 +6,7 @@ import (
 
 	"github.com/ghost-pack/hammer/internal/docker"
 	"github.com/ghost-pack/hammer/internal/gcp"
+	"github.com/ghost-pack/hammer/internal/gcp/project"
 	"github.com/ghost-pack/hammer/internal/oam"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -48,6 +49,11 @@ func (m *MockGarClient) EnsureRepository(ctx context.Context, projectID, locatio
 	return callArgs.Error(0)
 }
 
+func (m *MockGarClient) GrantRepositoryReader(ctx context.Context, projectID, location, repoID, saEmail string) error {
+	callArgs := m.Called(ctx, projectID, location, repoID, saEmail)
+	return callArgs.Error(0)
+}
+
 func (m *MockGarClient) Close() error {
 	callArgs := m.Called()
 	return callArgs.Error(0)
@@ -81,7 +87,7 @@ func TestFor(t *testing.T) {
 	type args struct {
 		component        oam.Component
 		client           docker.Client
-		garClient        gcp.GarClient
+		garClient        project.GarClient
 		cloudBuildClient gcp.CloudBuildClient
 		cloudStorage     gcp.CloudStorageClient
 	}

@@ -19,9 +19,10 @@ type DependencyClients struct {
 	OrgPolicy       project.OrgPolicyClient
 	IAM             project.IAMClient
 	CloudStorage    gcp.CloudStorageClient
+	Billing         project.BillingClient
 }
 
-type Factory func(*tenant.Tenant, DependencyClients) (Provisioner, error)
+type Factory func(*tenant.Tenant, *DependencyClients) (Provisioner, error)
 
 var registry = map[string]Factory{}
 
@@ -38,7 +39,7 @@ func Register(kind string, f Factory) {
 	registry[kind] = f
 }
 
-func For(t *tenant.Tenant, deps DependencyClients) (Provisioner, error) {
+func For(t *tenant.Tenant, deps *DependencyClients) (Provisioner, error) {
 	f, ok := registry[t.Kind]
 	if !ok {
 		return nil, fmt.Errorf("no provisioner registered for kind %s", t.Kind)

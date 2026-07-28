@@ -3,7 +3,7 @@ kind: Application
 metadata:
   name: hammer
   annotations:
-    team: "ghost-pack"
+    team: "hammer-bootstrap"
     description: "The hammer CLI."
 spec:
   components:

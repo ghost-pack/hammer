@@ -7,6 +7,7 @@ import (
 
 	"github.com/ghost-pack/hammer/internal/docker"
 	"github.com/ghost-pack/hammer/internal/gcp"
+	"github.com/ghost-pack/hammer/internal/gcp/project"
 	"github.com/ghost-pack/hammer/internal/oam"
 	"github.com/ghost-pack/hammer/internal/observability/tracing"
 	"github.com/ghost-pack/hammer/internal/pipeline"
@@ -35,7 +36,7 @@ func newCICmd() *cobra.Command {
 			// Just giving this to every pipeline for now.
 			dockerClient := docker.NewClient()
 
-			garClient, err := gcp.NewGarClient(cmd.Context())
+			garClient, err := project.NewGarClient(cmd.Context())
 			if err != nil {
 				return err
 			}
