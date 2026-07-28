@@ -2,6 +2,8 @@ package gcp
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"testing"
 
 	"cloud.google.com/go/storage"
@@ -217,6 +219,635 @@ func TestProvisionerApply(t *testing.T) {
 					Return(nil)
 			},
 			wantErr: false,
+		},
+		{
+			name: "Successful Apply with existing previous state",
+			tenant: &tenant.Tenant{
+				APIVersion: "core.oam.dev/v1beta1",
+				Kind:       "Tenant",
+				Metadata:   tenant.Metadata{Name: "acme-corp"},
+				Spec: tenant.Spec{
+					BillingAccount: "ABCDE-12345-FGHIJ",
+					ParentFolder:   "937506553540",
+					AllowedApis: []string{
+						"run.googleapis.com",
+						"artifactregistry.googleapis.com",
+						"logging.googleapis.com",
+						"monitoring.googleapis.com",
+					},
+					Environments: []string{
+						"dev",
+						"prod",
+					},
+				},
+			},
+			setupMock: func(mockResourceManager *MockResourceManager, mockServiceUsage *MockServiceUsage, mockOrgPolicy *MockOrgPolicy, mockIam *MockIam, mockBilling *MockBilling, mockCloudStorage *MockCloudStorage) {
+				mockCloudStorage.On("EnsureBucketExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				stateBytes, _ := os.ReadFile("testdata/lastAppliedState.json")
+				mockCloudStorage.On("GetObject", mock.Anything, mock.Anything, mock.Anything).
+					Return(stateBytes, nil)
+				mockResourceManager.On("EnsureFolderExists", mock.Anything, mock.Anything, mock.Anything).
+					Return("acme-corp", nil)
+				mockResourceManager.On("EnsureProjectExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockOrgPolicy.On("EnforcePolicy", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockServiceUsage.On("EnableAPIs", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return("sa-pipeline@acme-corp-dev.iam.gserviceaccount.com", nil).Once()
+				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return("sa-pipeline@acme-corp-prod.iam.gserviceaccount.com", nil).Once()
+				mockIam.On("BindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockIam.On("UnbindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockCloudStorage.On("WriteObject", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "failed apply unsupported api",
+			tenant: &tenant.Tenant{
+				APIVersion: "core.oam.dev/v1beta1",
+				Kind:       "Tenant",
+				Metadata:   tenant.Metadata{Name: "acme-corp"},
+				Spec: tenant.Spec{
+					BillingAccount: "ABCDE-12345-FGHIJ",
+					ParentFolder:   "937506553540",
+					AllowedApis: []string{
+						"run.googleapis.com",
+						"artifactregistry.googleapis.com",
+						"logging.googleapis.com",
+						"monitoringasdfasdfasdf.googleapis.com",
+					},
+					Environments: []string{
+						"dev",
+						"prod",
+					},
+				},
+			},
+			setupMock: func(mockResourceManager *MockResourceManager, mockServiceUsage *MockServiceUsage, mockOrgPolicy *MockOrgPolicy, mockIam *MockIam, mockBilling *MockBilling, mockCloudStorage *MockCloudStorage) {
+				mockCloudStorage.On("EnsureBucketExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				stateBytes, _ := os.ReadFile("testdata/lastAppliedState.json")
+				mockCloudStorage.On("GetObject", mock.Anything, mock.Anything, mock.Anything).
+					Return(stateBytes, nil)
+				mockResourceManager.On("EnsureFolderExists", mock.Anything, mock.Anything, mock.Anything).
+					Return("acme-corp", nil)
+				mockResourceManager.On("EnsureProjectExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockOrgPolicy.On("EnforcePolicy", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockServiceUsage.On("EnableAPIs", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return("sa-pipeline@acme-corp-dev.iam.gserviceaccount.com", nil).Once()
+				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return("sa-pipeline@acme-corp-prod.iam.gserviceaccount.com", nil).Once()
+			},
+			wantErr: true,
+		},
+		{
+			name: "failed apply unsupported api to remove",
+			tenant: &tenant.Tenant{
+				APIVersion: "core.oam.dev/v1beta1",
+				Kind:       "Tenant",
+				Metadata:   tenant.Metadata{Name: "acme-corp"},
+				Spec: tenant.Spec{
+					BillingAccount: "ABCDE-12345-FGHIJ",
+					ParentFolder:   "937506553540",
+					AllowedApis: []string{
+						"run.googleapis.com",
+						"artifactregistry.googleapis.com",
+						"logging.googleapis.com",
+						"monitoring.googleapis.com",
+					},
+					Environments: []string{
+						"dev",
+						"prod",
+					},
+				},
+			},
+			setupMock: func(mockResourceManager *MockResourceManager, mockServiceUsage *MockServiceUsage, mockOrgPolicy *MockOrgPolicy, mockIam *MockIam, mockBilling *MockBilling, mockCloudStorage *MockCloudStorage) {
+				mockCloudStorage.On("EnsureBucketExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				stateBytes, _ := os.ReadFile("testdata/lastAppliedState_unsupportedapi.json")
+				mockCloudStorage.On("GetObject", mock.Anything, mock.Anything, mock.Anything).
+					Return(stateBytes, nil)
+				mockResourceManager.On("EnsureFolderExists", mock.Anything, mock.Anything, mock.Anything).
+					Return("acme-corp", nil)
+				mockResourceManager.On("EnsureProjectExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockOrgPolicy.On("EnforcePolicy", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockServiceUsage.On("EnableAPIs", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return("sa-pipeline@acme-corp-dev.iam.gserviceaccount.com", nil).Once()
+				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return("sa-pipeline@acme-corp-prod.iam.gserviceaccount.com", nil).Once()
+			},
+			wantErr: true,
+		},
+		{
+			name: "failed apply fails to unbind role",
+			tenant: &tenant.Tenant{
+				APIVersion: "core.oam.dev/v1beta1",
+				Kind:       "Tenant",
+				Metadata:   tenant.Metadata{Name: "acme-corp"},
+				Spec: tenant.Spec{
+					BillingAccount: "ABCDE-12345-FGHIJ",
+					ParentFolder:   "937506553540",
+					AllowedApis: []string{
+						"run.googleapis.com",
+						"artifactregistry.googleapis.com",
+						"logging.googleapis.com",
+						"monitoring.googleapis.com",
+					},
+					Environments: []string{
+						"dev",
+						"prod",
+					},
+				},
+			},
+			setupMock: func(mockResourceManager *MockResourceManager, mockServiceUsage *MockServiceUsage, mockOrgPolicy *MockOrgPolicy, mockIam *MockIam, mockBilling *MockBilling, mockCloudStorage *MockCloudStorage) {
+				mockCloudStorage.On("EnsureBucketExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				stateBytes, _ := os.ReadFile("testdata/lastAppliedState.json")
+				mockCloudStorage.On("GetObject", mock.Anything, mock.Anything, mock.Anything).
+					Return(stateBytes, nil)
+				mockResourceManager.On("EnsureFolderExists", mock.Anything, mock.Anything, mock.Anything).
+					Return("acme-corp", nil)
+				mockResourceManager.On("EnsureProjectExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockOrgPolicy.On("EnforcePolicy", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockServiceUsage.On("EnableAPIs", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return("sa-pipeline@acme-corp-dev.iam.gserviceaccount.com", nil).Once()
+				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return("sa-pipeline@acme-corp-prod.iam.gserviceaccount.com", nil).Once()
+				mockIam.On("BindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockIam.On("UnbindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(fmt.Errorf("error"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "failed Apply with existing previous state bad unmarshal",
+			tenant: &tenant.Tenant{
+				APIVersion: "core.oam.dev/v1beta1",
+				Kind:       "Tenant",
+				Metadata:   tenant.Metadata{Name: "acme-corp"},
+				Spec: tenant.Spec{
+					BillingAccount: "ABCDE-12345-FGHIJ",
+					ParentFolder:   "937506553540",
+					AllowedApis: []string{
+						"run.googleapis.com",
+						"artifactregistry.googleapis.com",
+						"logging.googleapis.com",
+						"monitoring.googleapis.com",
+					},
+					Environments: []string{
+						"dev",
+						"prod",
+					},
+				},
+			},
+			setupMock: func(mockResourceManager *MockResourceManager, mockServiceUsage *MockServiceUsage, mockOrgPolicy *MockOrgPolicy, mockIam *MockIam, mockBilling *MockBilling, mockCloudStorage *MockCloudStorage) {
+				mockCloudStorage.On("EnsureBucketExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				stateBytes, _ := os.ReadFile("testdata/lastAppliedState_bad.json")
+				mockCloudStorage.On("GetObject", mock.Anything, mock.Anything, mock.Anything).
+					Return(stateBytes, nil)
+			},
+			wantErr: true,
+		},
+		{
+			name: "Failed Apply Bad Cloud Storage Ensure",
+			tenant: &tenant.Tenant{
+				APIVersion: "core.oam.dev/v1beta1",
+				Kind:       "Tenant",
+				Metadata:   tenant.Metadata{Name: "acme-corp"},
+				Spec: tenant.Spec{
+					BillingAccount: "ABCDE-12345-FGHIJ",
+					ParentFolder:   "937506553540",
+					AllowedApis: []string{
+						"run.googleapis.com",
+						"artifactregistry.googleapis.com",
+						"logging.googleapis.com",
+						"monitoring.googleapis.com",
+					},
+					Environments: []string{
+						"dev",
+						"prod",
+					},
+				},
+			},
+			setupMock: func(mockResourceManager *MockResourceManager, mockServiceUsage *MockServiceUsage, mockOrgPolicy *MockOrgPolicy, mockIam *MockIam, mockBilling *MockBilling, mockCloudStorage *MockCloudStorage) {
+				mockCloudStorage.On("EnsureBucketExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(fmt.Errorf("error"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "Failed apply can't get cloud storage object",
+			tenant: &tenant.Tenant{
+				APIVersion: "core.oam.dev/v1beta1",
+				Kind:       "Tenant",
+				Metadata:   tenant.Metadata{Name: "acme-corp"},
+				Spec: tenant.Spec{
+					BillingAccount: "ABCDE-12345-FGHIJ",
+					ParentFolder:   "937506553540",
+					AllowedApis: []string{
+						"run.googleapis.com",
+						"artifactregistry.googleapis.com",
+						"logging.googleapis.com",
+						"monitoring.googleapis.com",
+					},
+					Environments: []string{
+						"dev",
+						"prod",
+					},
+				},
+			},
+			setupMock: func(mockResourceManager *MockResourceManager, mockServiceUsage *MockServiceUsage, mockOrgPolicy *MockOrgPolicy, mockIam *MockIam, mockBilling *MockBilling, mockCloudStorage *MockCloudStorage) {
+				mockCloudStorage.On("EnsureBucketExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockCloudStorage.On("GetObject", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, fmt.Errorf("error"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "Failed apply folder creation fails",
+			tenant: &tenant.Tenant{
+				APIVersion: "core.oam.dev/v1beta1",
+				Kind:       "Tenant",
+				Metadata:   tenant.Metadata{Name: "acme-corp"},
+				Spec: tenant.Spec{
+					BillingAccount: "ABCDE-12345-FGHIJ",
+					ParentFolder:   "937506553540",
+					AllowedApis: []string{
+						"run.googleapis.com",
+						"artifactregistry.googleapis.com",
+						"logging.googleapis.com",
+						"monitoring.googleapis.com",
+					},
+					Environments: []string{
+						"dev",
+						"prod",
+					},
+				},
+			},
+			setupMock: func(mockResourceManager *MockResourceManager, mockServiceUsage *MockServiceUsage, mockOrgPolicy *MockOrgPolicy, mockIam *MockIam, mockBilling *MockBilling, mockCloudStorage *MockCloudStorage) {
+				mockCloudStorage.On("EnsureBucketExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockCloudStorage.On("GetObject", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, storage.ErrObjectNotExist)
+				mockResourceManager.On("EnsureFolderExists", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, fmt.Errorf("error"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "failed apply project creation fails",
+			tenant: &tenant.Tenant{
+				APIVersion: "core.oam.dev/v1beta1",
+				Kind:       "Tenant",
+				Metadata:   tenant.Metadata{Name: "acme-corp"},
+				Spec: tenant.Spec{
+					BillingAccount: "ABCDE-12345-FGHIJ",
+					ParentFolder:   "937506553540",
+					AllowedApis: []string{
+						"run.googleapis.com",
+						"artifactregistry.googleapis.com",
+						"logging.googleapis.com",
+						"monitoring.googleapis.com",
+					},
+					Environments: []string{
+						"dev",
+						"prod",
+					},
+				},
+			},
+			setupMock: func(mockResourceManager *MockResourceManager, mockServiceUsage *MockServiceUsage, mockOrgPolicy *MockOrgPolicy, mockIam *MockIam, mockBilling *MockBilling, mockCloudStorage *MockCloudStorage) {
+				mockCloudStorage.On("EnsureBucketExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockCloudStorage.On("GetObject", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, storage.ErrObjectNotExist)
+				mockResourceManager.On("EnsureFolderExists", mock.Anything, mock.Anything, mock.Anything).
+					Return("acme-corp", nil)
+				mockResourceManager.On("EnsureProjectExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(fmt.Errorf("error"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "failed apply billing account linking fails",
+			tenant: &tenant.Tenant{
+				APIVersion: "core.oam.dev/v1beta1",
+				Kind:       "Tenant",
+				Metadata:   tenant.Metadata{Name: "acme-corp"},
+				Spec: tenant.Spec{
+					BillingAccount: "ABCDE-12345-FGHIJ",
+					ParentFolder:   "937506553540",
+					AllowedApis: []string{
+						"run.googleapis.com",
+						"artifactregistry.googleapis.com",
+						"logging.googleapis.com",
+						"monitoring.googleapis.com",
+					},
+					Environments: []string{
+						"dev",
+						"prod",
+					},
+				},
+			},
+			setupMock: func(mockResourceManager *MockResourceManager, mockServiceUsage *MockServiceUsage, mockOrgPolicy *MockOrgPolicy, mockIam *MockIam, mockBilling *MockBilling, mockCloudStorage *MockCloudStorage) {
+				mockCloudStorage.On("EnsureBucketExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockCloudStorage.On("GetObject", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, storage.ErrObjectNotExist)
+				mockResourceManager.On("EnsureFolderExists", mock.Anything, mock.Anything, mock.Anything).
+					Return("acme-corp", nil)
+				mockResourceManager.On("EnsureProjectExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
+					Return(fmt.Errorf("error"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "failed apply org policy application fails",
+			tenant: &tenant.Tenant{
+				APIVersion: "core.oam.dev/v1beta1",
+				Kind:       "Tenant",
+				Metadata:   tenant.Metadata{Name: "acme-corp"},
+				Spec: tenant.Spec{
+					BillingAccount: "ABCDE-12345-FGHIJ",
+					ParentFolder:   "937506553540",
+					AllowedApis: []string{
+						"run.googleapis.com",
+						"artifactregistry.googleapis.com",
+						"logging.googleapis.com",
+						"monitoring.googleapis.com",
+					},
+					Environments: []string{
+						"dev",
+						"prod",
+					},
+				},
+			},
+			setupMock: func(mockResourceManager *MockResourceManager, mockServiceUsage *MockServiceUsage, mockOrgPolicy *MockOrgPolicy, mockIam *MockIam, mockBilling *MockBilling, mockCloudStorage *MockCloudStorage) {
+				mockCloudStorage.On("EnsureBucketExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockCloudStorage.On("GetObject", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, storage.ErrObjectNotExist)
+				mockResourceManager.On("EnsureFolderExists", mock.Anything, mock.Anything, mock.Anything).
+					Return("acme-corp", nil)
+				mockResourceManager.On("EnsureProjectExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockOrgPolicy.On("EnforcePolicy", mock.Anything, mock.Anything, mock.Anything).
+					Return(fmt.Errorf("error"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "Failed Apply unable to enable APIs",
+			tenant: &tenant.Tenant{
+				APIVersion: "core.oam.dev/v1beta1",
+				Kind:       "Tenant",
+				Metadata:   tenant.Metadata{Name: "acme-corp"},
+				Spec: tenant.Spec{
+					BillingAccount: "ABCDE-12345-FGHIJ",
+					ParentFolder:   "937506553540",
+					AllowedApis: []string{
+						"run.googleapis.com",
+						"artifactregistry.googleapis.com",
+						"logging.googleapis.com",
+						"monitoring.googleapis.com",
+					},
+					Environments: []string{
+						"dev",
+						"prod",
+					},
+				},
+			},
+			setupMock: func(mockResourceManager *MockResourceManager, mockServiceUsage *MockServiceUsage, mockOrgPolicy *MockOrgPolicy, mockIam *MockIam, mockBilling *MockBilling, mockCloudStorage *MockCloudStorage) {
+				mockCloudStorage.On("EnsureBucketExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockCloudStorage.On("GetObject", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, storage.ErrObjectNotExist)
+				mockResourceManager.On("EnsureFolderExists", mock.Anything, mock.Anything, mock.Anything).
+					Return("acme-corp", nil)
+				mockResourceManager.On("EnsureProjectExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockOrgPolicy.On("EnforcePolicy", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockServiceUsage.On("EnableAPIs", mock.Anything, mock.Anything, mock.Anything).
+					Return(fmt.Errorf("error"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "failed apply unable to create service accounts",
+			tenant: &tenant.Tenant{
+				APIVersion: "core.oam.dev/v1beta1",
+				Kind:       "Tenant",
+				Metadata:   tenant.Metadata{Name: "acme-corp"},
+				Spec: tenant.Spec{
+					BillingAccount: "ABCDE-12345-FGHIJ",
+					ParentFolder:   "937506553540",
+					AllowedApis: []string{
+						"run.googleapis.com",
+						"artifactregistry.googleapis.com",
+						"logging.googleapis.com",
+						"monitoring.googleapis.com",
+					},
+					Environments: []string{
+						"dev",
+						"prod",
+					},
+				},
+			},
+			setupMock: func(mockResourceManager *MockResourceManager, mockServiceUsage *MockServiceUsage, mockOrgPolicy *MockOrgPolicy, mockIam *MockIam, mockBilling *MockBilling, mockCloudStorage *MockCloudStorage) {
+				mockCloudStorage.On("EnsureBucketExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockCloudStorage.On("GetObject", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, storage.ErrObjectNotExist)
+				mockResourceManager.On("EnsureFolderExists", mock.Anything, mock.Anything, mock.Anything).
+					Return("acme-corp", nil)
+				mockResourceManager.On("EnsureProjectExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockOrgPolicy.On("EnforcePolicy", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockServiceUsage.On("EnableAPIs", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return("", fmt.Errorf("error")).Once()
+			},
+			wantErr: true,
+		},
+		{
+			name: "failed apply unable to bind roles",
+			tenant: &tenant.Tenant{
+				APIVersion: "core.oam.dev/v1beta1",
+				Kind:       "Tenant",
+				Metadata:   tenant.Metadata{Name: "acme-corp"},
+				Spec: tenant.Spec{
+					BillingAccount: "ABCDE-12345-FGHIJ",
+					ParentFolder:   "937506553540",
+					AllowedApis: []string{
+						"run.googleapis.com",
+						"artifactregistry.googleapis.com",
+						"logging.googleapis.com",
+						"monitoring.googleapis.com",
+					},
+					Environments: []string{
+						"dev",
+						"prod",
+					},
+				},
+			},
+			setupMock: func(mockResourceManager *MockResourceManager, mockServiceUsage *MockServiceUsage, mockOrgPolicy *MockOrgPolicy, mockIam *MockIam, mockBilling *MockBilling, mockCloudStorage *MockCloudStorage) {
+				mockCloudStorage.On("EnsureBucketExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockCloudStorage.On("GetObject", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, storage.ErrObjectNotExist)
+				mockResourceManager.On("EnsureFolderExists", mock.Anything, mock.Anything, mock.Anything).
+					Return("acme-corp", nil)
+				mockResourceManager.On("EnsureProjectExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockOrgPolicy.On("EnforcePolicy", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockServiceUsage.On("EnableAPIs", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return("sa-pipeline@acme-corp-dev.iam.gserviceaccount.com", nil).Once()
+				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return("sa-pipeline@acme-corp-prod.iam.gserviceaccount.com", nil).Once()
+				mockIam.On("BindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(fmt.Errorf("error"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "failed apply unable to write to cloud storage",
+			tenant: &tenant.Tenant{
+				APIVersion: "core.oam.dev/v1beta1",
+				Kind:       "Tenant",
+				Metadata:   tenant.Metadata{Name: "acme-corp"},
+				Spec: tenant.Spec{
+					BillingAccount: "ABCDE-12345-FGHIJ",
+					ParentFolder:   "937506553540",
+					AllowedApis: []string{
+						"run.googleapis.com",
+						"artifactregistry.googleapis.com",
+						"logging.googleapis.com",
+						"monitoring.googleapis.com",
+					},
+					Environments: []string{
+						"dev",
+						"prod",
+					},
+				},
+			},
+			setupMock: func(mockResourceManager *MockResourceManager, mockServiceUsage *MockServiceUsage, mockOrgPolicy *MockOrgPolicy, mockIam *MockIam, mockBilling *MockBilling, mockCloudStorage *MockCloudStorage) {
+				mockCloudStorage.On("EnsureBucketExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockCloudStorage.On("GetObject", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, storage.ErrObjectNotExist)
+				mockResourceManager.On("EnsureFolderExists", mock.Anything, mock.Anything, mock.Anything).
+					Return("acme-corp", nil)
+				mockResourceManager.On("EnsureProjectExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockOrgPolicy.On("EnforcePolicy", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockServiceUsage.On("EnableAPIs", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return("sa-pipeline@acme-corp-dev.iam.gserviceaccount.com", nil).Once()
+				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return("sa-pipeline@acme-corp-prod.iam.gserviceaccount.com", nil).Once()
+				mockIam.On("BindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockCloudStorage.On("WriteObject", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(fmt.Errorf("error"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "failed to write to bucket second time",
+			tenant: &tenant.Tenant{
+				APIVersion: "core.oam.dev/v1beta1",
+				Kind:       "Tenant",
+				Metadata:   tenant.Metadata{Name: "acme-corp"},
+				Spec: tenant.Spec{
+					BillingAccount: "ABCDE-12345-FGHIJ",
+					ParentFolder:   "937506553540",
+					AllowedApis: []string{
+						"run.googleapis.com",
+						"artifactregistry.googleapis.com",
+						"logging.googleapis.com",
+						"monitoring.googleapis.com",
+					},
+					Environments: []string{
+						"dev",
+						"prod",
+					},
+				},
+			},
+			setupMock: func(mockResourceManager *MockResourceManager, mockServiceUsage *MockServiceUsage, mockOrgPolicy *MockOrgPolicy, mockIam *MockIam, mockBilling *MockBilling, mockCloudStorage *MockCloudStorage) {
+				mockCloudStorage.On("EnsureBucketExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockCloudStorage.On("GetObject", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, storage.ErrObjectNotExist)
+				mockResourceManager.On("EnsureFolderExists", mock.Anything, mock.Anything, mock.Anything).
+					Return("acme-corp", nil)
+				mockResourceManager.On("EnsureProjectExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockOrgPolicy.On("EnforcePolicy", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockServiceUsage.On("EnableAPIs", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return("sa-pipeline@acme-corp-dev.iam.gserviceaccount.com", nil).Once()
+				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return("sa-pipeline@acme-corp-prod.iam.gserviceaccount.com", nil).Once()
+				mockIam.On("BindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockCloudStorage.On("WriteObject", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil).Once()
+				mockCloudStorage.On("WriteObject", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(fmt.Errorf("error")).Once()
+			},
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {

@@ -1,0 +1,25 @@
+{
+  "name": "acme-corp",
+  "appliedAt": "2026-07-24T10:00:00Z",
+  "folderId": "folders/987654321",
+  "projects": {
+    "dev": {
+      "projectId": "acme-corp-dev",
+      "serviceAccounts": {
+        "sa-pipeline": "sa-pipeline@acme-corp-dev.iam.gserviceaccount.com"
+      }
+    },
+    "prod": {
+      "projectId": "acme-corp-prod",
+      "serviceAccounts": {
+        "sa-pipeline": "sa-pipeline@acme-corp-prod.iam.gserviceaccount.com"
+      }
+    }
+  },
+  "allowedAPIs": [
+    "run.googleapis.com",
+    "artifactregistry.googleapis.com",
+    "logging.googleapis.com",
+    "cloudscheduler.googleapis.com"
+  ]
+}
