@@ -10,8 +10,13 @@ func (p *Provisioner) ensureServiceAccounts(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		serviceAccounts := map[string]string{
-			"sa-pipeline": email,
+
+		serviceAccount := ProvisionedServiceAccount{
+			Email: email,
+		}
+
+		serviceAccounts := map[string]ProvisionedServiceAccount{
+			"sa-pipeline": serviceAccount,
 		}
 
 		p.newState.Projects[env] = ProvisionedProject{

@@ -24,6 +24,8 @@ type IAMClient interface {
 	EnsureServiceAccountExists(ctx context.Context, projectID, name, displayName string) (string, error)
 	BindProjectRoles(ctx context.Context, projectID, saEmail string, roles []string) error
 	UnbindProjectRoles(ctx context.Context, projectID, saEmail string, roles []string) error
+	BindOrgRoles(ctx context.Context, orgID, saEmail string, roles []string) error
+	UnbindOrgRoles(ctx context.Context, orgID, saEmail string, roles []string) error
 	Close() error
 }
 
@@ -85,9 +87,32 @@ func (a *projectsAdapter) Close() error {
 	return a.client.Close()
 }
 
+type organizationAPI interface {
+	GetIamPolicy(ctx context.Context, req *iampb.GetIamPolicyRequest, opts ...gax.CallOption) (*iampb.Policy, error)
+	SetIamPolicy(ctx context.Context, req *iampb.SetIamPolicyRequest, opts ...gax.CallOption) (*iampb.Policy, error)
+	Close() error
+}
+
+type organizationAdapter struct {
+	client *resourcemanager.OrganizationsClient
+}
+
+func (a *organizationAdapter) GetIamPolicy(ctx context.Context, req *iampb.GetIamPolicyRequest, opts ...gax.CallOption) (*iampb.Policy, error) {
+	return a.client.GetIamPolicy(ctx, req, opts...)
+}
+
+func (a *organizationAdapter) SetIamPolicy(ctx context.Context, req *iampb.SetIamPolicyRequest, opts ...gax.CallOption) (*iampb.Policy, error) {
+	return a.client.SetIamPolicy(ctx, req, opts...)
+}
+
+func (a *organizationAdapter) Close() error {
+	return a.client.Close()
+}
+
 type IAMClientImpl struct {
-	iam      iamAPI
-	projects projectsAPI
+	iam          iamAPI
+	projects     projectsAPI
+	organization organizationAPI
 }
 
 func NewIAMClient(ctx context.Context, opts ...option.ClientOption) (*IAMClientImpl, error) {
@@ -100,18 +125,31 @@ func NewIAMClient(ctx context.Context, opts ...option.ClientOption) (*IAMClientI
 		iamClient.Close()
 		return nil, fmt.Errorf("creating projects client for iam: %w", err)
 	}
-	return &IAMClientImpl{iam: &iamAdapter{client: iamClient}, projects: &projectsAdapter{client: projectsClient}}, nil
+	orgsClient, err := resourcemanager.NewOrganizationsClient(ctx, opts...)
+	if err != nil {
+		iamClient.Close()
+		projectsClient.Close()
+		return nil, fmt.Errorf("creating organizations client for iam: %w", err)
+	}
+	return &IAMClientImpl{
+		iam:          &iamAdapter{client: iamClient},
+		projects:     &projectsAdapter{client: projectsClient},
+		organization: &organizationAdapter{client: orgsClient},
+	}, nil
 }
 
-func newIamClientWithAPI(api iamAPI, api2 projectsAPI) *IAMClientImpl {
-	return &IAMClientImpl{iam: api, projects: api2}
+func newIamClientWithAPI(api iamAPI, projects projectsAPI, org organizationAPI) *IAMClientImpl {
+	return &IAMClientImpl{iam: api, projects: projects, organization: org}
 }
 
 func (c *IAMClientImpl) Close() error {
 	if err := c.iam.Close(); err != nil {
 		return err
 	}
-	return c.projects.Close()
+	if err := c.projects.Close(); err != nil {
+		return err
+	}
+	return c.organization.Close()
 }
 
 // EnsureServiceAccountExists creates a SA if it doesn't exist, returns its email
@@ -190,6 +228,42 @@ func (c *IAMClientImpl) BindProjectRoles(ctx context.Context, projectID, saEmail
 	return nil
 }
 
+func (c *IAMClientImpl) BindOrgRoles(ctx context.Context, orgID, saEmail string, roles []string) error {
+	ctx, span := tracing.Tracer("bind org roles").Start(ctx, "bind org roles",
+		trace.WithAttributes(
+			attribute.String("org", orgID),
+			attribute.String("serviceAccountEmail", saEmail)))
+	defer span.End()
+
+	resource := "organizations/" + orgID
+	member := "serviceAccount:" + saEmail
+
+	policy, err := c.organization.GetIamPolicy(ctx, &iampb.GetIamPolicyRequest{Resource: resource})
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(otelCodes.Error, err.Error())
+		return fmt.Errorf("getting org IAM policy for %s: %w", orgID, err)
+	}
+
+	for _, role := range roles {
+		addBinding(policy, role, member)
+	}
+
+	_, err = c.organization.SetIamPolicy(ctx, &iampb.SetIamPolicyRequest{
+		Resource: resource,
+		Policy:   policy,
+	})
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(otelCodes.Error, err.Error())
+		return fmt.Errorf("setting org IAM policy for %s: %w", orgID, err)
+	}
+
+	slog.InfoContext(ctx, "org roles bound", "orgID", orgID, "sa", saEmail, "roles", roles)
+	span.SetStatus(otelCodes.Ok, "org roles bound")
+	return nil
+}
+
 func addBinding(policy *iampb.Policy, role, member string) {
 	for _, binding := range policy.Bindings {
 		if binding.Role == role {
@@ -242,6 +316,42 @@ func (c *IAMClientImpl) UnbindProjectRoles(ctx context.Context, projectID, saEma
 	}
 	slog.InfoContext(ctx, "roles unbound", "projectID", projectID, "sa", saEmail, "roles", roles)
 	span.SetStatus(otelCodes.Ok, "roles unbound")
+	return nil
+}
+
+func (c *IAMClientImpl) UnbindOrgRoles(ctx context.Context, orgID, saEmail string, roles []string) error {
+	ctx, span := tracing.Tracer("unbind org roles").Start(ctx, "unbind org roles",
+		trace.WithAttributes(
+			attribute.String("org", orgID),
+			attribute.String("serviceAccountEmail", saEmail)))
+	defer span.End()
+
+	resource := "organizations/" + orgID
+	member := "serviceAccount:" + saEmail
+
+	policy, err := c.organization.GetIamPolicy(ctx, &iampb.GetIamPolicyRequest{Resource: resource})
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(otelCodes.Error, err.Error())
+		return fmt.Errorf("getting org IAM policy for %s: %w", orgID, err)
+	}
+
+	for _, role := range roles {
+		removeBinding(policy, role, member)
+	}
+
+	_, err = c.organization.SetIamPolicy(ctx, &iampb.SetIamPolicyRequest{
+		Resource: resource,
+		Policy:   policy,
+	})
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(otelCodes.Error, err.Error())
+		return fmt.Errorf("removing org IAM roles for %s: %w", orgID, err)
+	}
+
+	slog.InfoContext(ctx, "org roles unbound", "orgID", orgID, "sa", saEmail, "roles", roles)
+	span.SetStatus(otelCodes.Ok, "org roles unbound")
 	return nil
 }
 

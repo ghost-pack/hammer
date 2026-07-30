@@ -6,17 +6,17 @@ import (
 	"log/slog"
 
 	"github.com/ghost-pack/hammer/internal/observability/tracing"
+	"github.com/ghost-pack/hammer/internal/provisioner"
 	"github.com/ghost-pack/hammer/internal/tenant"
-	"github.com/ghost-pack/hammer/internal/tenantpipeline"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
 
 func init() {
-	tenantpipeline.Register("Tenant", New)
+	provisioner.Register("Tenant", New)
 }
 
-func New(t *tenant.Tenant, clients *tenantpipeline.DependencyClients) (tenantpipeline.Provisioner, error) {
+func New(t *tenant.Tenant, clients *provisioner.DependencyClients) (provisioner.Provisioner, error) {
 	return &Provisioner{
 		tenant:           t,
 		clients:          clients,
@@ -31,7 +31,7 @@ func New(t *tenant.Tenant, clients *tenantpipeline.DependencyClients) (tenantpip
 type Provisioner struct {
 	// config — set at construction, never changes
 	tenant          *tenant.Tenant
-	clients         *tenantpipeline.DependencyClients
+	clients         *provisioner.DependencyClients
 	registryBucket  string
 	platformProject string
 	defaultRegion   string

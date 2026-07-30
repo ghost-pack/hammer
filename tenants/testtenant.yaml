@@ -13,7 +13,3 @@ spec:
   environments:
     - dev
     - prod
-#  # Org policies to enforce on both projects
-#  orgPolicies:
-#    - constraints/compute.requireOsLogin
-#    - constraints/iam.disableServiceAccountKeyCreation

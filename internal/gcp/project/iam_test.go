@@ -84,6 +84,27 @@ func (m *MockProjectsAPI) Close() error {
 	return args.Error(0)
 }
 
+type MockOrganizationAPI struct {
+	mock.Mock
+}
+
+func (m *MockOrganizationAPI) GetIamPolicy(ctx context.Context, req *iampb.GetIamPolicyRequest, opts ...gax.CallOption) (*iampb.Policy, error) {
+	args := m.Called(ctx, req)
+	op, _ := args.Get(0).(*iampb.Policy)
+	return op, args.Error(1)
+}
+
+func (m *MockOrganizationAPI) SetIamPolicy(ctx context.Context, req *iampb.SetIamPolicyRequest, opts ...gax.CallOption) (*iampb.Policy, error) {
+	args := m.Called(ctx, req)
+	op, _ := args.Get(0).(*iampb.Policy)
+	return op, args.Error(1)
+}
+
+func (m *MockOrganizationAPI) Close() error {
+	args := m.Called()
+	return args.Error(0)
+}
+
 func TestEnsureServiceAccountExists(t *testing.T) {
 	t.Run("successfully create service accounts", func(t *testing.T) {
 		mockIamApi := &MockIamAPI{}
@@ -97,7 +118,7 @@ func TestEnsureServiceAccountExists(t *testing.T) {
 				req.ServiceAccount.DisplayName == "sa-cldrun"
 		})).Return(&adminpb.ServiceAccount{Email: "sa-cldrun@my-project.iam.gserviceaccount.com"}, nil)
 
-		client := newIamClientWithAPI(mockIamApi, &MockProjectsAPI{})
+		client := newIamClientWithAPI(mockIamApi, &MockProjectsAPI{}, &MockOrganizationAPI{})
 		email, err := client.EnsureServiceAccountExists(context.Background(), "my-project", "sa-cldrun", "sa-cldrun")
 		require.NoError(t, err)
 		require.Equal(t, "sa-cldrun@my-project.iam.gserviceaccount.com", email)
@@ -117,7 +138,7 @@ func TestEnsureServiceAccountExists(t *testing.T) {
 				req.ServiceAccount.DisplayName == "sa-cldrun"
 		})).Return(nil, fmt.Errorf("some error"))
 
-		client := newIamClientWithAPI(mockIamApi, &MockProjectsAPI{})
+		client := newIamClientWithAPI(mockIamApi, &MockProjectsAPI{}, &MockOrganizationAPI{})
 		email, err := client.EnsureServiceAccountExists(context.Background(), "my-project", "sa-cldrun", "sa-cldrun")
 		require.Error(t, err)
 		require.Empty(t, email)
@@ -131,7 +152,7 @@ func TestEnsureServiceAccountExists(t *testing.T) {
 			return req.Name == "projects/my-project/serviceAccounts/sa-cldrun@my-project.iam.gserviceaccount.com"
 		})).Return(&adminpb.ServiceAccount{Email: "sa-cldrun@my-project.iam.gserviceaccount.com"}, nil)
 
-		client := newIamClientWithAPI(mockIamApi, &MockProjectsAPI{})
+		client := newIamClientWithAPI(mockIamApi, &MockProjectsAPI{}, &MockOrganizationAPI{})
 		email, err := client.EnsureServiceAccountExists(context.Background(), "my-project", "sa-cldrun", "sa-cldrun")
 		require.NoError(t, err)
 		require.Equal(t, "sa-cldrun@my-project.iam.gserviceaccount.com", email)
@@ -145,7 +166,7 @@ func TestEnsureServiceAccountExists(t *testing.T) {
 			return req.Name == "projects/my-project/serviceAccounts/sa-cldrun@my-project.iam.gserviceaccount.com"
 		})).Return(nil, fmt.Errorf("some error"))
 
-		client := newIamClientWithAPI(mockIamApi, &MockProjectsAPI{})
+		client := newIamClientWithAPI(mockIamApi, &MockProjectsAPI{}, &MockOrganizationAPI{})
 		email, err := client.EnsureServiceAccountExists(context.Background(), "my-project", "sa-cldrun", "sa-cldrun")
 		require.Error(t, err)
 		require.Empty(t, email)
@@ -172,7 +193,7 @@ func TestBindProjectRoles(t *testing.T) {
 			{Role: "my-role", Members: []string{"serviceAccount:sa-cldrun@my-project.iam.gserviceaccount.com"}},
 		}}, nil)
 
-		client := newIamClientWithAPI(mockIamApi, mockProjectsAPI)
+		client := newIamClientWithAPI(mockIamApi, mockProjectsAPI, &MockOrganizationAPI{})
 		err := client.BindProjectRoles(context.Background(), "my-project", "sa-cldrun@my-project.iam.gserviceaccount.com", []string{"my-role"})
 		require.NoError(t, err)
 
@@ -186,7 +207,7 @@ func TestBindProjectRoles(t *testing.T) {
 			return req.Resource == "projects/my-project"
 		})).Return(nil, fmt.Errorf("some error"))
 
-		client := newIamClientWithAPI(mockIamApi, mockProjectsAPI)
+		client := newIamClientWithAPI(mockIamApi, mockProjectsAPI, &MockOrganizationAPI{})
 		err := client.BindProjectRoles(context.Background(), "my-project", "sa-cldrun@my-project.iam.gserviceaccount.com", []string{"my-role"})
 		require.Error(t, err)
 
@@ -207,7 +228,7 @@ func TestBindProjectRoles(t *testing.T) {
 			return req.Resource == "projects/my-project" && proto.Equal(req.Policy, expected)
 		})).Return(nil, fmt.Errorf("some error"))
 
-		client := newIamClientWithAPI(mockIamApi, mockProjectsAPI)
+		client := newIamClientWithAPI(mockIamApi, mockProjectsAPI, &MockOrganizationAPI{})
 		err := client.BindProjectRoles(context.Background(), "my-project", "sa-cldrun@my-project.iam.gserviceaccount.com", []string{"my-role"})
 		require.Error(t, err)
 
@@ -232,7 +253,7 @@ func TestBindProjectRoles(t *testing.T) {
 			{Role: "my-role", Members: []string{"serviceAccount:sa-cldrun-2@my-project.iam.gserviceaccount.com", "serviceAccount:sa-cldrun@my-project.iam.gserviceaccount.com"}},
 		}}, nil)
 
-		client := newIamClientWithAPI(mockIamApi, mockProjectsAPI)
+		client := newIamClientWithAPI(mockIamApi, mockProjectsAPI, &MockOrganizationAPI{})
 		err := client.BindProjectRoles(context.Background(), "my-project", "sa-cldrun@my-project.iam.gserviceaccount.com", []string{"my-role"})
 		require.NoError(t, err)
 
@@ -257,8 +278,118 @@ func TestBindProjectRoles(t *testing.T) {
 			{Role: "my-role", Members: []string{"serviceAccount:sa-cldrun@my-project.iam.gserviceaccount.com"}},
 		}}, nil)
 
-		client := newIamClientWithAPI(mockIamApi, mockProjectsAPI)
+		client := newIamClientWithAPI(mockIamApi, mockProjectsAPI, &MockOrganizationAPI{})
 		err := client.BindProjectRoles(context.Background(), "my-project", "sa-cldrun@my-project.iam.gserviceaccount.com", []string{"my-role"})
+		require.NoError(t, err)
+
+		mockIamApi.AssertExpectations(t)
+	})
+}
+
+func TestBindOrgRoles(t *testing.T) {
+	t.Run("successfully bind new role on org", func(t *testing.T) {
+		mockIamApi := &MockIamAPI{}
+		mockOrgApi := &MockOrganizationAPI{}
+		mockOrgApi.On("GetIamPolicy", mock.Anything, mock.MatchedBy(func(req *iampb.GetIamPolicyRequest) bool {
+			return req.Resource == "organizations/my-org-id"
+		})).Return(&iampb.Policy{}, nil)
+
+		mockOrgApi.On("SetIamPolicy", mock.Anything, mock.MatchedBy(func(req *iampb.SetIamPolicyRequest) bool {
+			expected := &iampb.Policy{Bindings: []*iampb.Binding{
+				{Role: "my-role", Members: []string{"serviceAccount:sa-cldrun@my-project.iam.gserviceaccount.com"}},
+			}}
+			return req.Resource == "organizations/my-org-id" && proto.Equal(req.Policy, expected)
+		})).Return(&iampb.Policy{Bindings: []*iampb.Binding{
+			{Role: "my-role", Members: []string{"serviceAccount:sa-cldrun@my-project.iam.gserviceaccount.com"}},
+		}}, nil)
+
+		client := newIamClientWithAPI(mockIamApi, &MockProjectsAPI{}, mockOrgApi)
+		err := client.BindOrgRoles(context.Background(), "my-org-id", "sa-cldrun@my-project.iam.gserviceaccount.com", []string{"my-role"})
+		require.NoError(t, err)
+
+		mockIamApi.AssertExpectations(t)
+	})
+
+	t.Run("fail to get iam policy on org", func(t *testing.T) {
+		mockIamApi := &MockIamAPI{}
+		mockOrgApi := &MockOrganizationAPI{}
+		mockOrgApi.On("GetIamPolicy", mock.Anything, mock.MatchedBy(func(req *iampb.GetIamPolicyRequest) bool {
+			return req.Resource == "organizations/my-org-id"
+		})).Return(nil, fmt.Errorf("some error"))
+
+		client := newIamClientWithAPI(mockIamApi, &MockProjectsAPI{}, mockOrgApi)
+		err := client.BindOrgRoles(context.Background(), "my-org-id", "sa-cldrun@my-project.iam.gserviceaccount.com", []string{"my-role"})
+		require.Error(t, err)
+
+		mockIamApi.AssertExpectations(t)
+	})
+
+	t.Run("fail to set IAM policy on org", func(t *testing.T) {
+		mockIamApi := &MockIamAPI{}
+		mockOrgApi := &MockOrganizationAPI{}
+		mockOrgApi.On("GetIamPolicy", mock.Anything, mock.MatchedBy(func(req *iampb.GetIamPolicyRequest) bool {
+			return req.Resource == "organizations/my-org-id"
+		})).Return(&iampb.Policy{}, nil)
+
+		mockOrgApi.On("SetIamPolicy", mock.Anything, mock.MatchedBy(func(req *iampb.SetIamPolicyRequest) bool {
+			expected := &iampb.Policy{Bindings: []*iampb.Binding{
+				{Role: "my-role", Members: []string{"serviceAccount:sa-cldrun@my-project.iam.gserviceaccount.com"}},
+			}}
+			return req.Resource == "organizations/my-org-id" && proto.Equal(req.Policy, expected)
+		})).Return(nil, fmt.Errorf("some error"))
+
+		client := newIamClientWithAPI(mockIamApi, &MockProjectsAPI{}, mockOrgApi)
+		err := client.BindOrgRoles(context.Background(), "my-org-id", "sa-cldrun@my-project.iam.gserviceaccount.com", []string{"my-role"})
+		require.Error(t, err)
+
+		mockIamApi.AssertExpectations(t)
+	})
+
+	t.Run("successfully bind new member on existing role in org", func(t *testing.T) {
+		mockIamApi := &MockIamAPI{}
+		mockOrgApi := &MockOrganizationAPI{}
+		mockOrgApi.On("GetIamPolicy", mock.Anything, mock.MatchedBy(func(req *iampb.GetIamPolicyRequest) bool {
+			return req.Resource == "organizations/my-org-id"
+		})).Return(&iampb.Policy{Bindings: []*iampb.Binding{
+			{Role: "my-role", Members: []string{"serviceAccount:sa-cldrun-2@my-project.iam.gserviceaccount.com"}},
+		}}, nil)
+
+		mockOrgApi.On("SetIamPolicy", mock.Anything, mock.MatchedBy(func(req *iampb.SetIamPolicyRequest) bool {
+			expected := &iampb.Policy{Bindings: []*iampb.Binding{
+				{Role: "my-role", Members: []string{"serviceAccount:sa-cldrun-2@my-project.iam.gserviceaccount.com", "serviceAccount:sa-cldrun@my-project.iam.gserviceaccount.com"}},
+			}}
+			return req.Resource == "organizations/my-org-id" && proto.Equal(req.Policy, expected)
+		})).Return(&iampb.Policy{Bindings: []*iampb.Binding{
+			{Role: "my-role", Members: []string{"serviceAccount:sa-cldrun-2@my-project.iam.gserviceaccount.com", "serviceAccount:sa-cldrun@my-project.iam.gserviceaccount.com"}},
+		}}, nil)
+
+		client := newIamClientWithAPI(mockIamApi, &MockProjectsAPI{}, mockOrgApi)
+		err := client.BindOrgRoles(context.Background(), "my-org-id", "sa-cldrun@my-project.iam.gserviceaccount.com", []string{"my-role"})
+		require.NoError(t, err)
+
+		mockIamApi.AssertExpectations(t)
+	})
+
+	t.Run("successfully no-op on existing member of existing role on org", func(t *testing.T) {
+		mockIamApi := &MockIamAPI{}
+		mockOrgApi := &MockOrganizationAPI{}
+		mockOrgApi.On("GetIamPolicy", mock.Anything, mock.MatchedBy(func(req *iampb.GetIamPolicyRequest) bool {
+			return req.Resource == "organizations/my-org-id"
+		})).Return(&iampb.Policy{Bindings: []*iampb.Binding{
+			{Role: "my-role", Members: []string{"serviceAccount:sa-cldrun@my-project.iam.gserviceaccount.com"}},
+		}}, nil)
+
+		mockOrgApi.On("SetIamPolicy", mock.Anything, mock.MatchedBy(func(req *iampb.SetIamPolicyRequest) bool {
+			expected := &iampb.Policy{Bindings: []*iampb.Binding{
+				{Role: "my-role", Members: []string{"serviceAccount:sa-cldrun@my-project.iam.gserviceaccount.com"}},
+			}}
+			return req.Resource == "organizations/my-org-id" && proto.Equal(req.Policy, expected)
+		})).Return(&iampb.Policy{Bindings: []*iampb.Binding{
+			{Role: "my-role", Members: []string{"serviceAccount:sa-cldrun@my-project.iam.gserviceaccount.com"}},
+		}}, nil)
+
+		client := newIamClientWithAPI(mockIamApi, &MockProjectsAPI{}, mockOrgApi)
+		err := client.BindOrgRoles(context.Background(), "my-org-id", "sa-cldrun@my-project.iam.gserviceaccount.com", []string{"my-role"})
 		require.NoError(t, err)
 
 		mockIamApi.AssertExpectations(t)
@@ -281,7 +412,7 @@ func TestUnbindProjectRoles(t *testing.T) {
 			return req.Resource == "projects/my-project" && proto.Equal(req.Policy, expected)
 		})).Return(&iampb.Policy{}, nil)
 
-		client := newIamClientWithAPI(mockIamApi, mockProjectsAPI)
+		client := newIamClientWithAPI(mockIamApi, mockProjectsAPI, &MockOrganizationAPI{})
 		err := client.UnbindProjectRoles(context.Background(), "my-project", "sa-cldrun@my-project.iam.gserviceaccount.com", []string{"my-role"})
 		require.NoError(t, err)
 		mockProjectsAPI.AssertExpectations(t)
@@ -308,7 +439,7 @@ func TestUnbindProjectRoles(t *testing.T) {
 			return req.Resource == "projects/my-project" && proto.Equal(req.Policy, expected)
 		})).Return(&iampb.Policy{}, nil)
 
-		client := newIamClientWithAPI(mockIamApi, mockProjectsAPI)
+		client := newIamClientWithAPI(mockIamApi, mockProjectsAPI, &MockOrganizationAPI{})
 		err := client.UnbindProjectRoles(context.Background(), "my-project", "sa-cldrun@my-project.iam.gserviceaccount.com", []string{"my-role"})
 		require.NoError(t, err)
 		mockProjectsAPI.AssertExpectations(t)
@@ -326,7 +457,7 @@ func TestUnbindProjectRoles(t *testing.T) {
 			return req.Resource == "projects/my-project" && proto.Equal(req.Policy, &iampb.Policy{})
 		})).Return(&iampb.Policy{}, nil)
 
-		client := newIamClientWithAPI(mockIamApi, mockProjectsAPI)
+		client := newIamClientWithAPI(mockIamApi, mockProjectsAPI, &MockOrganizationAPI{})
 		err := client.UnbindProjectRoles(context.Background(), "my-project", "sa-cldrun@my-project.iam.gserviceaccount.com", []string{"my-role"})
 		require.NoError(t, err)
 		mockProjectsAPI.AssertExpectations(t)
@@ -351,7 +482,7 @@ func TestUnbindProjectRoles(t *testing.T) {
 			return req.Resource == "projects/my-project" && proto.Equal(req.Policy, expected)
 		})).Return(&iampb.Policy{}, nil)
 
-		client := newIamClientWithAPI(mockIamApi, mockProjectsAPI)
+		client := newIamClientWithAPI(mockIamApi, mockProjectsAPI, &MockOrganizationAPI{})
 		err := client.UnbindProjectRoles(context.Background(), "my-project", "sa-cldrun@my-project.iam.gserviceaccount.com", []string{"my-role"})
 		require.NoError(t, err)
 		mockProjectsAPI.AssertExpectations(t)
@@ -365,7 +496,7 @@ func TestUnbindProjectRoles(t *testing.T) {
 			return req.Resource == "projects/my-project"
 		})).Return(nil, fmt.Errorf("some error"))
 
-		client := newIamClientWithAPI(mockIamApi, mockProjectsAPI)
+		client := newIamClientWithAPI(mockIamApi, mockProjectsAPI, &MockOrganizationAPI{})
 		err := client.UnbindProjectRoles(context.Background(), "my-project", "sa-cldrun@my-project.iam.gserviceaccount.com", []string{"my-role"})
 		require.Error(t, err)
 		require.ErrorContains(t, err, "getting IAM policy")
@@ -385,7 +516,7 @@ func TestUnbindProjectRoles(t *testing.T) {
 		mockProjectsAPI.On("SetIamPolicy", mock.Anything, mock.Anything).
 			Return(nil, fmt.Errorf("some error"))
 
-		client := newIamClientWithAPI(mockIamApi, mockProjectsAPI)
+		client := newIamClientWithAPI(mockIamApi, mockProjectsAPI, &MockOrganizationAPI{})
 		err := client.UnbindProjectRoles(context.Background(), "my-project", "sa-cldrun@my-project.iam.gserviceaccount.com", []string{"my-role"})
 		require.Error(t, err)
 		require.ErrorContains(t, err, "removing IAM roles")
@@ -394,14 +525,145 @@ func TestUnbindProjectRoles(t *testing.T) {
 	})
 }
 
+func TestUnbindOrgRoles(t *testing.T) {
+	t.Run("removes sole member and removes binding entirely on org", func(t *testing.T) {
+		mockIamApi := &MockIamAPI{}
+		mockOrgApi := &MockOrganizationAPI{}
+		mockOrgApi.On("GetIamPolicy", mock.Anything, mock.MatchedBy(func(req *iampb.GetIamPolicyRequest) bool {
+			return req.Resource == "organizations/my-org-id"
+		})).Return(&iampb.Policy{Bindings: []*iampb.Binding{
+			{Role: "my-role", Members: []string{"serviceAccount:sa-cldrun@my-project.iam.gserviceaccount.com"}},
+		}}, nil)
+
+		mockOrgApi.On("SetIamPolicy", mock.Anything, mock.MatchedBy(func(req *iampb.SetIamPolicyRequest) bool {
+			// binding removed entirely since it had only one member
+			expected := &iampb.Policy{Bindings: []*iampb.Binding{}}
+			return req.Resource == "organizations/my-org-id" && proto.Equal(req.Policy, expected)
+		})).Return(&iampb.Policy{}, nil)
+
+		client := newIamClientWithAPI(mockIamApi, &MockProjectsAPI{}, mockOrgApi)
+		err := client.UnbindOrgRoles(context.Background(), "my-org-id", "sa-cldrun@my-project.iam.gserviceaccount.com", []string{"my-role"})
+		require.NoError(t, err)
+		mockOrgApi.AssertExpectations(t)
+		mockIamApi.AssertExpectations(t)
+	})
+
+	t.Run("removes member but keeps other members in binding on org", func(t *testing.T) {
+		mockIamApi := &MockIamAPI{}
+		mockOrgApi := &MockOrganizationAPI{}
+		mockOrgApi.On("GetIamPolicy", mock.Anything, mock.MatchedBy(func(req *iampb.GetIamPolicyRequest) bool {
+			return req.Resource == "organizations/my-org-id"
+		})).Return(&iampb.Policy{Bindings: []*iampb.Binding{
+			{Role: "my-role", Members: []string{
+				"serviceAccount:sa-cldrun@my-project.iam.gserviceaccount.com",
+				"serviceAccount:sa-other@my-project.iam.gserviceaccount.com",
+			}},
+		}}, nil)
+
+		mockOrgApi.On("SetIamPolicy", mock.Anything, mock.MatchedBy(func(req *iampb.SetIamPolicyRequest) bool {
+			// only the other member should remain
+			expected := &iampb.Policy{Bindings: []*iampb.Binding{
+				{Role: "my-role", Members: []string{"serviceAccount:sa-other@my-project.iam.gserviceaccount.com"}},
+			}}
+			return req.Resource == "organizations/my-org-id" && proto.Equal(req.Policy, expected)
+		})).Return(&iampb.Policy{}, nil)
+
+		client := newIamClientWithAPI(mockIamApi, &MockProjectsAPI{}, mockOrgApi)
+		err := client.UnbindOrgRoles(context.Background(), "my-org-id", "sa-cldrun@my-project.iam.gserviceaccount.com", []string{"my-role"})
+		require.NoError(t, err)
+		mockOrgApi.AssertExpectations(t)
+		mockIamApi.AssertExpectations(t)
+	})
+
+	t.Run("no-op when role does not exist in policy", func(t *testing.T) {
+		mockIamApi := &MockIamAPI{}
+		mockOrgApi := &MockOrganizationAPI{}
+		mockOrgApi.On("GetIamPolicy", mock.Anything, mock.MatchedBy(func(req *iampb.GetIamPolicyRequest) bool {
+			return req.Resource == "organizations/my-org-id"
+		})).Return(&iampb.Policy{}, nil)
+
+		mockOrgApi.On("SetIamPolicy", mock.Anything, mock.MatchedBy(func(req *iampb.SetIamPolicyRequest) bool {
+			return req.Resource == "organizations/my-org-id" && proto.Equal(req.Policy, &iampb.Policy{})
+		})).Return(&iampb.Policy{}, nil)
+
+		client := newIamClientWithAPI(mockIamApi, &MockProjectsAPI{}, mockOrgApi)
+		err := client.UnbindOrgRoles(context.Background(), "my-org-id", "sa-cldrun@my-project.iam.gserviceaccount.com", []string{"my-role"})
+		require.NoError(t, err)
+		mockOrgApi.AssertExpectations(t)
+		mockIamApi.AssertExpectations(t)
+	})
+
+	t.Run("no-op when member not in role on org", func(t *testing.T) {
+		mockIamApi := &MockIamAPI{}
+		mockOrgApi := &MockOrganizationAPI{}
+		existingPolicy := &iampb.Policy{Bindings: []*iampb.Binding{
+			{Role: "my-role", Members: []string{"serviceAccount:sa-other@my-project.iam.gserviceaccount.com"}},
+		}}
+		mockOrgApi.On("GetIamPolicy", mock.Anything, mock.MatchedBy(func(req *iampb.GetIamPolicyRequest) bool {
+			return req.Resource == "organizations/my-org-id"
+		})).Return(existingPolicy, nil)
+
+		mockOrgApi.On("SetIamPolicy", mock.Anything, mock.MatchedBy(func(req *iampb.SetIamPolicyRequest) bool {
+			// policy unchanged — sa-other is untouched
+			expected := &iampb.Policy{Bindings: []*iampb.Binding{
+				{Role: "my-role", Members: []string{"serviceAccount:sa-other@my-project.iam.gserviceaccount.com"}},
+			}}
+			return req.Resource == "organizations/my-org-id" && proto.Equal(req.Policy, expected)
+		})).Return(&iampb.Policy{}, nil)
+
+		client := newIamClientWithAPI(mockIamApi, &MockProjectsAPI{}, mockOrgApi)
+		err := client.UnbindOrgRoles(context.Background(), "my-org-id", "sa-cldrun@my-project.iam.gserviceaccount.com", []string{"my-role"})
+		require.NoError(t, err)
+		mockOrgApi.AssertExpectations(t)
+		mockIamApi.AssertExpectations(t)
+	})
+
+	t.Run("fail to get iam policy on org", func(t *testing.T) {
+		mockIamApi := &MockIamAPI{}
+		mockOrgApi := &MockOrganizationAPI{}
+		mockOrgApi.On("GetIamPolicy", mock.Anything, mock.MatchedBy(func(req *iampb.GetIamPolicyRequest) bool {
+			return req.Resource == "organizations/my-org-id"
+		})).Return(nil, fmt.Errorf("getting IAM policy"))
+
+		client := newIamClientWithAPI(mockIamApi, &MockProjectsAPI{}, mockOrgApi)
+		err := client.UnbindOrgRoles(context.Background(), "my-org-id", "sa-cldrun@my-project.iam.gserviceaccount.com", []string{"my-role"})
+		require.Error(t, err)
+		require.ErrorContains(t, err, "getting IAM policy")
+		mockOrgApi.AssertNotCalled(t, "SetIamPolicy", mock.Anything, mock.Anything)
+		mockIamApi.AssertExpectations(t)
+	})
+
+	t.Run("fail to set IAM policy", func(t *testing.T) {
+		mockIamApi := &MockIamAPI{}
+		mockOrgApi := &MockOrganizationAPI{}
+		mockOrgApi.On("GetIamPolicy", mock.Anything, mock.MatchedBy(func(req *iampb.GetIamPolicyRequest) bool {
+			return req.Resource == "organizations/my-org-id"
+		})).Return(&iampb.Policy{Bindings: []*iampb.Binding{
+			{Role: "my-role", Members: []string{"serviceAccount:sa-cldrun@my-project.iam.gserviceaccount.com"}},
+		}}, nil)
+
+		mockOrgApi.On("SetIamPolicy", mock.Anything, mock.Anything).
+			Return(nil, fmt.Errorf("removing IAM roles"))
+
+		client := newIamClientWithAPI(mockIamApi, &MockProjectsAPI{}, mockOrgApi)
+		err := client.UnbindOrgRoles(context.Background(), "my-org-id", "sa-cldrun@my-project.iam.gserviceaccount.com", []string{"my-role"})
+		require.Error(t, err)
+		require.ErrorContains(t, err, "removing IAM roles")
+		mockOrgApi.AssertExpectations(t)
+		mockIamApi.AssertExpectations(t)
+	})
+}
+
 func TestIAMClientClose(t *testing.T) {
 	t.Run("successfully close", func(t *testing.T) {
 		mockIamApi := &MockIamAPI{}
 		mockProjectsAPI := &MockProjectsAPI{}
+		mockOrganizationAPI := &MockOrganizationAPI{}
 		mockIamApi.On("Close").Return(nil)
 		mockProjectsAPI.On("Close").Return(nil)
+		mockOrganizationAPI.On("Close").Return(nil)
 
-		client := newIamClientWithAPI(mockIamApi, mockProjectsAPI)
+		client := newIamClientWithAPI(mockIamApi, mockProjectsAPI, mockOrganizationAPI)
 		err := client.Close()
 		require.NoError(t, err)
 
@@ -414,7 +676,21 @@ func TestIAMClientClose(t *testing.T) {
 		mockProjectsAPI := &MockProjectsAPI{}
 		mockIamApi.On("Close").Return(fmt.Errorf("error"))
 
-		client := newIamClientWithAPI(mockIamApi, mockProjectsAPI)
+		client := newIamClientWithAPI(mockIamApi, mockProjectsAPI, &MockOrganizationAPI{})
+		err := client.Close()
+		require.Error(t, err)
+
+		mockIamApi.AssertExpectations(t)
+		mockProjectsAPI.AssertExpectations(t)
+	})
+
+	t.Run("fail close project", func(t *testing.T) {
+		mockIamApi := &MockIamAPI{}
+		mockProjectsAPI := &MockProjectsAPI{}
+		mockIamApi.On("Close").Return(nil)
+		mockProjectsAPI.On("Close").Return(fmt.Errorf("error"))
+
+		client := newIamClientWithAPI(mockIamApi, mockProjectsAPI, &MockOrganizationAPI{})
 		err := client.Close()
 		require.Error(t, err)
 

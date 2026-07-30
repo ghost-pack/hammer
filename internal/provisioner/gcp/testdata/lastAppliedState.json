@@ -1,0 +1,99 @@
+{
+  "name": "acme-corp",
+  "appliedAt": "2026-07-24T10:00:00Z",
+  "folderId": "folders/987654321",
+  "parent": "937506553540",
+  "billingAccount": "ABCDE-12345-FGHIJ",
+  "projects": {
+    "dev": {
+      "projectId": "acme-corp-dev",
+      "serviceAccounts": {
+        "sa-pipeline": {
+          "email": "sa-pipeline@acme-corp-dev.iam.gserviceaccount.com",
+          "projectRoles": [
+            "roles/run.admin",
+            "roles/iam.serviceAccountAdmin",
+            "roles/iam.serviceAccountUser",
+            "roles/resourcemanager.projectIamAdmin",
+            "roles/serviceusage.serviceUsageConsumer"
+          ]
+        },
+        "sa-provisioner": {
+          "email": "sa-provisioner@acme-corp-dev.iam.gserviceaccount.com",
+          "projectRoles": [
+            "roles/storage.objectAdmin"
+          ],
+          "orgRoles": [
+            "roles/resourcemanager.projectCreator",
+            "roles/resourcemanager.folderCreator",
+            "roles/orgpolicy.policyAdmin",
+            "roles/iam.serviceAccountAdmin",
+            "roles/serviceusage.serviceUsageAdmin",
+            "roles/billing.user"
+          ]
+        },
+        "sa-oam": {
+          "email": "sa-oam@acme-corp-dev.iam.gserviceaccount.com",
+          "projectRoles": [
+            "roles/iam.serviceAccountTokenCreator",
+            "roles/artifactregistry.writer",
+            "roles/cloudbuild.builds.editor",
+            "roles/storage.objectAdmin",
+            "roles/pubsub.publisher",
+            "roles/pubsub.subscriber"
+          ]
+        }
+      }
+    },
+    "prod": {
+      "projectId": "acme-corp-prod",
+      "serviceAccounts": {
+        "sa-pipeline": {
+          "email": "sa-pipeline@acme-corp-prod.iam.gserviceaccount.com",
+          "projectRoles": [
+            "roles/run.admin",
+            "roles/iam.serviceAccountAdmin",
+            "roles/iam.serviceAccountUser",
+            "roles/resourcemanager.projectIamAdmin",
+            "roles/serviceusage.serviceUsageConsumer"
+          ]
+        },
+        "sa-provisioner": {
+          "email": "sa-provisioner@acme-corp-prod.iam.gserviceaccount.com",
+          "projectRoles": [
+            "roles/storage.objectAdmin"
+          ],
+          "orgRoles": [
+            "roles/resourcemanager.projectCreator",
+            "roles/resourcemanager.folderCreator",
+            "roles/orgpolicy.policyAdmin",
+            "roles/iam.serviceAccountAdmin",
+            "roles/serviceusage.serviceUsageAdmin",
+            "roles/billing.user"
+          ]
+        },
+        "sa-oam": {
+          "email": "sa-oam@acme-corp-prod.iam.gserviceaccount.com",
+          "projectRoles": [
+            "roles/iam.serviceAccountTokenCreator",
+            "roles/artifactregistry.writer",
+            "roles/cloudbuild.builds.editor",
+            "roles/storage.objectAdmin",
+            "roles/pubsub.publisher",
+            "roles/pubsub.subscriber"
+          ]
+        }
+      }
+    }
+  },
+  "allowedAPIs": [
+    "run.googleapis.com",
+    "artifactregistry.googleapis.com",
+    "logging.googleapis.com",
+    "cloudscheduler.googleapis.com"
+  ],
+  "orgPolicies": [
+    "constraints/compute.requireOsLogin",
+    "constraints/iam.disableServiceAccountKeyCreation"
+  ]
+}

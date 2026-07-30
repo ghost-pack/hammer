@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"cloud.google.com/go/storage"
+	"github.com/ghost-pack/hammer/internal/provisioner"
 	"github.com/ghost-pack/hammer/internal/tenant"
-	"github.com/ghost-pack/hammer/internal/tenantpipeline"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -81,6 +81,16 @@ func (m *MockIam) UnbindProjectRoles(ctx context.Context, projectID, saEmail str
 	return callArgs.Error(0)
 }
 
+func (m *MockIam) BindOrgRoles(ctx context.Context, projectID, saEmail string, roles []string) error {
+	callArgs := m.Called(ctx, projectID, projectID, saEmail, roles)
+	return callArgs.Error(0)
+}
+
+func (m *MockIam) UnbindOrgRoles(ctx context.Context, projectID, saEmail string, roles []string) error {
+	callArgs := m.Called(ctx, projectID, projectID, saEmail, roles)
+	return callArgs.Error(0)
+}
+
 func (m *MockIam) Close() error {
 	callArgs := m.Called()
 	return callArgs.Error(0)
@@ -128,20 +138,20 @@ func (m *MockBilling) Close() error {
 func TestNewProvisioner(t *testing.T) {
 	type args struct {
 		tenant *tenant.Tenant
-		client *tenantpipeline.DependencyClients
+		client *provisioner.DependencyClients
 	}
 	tests := []struct {
 		name    string
 		args    args
-		want    tenantpipeline.Provisioner
+		want    provisioner.Provisioner
 		wantErr bool
 	}{
 		{
 			name: "SuccessfulNewProvisioner",
-			args: args{tenant: &tenant.Tenant{Metadata: tenant.Metadata{Name: "acme-corp"}}, client: &tenantpipeline.DependencyClients{}},
+			args: args{tenant: &tenant.Tenant{Metadata: tenant.Metadata{Name: "acme-corp"}}, client: &provisioner.DependencyClients{}},
 			want: &Provisioner{
 				tenant:           &tenant.Tenant{Metadata: tenant.Metadata{Name: "acme-corp"}},
-				clients:          &tenantpipeline.DependencyClients{},
+				clients:          &provisioner.DependencyClients{},
 				registryBucket:   "hammer-platform-registry",
 				platformProject:  "hammer-bootstrap",
 				defaultRegion:    "us-central1",
@@ -153,7 +163,7 @@ func TestNewProvisioner(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := New(tt.args.tenant, &tenantpipeline.DependencyClients{})
+			got, err := New(tt.args.tenant, &provisioner.DependencyClients{})
 			if err != nil {
 				if tt.wantErr {
 					require.Error(t, err)
@@ -860,7 +870,7 @@ func TestProvisionerApply(t *testing.T) {
 			mockIam := new(MockIam)
 			tt.setupMock(mockResourceManager, mockServiceUsage, mockOrgPolicy, mockIam, mockBilling, mockCloudStorage)
 
-			provisioner, _ := New(tt.tenant, &tenantpipeline.DependencyClients{
+			provisioner, _ := New(tt.tenant, &provisioner.DependencyClients{
 				CloudStorage:    mockCloudStorage,
 				ResourceManager: mockResourceManager,
 				Billing:         mockBilling,

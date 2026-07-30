@@ -1,4 +1,4 @@
-package tenantpipeline
+package provisioner
 
 import (
 	"context"
@@ -28,13 +28,13 @@ var registry = map[string]Factory{}
 
 func Register(kind string, f Factory) {
 	if kind == "" {
-		panic("tenantpipeline.Register: kind is empty")
+		panic("provisioner.Register: kind is empty")
 	}
 	if f == nil {
-		panic("tenantpipeline.Register: factory is nil")
+		panic("provisioner.Register: factory is nil")
 	}
 	if _, exists := registry[kind]; exists {
-		panic("tenantpipeline.Register: kind already registered: " + kind)
+		panic("provisioner.Register: kind already registered: " + kind)
 	}
 	registry[kind] = f
 }

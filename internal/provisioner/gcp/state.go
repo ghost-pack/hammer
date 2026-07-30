@@ -7,12 +7,18 @@ type TenantState struct {
 	AppliedAt      time.Time                     `json:"appliedAt"`
 	Parent         string                        `json:"parent"`
 	BillingAccount string                        `json:"billingAccount"`
-	Projects       map[string]ProvisionedProject `json:"projects"` // env → project
+	Projects       map[string]ProvisionedProject `json:"projects"`
 	AllowedApis    []string                      `json:"allowedAPIs"`
 	OrgPolicies    []string                      `json:"orgPolicies"`
 }
 
 type ProvisionedProject struct {
-	ProjectID       string            `json:"projectId"`
-	ServiceAccounts map[string]string `json:"serviceAccounts"` // name → email
+	ProjectID       string                               `json:"projectId"`
+	ServiceAccounts map[string]ProvisionedServiceAccount `json:"serviceAccounts"`
+}
+
+type ProvisionedServiceAccount struct {
+	Email        string   `json:"email"`
+	ProjectRoles []string `json:"projectRoles,omitempty"`
+	OrgRoles     []string `json:"orgRoles,omitempty"`
 }
