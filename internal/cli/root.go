@@ -8,6 +8,7 @@ import (
 	_ "github.com/ghost-pack/hammer/internal/pipeline/cloudbuild"
 	_ "github.com/ghost-pack/hammer/internal/pipeline/goservice"
 	_ "github.com/ghost-pack/hammer/internal/pipeline/toolkit"
+	_ "github.com/ghost-pack/hammer/internal/provisioner/gcp"
 	"github.com/spf13/cobra"
 )
 
@@ -42,6 +43,7 @@ infrastructure for building it, scanning it, and deploying it to GCP.`,
 	cmd.AddCommand(
 		newVersionCmd(),
 		newCICmd(),
+		newTenantCmd(),
 	)
 
 	return cmd

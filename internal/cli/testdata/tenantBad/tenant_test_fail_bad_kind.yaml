@@ -1,0 +1,15 @@
+apiVersion: core.oam.dev/v1beta1
+kind: TenantBad
+metadata:
+  name: acme-corp
+spec:
+  billingAccount: "ABCDE-12345-FGHIJ"
+  parentFolder: "937506553540"   # or orgId
+  allowedAPIs:
+    - run.googleapis.com
+    - artifactregistry.googleapis.com
+    - logging.googleapis.com
+    - monitoring.googleapis.com
+  environments:
+    - dev
+    - prod

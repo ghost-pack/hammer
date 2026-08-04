@@ -30,10 +30,8 @@ func newCICmd() *cobra.Command {
 
 			slog.InfoContext(ctx, "ci start",
 				"file", flagOAMFile,
-				"env", flagEnv,
 			)
 
-			// Just giving this to every pipeline for now.
 			dockerClient := docker.NewClient()
 
 			garClient, err := project.NewGarClient(cmd.Context())
@@ -78,6 +76,7 @@ func newCICmd() *cobra.Command {
 				}
 
 				if onMain {
+					// Obviously remove once you start separating CI from CD
 					err := componentPipeline.Deploy(ctx)
 					if err != nil {
 						return err
