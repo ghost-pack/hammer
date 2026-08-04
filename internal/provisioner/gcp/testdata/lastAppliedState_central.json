@@ -1,0 +1,65 @@
+{
+  "name": "acme-corp",
+  "appliedAt": "2026-07-24T10:00:00Z",
+  "parent": "937506553540",
+  "billingAccount": "ABCDE-12345-FGHIJ",
+  "projects": {
+    "prod": {
+      "projectId": "hammer-central-prod",
+      "serviceAccounts": {
+        "sa-pipeline": {
+          "email": "sa-pipeline@hammer-central-prod.iam.gserviceaccount.com",
+          "projectRoles": [
+            "roles/run.admin",
+            "roles/iam.serviceAccountAdmin",
+            "roles/iam.serviceAccountUser",
+            "roles/resourcemanager.projectIamAdmin",
+            "roles/serviceusage.serviceUsageConsumer"
+          ]
+        },
+        "sa-provisioner": {
+          "email": "sa-provisioner@hammer-central-prod.iam.gserviceaccount.com",
+          "projectRoles": [
+            "roles/storage.objectAdmin",
+            "roles/artifactregistry.writer"
+          ],
+          "orgRoles": [
+            "roles/resourcemanager.projectCreator",
+            "roles/resourcemanager.folderCreator",
+            "roles/orgpolicy.policyAdmin",
+            "roles/iam.serviceAccountAdmin",
+            "roles/serviceusage.serviceUsageAdmin",
+            "roles/billing.user",
+            "roles/billing.viewer"
+          ]
+        },
+        "sa-oam": {
+          "email": "sa-oam@hammer-central-prod.iam.gserviceaccount.com",
+          "projectRoles": [
+            "roles/iam.serviceAccountTokenCreator",
+            "roles/artifactregistry.writer",
+            "roles/cloudbuild.builds.editor",
+            "roles/storage.objectAdmin",
+            "roles/artifactregistry.admin",
+            "roles/pubsub.publisher",
+            "roles/pubsub.subscriber"
+          ]
+        }
+      }
+    }
+  },
+  "allowedAPIs": [
+    "cloudbuild.googleapis.com",
+    "artifactregistry.googleapis.com",
+    "storage.googleapis.com",
+    "secretmanager.googleapis.com",
+    "logging.googleapis.com",
+    "monitoring.googleapis.com",
+    "pubsub.googleapis.com",
+    "cloudtrace.googleapis.com"
+  ],
+  "orgPolicies": [
+    "constraints/compute.requireOsLogin",
+    "constraints/iam.disableServiceAccountKeyCreation"
+  ]
+}

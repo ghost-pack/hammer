@@ -11,6 +11,9 @@
           "email": "sa-pipeline@acme-corp-dev.iam.gserviceaccount.com",
           "projectRoles": [
             "roles/run.admin",
+            "roles/artifactregistry.admin",
+            "roles/logging.admin",
+            "roles/monitoring.admin",
             "roles/iam.serviceAccountAdmin",
             "roles/iam.serviceAccountUser",
             "roles/resourcemanager.projectIamAdmin",
@@ -26,6 +29,9 @@
           "email": "sa-pipeline@acme-corp-prod.iam.gserviceaccount.com",
           "projectRoles": [
             "roles/run.admin",
+            "roles/artifactregistry.admin",
+            "roles/logging.admin",
+            "roles/monitoring.admin",
             "roles/iam.serviceAccountAdmin",
             "roles/iam.serviceAccountUser",
             "roles/resourcemanager.projectIamAdmin",
@@ -39,7 +45,7 @@
     "run.googleapis.com",
     "artifactregistry.googleapis.com",
     "logging.googleapis.com",
-    "cloudscheduler.googleapis.com"
+    "monitoring.googleapis.com"
   ],
   "orgPolicies": [
     "constraints/compute.requireOsLogin",

@@ -6,33 +6,128 @@ import (
 )
 
 func (p *Provisioner) applyRoleChanges(ctx context.Context) error {
-	rolesToAdd, err := convertApiToRole(p.apisToAdd)
-	rolesToAdd = append(rolesToAdd, alwaysOnRoles...)
-	if err != nil {
-		return err
-	}
-	rolesToRemove, err := convertApiToRole(p.apisToRemove)
-	if err != nil {
-		return err
-	}
 	for _, env := range p.tenant.Spec.Environments {
 		projectID := p.newState.Projects[env].ProjectID
-		pipelineSAEmail := fmt.Sprintf("sa-pipeline@%s.iam.gserviceaccount.com", projectID)
 
-		if len(rolesToAdd) > 0 {
-			if err := p.clients.IAM.BindProjectRoles(ctx, projectID, pipelineSAEmail, rolesToAdd); err != nil {
-				return fmt.Errorf("binding roles for %s: %w", env, err)
-			}
+		err := applySaPipelineRoles(ctx, p, env, projectID)
+		if err != nil {
+			return err
 		}
 
-		if len(rolesToRemove) > 0 {
-			if err := p.clients.IAM.UnbindProjectRoles(ctx, projectID, pipelineSAEmail, rolesToRemove); err != nil {
-				return fmt.Errorf("unbinding roles for %s: %w", env, err)
-			}
+		err = applyTenantDefinedServiceAccountRoles(ctx, p, env, projectID)
+		if err != nil {
+			return err
 		}
 	}
 
 	return nil
+
+}
+
+func applyTenantDefinedServiceAccountRoles(ctx context.Context, p *Provisioner, env string, projectID string) error {
+	// tenant-defined service accounts
+	for _, saSpec := range p.tenant.Spec.ServiceAccounts {
+		sa := p.newState.Projects[env].ServiceAccounts[saSpec.Name]
+
+		var lastProjectRoles, lastOrgRoles []string
+		if p.lastAppliedState != nil {
+			if lastSA, ok := p.lastAppliedState.Projects[env].ServiceAccounts[saSpec.Name]; ok {
+				lastProjectRoles = lastSA.ProjectRoles
+				lastOrgRoles = lastSA.OrgRoles
+			}
+		}
+
+		projectRolesToAdd, projectRolesToRemove := diffStringSlices(lastProjectRoles, saSpec.Roles.Project)
+		if len(projectRolesToAdd) > 0 {
+			if err := p.clients.IAM.BindProjectRoles(ctx, projectID, sa.Email, projectRolesToAdd); err != nil {
+				return fmt.Errorf("binding %s project roles for %s: %w", saSpec.Name, env, err)
+			}
+		}
+		if len(projectRolesToRemove) > 0 {
+			if err := p.clients.IAM.UnbindProjectRoles(ctx, projectID, sa.Email, projectRolesToRemove); err != nil {
+				return fmt.Errorf("unbinding %s project roles for %s: %w", saSpec.Name, env, err)
+			}
+		}
+
+		orgRolesToAdd, orgRolesToRemove := diffStringSlices(lastOrgRoles, saSpec.Roles.Organization)
+		if len(orgRolesToAdd) > 0 {
+			if err := p.clients.IAM.BindOrgRoles(ctx, p.tenant.Spec.ParentFolder, sa.Email, orgRolesToAdd); err != nil {
+				return fmt.Errorf("binding %s org roles for %s: %w", saSpec.Name, env, err)
+			}
+		}
+		if len(orgRolesToRemove) > 0 {
+			if err := p.clients.IAM.UnbindOrgRoles(ctx, p.tenant.Spec.ParentFolder, sa.Email, orgRolesToRemove); err != nil {
+				return fmt.Errorf("unbinding %s org roles for %s: %w", saSpec.Name, env, err)
+			}
+		}
+
+		project := p.newState.Projects[env]
+		sa.ProjectRoles = saSpec.Roles.Project
+		sa.OrgRoles = saSpec.Roles.Organization
+		project.ServiceAccounts[saSpec.Name] = sa
+		p.newState.Projects[env] = project
+	}
+	return nil
+}
+
+func applySaPipelineRoles(ctx context.Context, p *Provisioner, env string, projectID string) error {
+	pipelineSAEmail := p.newState.Projects[env].ServiceAccounts["sa-pipeline"].Email
+
+	pipelineRolesToAdd, err := convertApiToRole(p.apisToAdd)
+	if err != nil {
+		return fmt.Errorf("converting apis to add for sa-pipeline: %w", err)
+	}
+	pipelineRolesToAdd = append(pipelineRolesToAdd, alwaysOnRoles...)
+
+	pipelineRolesToRemove, err := convertApiToRole(p.apisToRemove)
+	if err != nil {
+		return fmt.Errorf("converting apis to remove for sa-pipeline: %w", err)
+	}
+
+	if len(pipelineRolesToAdd) > 0 {
+		if err := p.clients.IAM.BindProjectRoles(ctx, projectID, pipelineSAEmail, pipelineRolesToAdd); err != nil {
+			return fmt.Errorf("binding sa-pipeline roles for %s: %w", env, err)
+		}
+	}
+	if len(pipelineRolesToRemove) > 0 {
+		if err := p.clients.IAM.UnbindProjectRoles(ctx, projectID, pipelineSAEmail, pipelineRolesToRemove); err != nil {
+			return fmt.Errorf("unbinding sa-pipeline roles for %s: %w", env, err)
+		}
+	}
+
+	// compute final sa-pipeline roles for newState
+	allPipelineRoles, err := convertApiToRole(p.tenant.Spec.AllowedApis)
+	if err != nil {
+		return fmt.Errorf("computing final sa-pipeline roles: %w", err)
+	}
+	allPipelineRoles = append(allPipelineRoles, alwaysOnRoles...)
+
+	project := p.newState.Projects[env]
+	pipelineSA := project.ServiceAccounts["sa-pipeline"]
+	pipelineSA.ProjectRoles = allPipelineRoles
+	project.ServiceAccounts["sa-pipeline"] = pipelineSA
+	p.newState.Projects[env] = project
+	return nil
+}
+
+func diffStringSlices(old, new []string) (toAdd, toRemove []string) {
+	oldSet := make(map[string]bool, len(old))
+	for _, s := range old {
+		oldSet[s] = true
+	}
+	newSet := make(map[string]bool, len(new))
+	for _, s := range new {
+		newSet[s] = true
+		if !oldSet[s] {
+			toAdd = append(toAdd, s)
+		}
+	}
+	for _, s := range old {
+		if !newSet[s] {
+			toRemove = append(toRemove, s)
+		}
+	}
+	return
 }
 
 func convertApiToRole(apis []string) ([]string, error) {
@@ -59,6 +154,10 @@ var apiToRoles = map[string][]string{
 	"run.googleapis.com": {
 		"roles/run.admin",
 	},
+	"cloudbuild.googleapis.com": {
+		"roles/cloudbuild.builds.editor",
+		"roles/cloudbuild.integrations.owner",
+	},
 	"artifactregistry.googleapis.com": {
 		"roles/artifactregistry.admin",
 	},
@@ -76,6 +175,9 @@ var apiToRoles = map[string][]string{
 	},
 	"monitoring.googleapis.com": {
 		"roles/monitoring.admin",
+	},
+	"cloudtrace.googleapis.com": {
+		"roles/cloudtrace.agent",
 	},
 	"cloudscheduler.googleapis.com": {
 		"roles/cloudscheduler.admin",
