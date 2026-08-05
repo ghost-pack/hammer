@@ -5,8 +5,8 @@ metadata:
   annotations:
     platform.hammerplatform.dev/platform-project: "true"
 spec:
-  billingAccount: "ABCDE-12345-FGHIJ"
-  parentFolder: "937506553540"
+  billingAccount: "011702-581654-89E222"
+  parentFolder: "organizations/937506553540"
   allowedAPIs:
     - cloudbuild.googleapis.com
     - artifactregistry.googleapis.com
@@ -17,6 +17,9 @@ spec:
     - pubsub.googleapis.com
     - cloudtrace.googleapis.com
     - cloudresourcemanager.googleapis.com
+    - cloudbilling.googleapis.com
+    - orgpolicy.googleapis.com
+    - serviceusage.googleapis.com
   environments:
     - prod                         # hammer-central only has one environment
   serviceAccounts:

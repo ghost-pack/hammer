@@ -206,4 +206,13 @@ var apiToRoles = map[string][]string{
 	"cloudresourcemanager.googleapis.com": {
 		"roles/resourcemanager.projectIamAdmin",
 	},
+	"cloudbilling.googleapis.com": {
+		"roles/billing.admin",
+	},
+	"orgpolicy.googleapis.com": {
+		"roles/orgpolicy.policyAdmin",
+	},
+	"serviceusage.googleapis.com": {
+		"roles/serviceusage.serviceUsageAdmin",
+	},
 }

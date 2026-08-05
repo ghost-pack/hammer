@@ -6,6 +6,7 @@
   "projects": {
     "dev": {
       "projectId": "acme-corp-dev",
+      "projectNumber": "12345",
       "serviceAccounts": {
         "sa-pipeline": {
           "email": "sa-pipeline@acme-corp-dev.iam.gserviceaccount.com",
@@ -21,6 +22,7 @@
     },
     "prod": {
       "projectId": "acme-corp-prod",
+      "projectNumber": "12345",
       "serviceAccounts": {
         "sa-pipeline": {
           "email": "sa-pipeline@acme-corp-prod.iam.gserviceaccount.com",
@@ -42,7 +44,7 @@
     "cloudscheduler.googleapis.com"
   ],
   "orgPolicies": [
-    "constraints/compute.requireOsLogin",
-    "constraints/iam.disableServiceAccountKeyCreation"
+    "compute.requireOsLogin",
+    "iam.managed.disableServiceAccountKeyCreation"
   ]
 }

@@ -70,7 +70,7 @@ func (c *OrgPolicyClientImpl) Close() error {
 
 // EnforcePolicy enforces a boolean constraint on a resource.
 // resource is e.g. "projects/my-project-id" or "folders/123456"
-// constraint is e.g. "constraints/iam.disableServiceAccountKeyCreation"
+// constraint is e.g. "iam.disableServiceAccountKeyCreation"
 func (c *OrgPolicyClientImpl) EnforcePolicy(ctx context.Context, resource, constraint string) error {
 	ctx, span := tracing.Tracer("enforce org policy").Start(ctx, "enforce org policy",
 		trace.WithAttributes(

@@ -208,12 +208,13 @@ func TestEnsureProjectExists(t *testing.T) {
 		mockProjectsApi := &MockProjectsAPI{}
 		mockProjectsApi.On("GetProject", mock.Anything, mock.MatchedBy(func(req *resourcemanagerpb.GetProjectRequest) bool {
 			return req.Name == "projects/my-project"
-		})).Return(nil, nil)
+		})).Return(&resourcemanagerpb.Project{Name: "projects/12345"}, nil)
 
 		client := newResourceManagerWithAPI(mockProjectsApi, nil)
-		err := client.EnsureProjectExists(context.Background(), "my-project", "my-parent", "123456789")
+		projNumber, err := client.EnsureProjectExists(context.Background(), "my-project", "my-parent", "123456789")
 
 		require.NoError(t, err)
+		require.Equal(t, "12345", projNumber)
 		mockProjectsApi.AssertExpectations(t)
 	})
 
@@ -224,9 +225,10 @@ func TestEnsureProjectExists(t *testing.T) {
 		})).Return(nil, fmt.Errorf("some error"))
 
 		client := newResourceManagerWithAPI(mockProjectsApi, nil)
-		err := client.EnsureProjectExists(context.Background(), "my-project", "my-parent", "123456789")
+		projectNumber, err := client.EnsureProjectExists(context.Background(), "my-project", "my-parent", "123456789")
 
 		require.Error(t, err)
+		require.Empty(t, projectNumber)
 		mockProjectsApi.AssertExpectations(t)
 	})
 
@@ -234,6 +236,7 @@ func TestEnsureProjectExists(t *testing.T) {
 		mockOp := &MockCreateProjectOperation{}
 		mockOp.On("Wait", mock.Anything).Return(&resourcemanagerpb.Project{
 			ProjectId: "my-project",
+			Name:      "projects/12345",
 		}, nil)
 
 		mockProjectsApi := &MockProjectsAPI{}
@@ -251,9 +254,10 @@ func TestEnsureProjectExists(t *testing.T) {
 		})).Return(mockOp, nil)
 
 		client := newResourceManagerWithAPI(mockProjectsApi, nil)
-		err := client.EnsureProjectExists(context.Background(), "my-project", "My Project", "folders/123")
+		projectNumber, err := client.EnsureProjectExists(context.Background(), "my-project", "My Project", "folders/123")
 
 		require.NoError(t, err)
+		require.Equal(t, "12345", projectNumber)
 		mockProjectsApi.AssertExpectations(t)
 		mockOp.AssertExpectations(t)
 	})
@@ -274,9 +278,10 @@ func TestEnsureProjectExists(t *testing.T) {
 		})).Return(nil, fmt.Errorf("some error"))
 
 		client := newResourceManagerWithAPI(mockProjectsApi, nil)
-		err := client.EnsureProjectExists(context.Background(), "my-project", "My Project", "folders/123")
+		projectNumber, err := client.EnsureProjectExists(context.Background(), "my-project", "My Project", "folders/123")
 
 		require.Error(t, err)
+		require.Empty(t, projectNumber)
 		mockProjectsApi.AssertExpectations(t)
 	})
 
@@ -299,9 +304,10 @@ func TestEnsureProjectExists(t *testing.T) {
 		})).Return(mockOp, nil)
 
 		client := newResourceManagerWithAPI(mockProjectsApi, nil)
-		err := client.EnsureProjectExists(context.Background(), "my-project", "My Project", "folders/123")
+		projectNumber, err := client.EnsureProjectExists(context.Background(), "my-project", "My Project", "folders/123")
 
 		require.Error(t, err)
+		require.Empty(t, projectNumber)
 		mockProjectsApi.AssertExpectations(t)
 		mockOp.AssertExpectations(t)
 	})

@@ -14,6 +14,7 @@ type TenantState struct {
 
 type ProvisionedProject struct {
 	ProjectID       string                               `json:"projectId"`
+	ProjectNumber   string                               `json:"projectNumber"`
 	ServiceAccounts map[string]ProvisionedServiceAccount `json:"serviceAccounts"`
 }
 

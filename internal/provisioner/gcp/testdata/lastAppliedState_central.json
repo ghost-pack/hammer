@@ -6,6 +6,7 @@
   "projects": {
     "prod": {
       "projectId": "hammer-central-prod",
+      "projectNumber": "12345",
       "serviceAccounts": {
         "sa-pipeline": {
           "email": "sa-pipeline@hammer-central-prod.iam.gserviceaccount.com",
@@ -59,7 +60,7 @@
     "cloudtrace.googleapis.com"
   ],
   "orgPolicies": [
-    "constraints/compute.requireOsLogin",
-    "constraints/iam.disableServiceAccountKeyCreation"
+    "compute.requireOsLogin",
+    "iam.managed.disableServiceAccountKeyCreation"
   ]
 }

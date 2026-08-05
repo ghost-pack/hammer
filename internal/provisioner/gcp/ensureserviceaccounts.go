@@ -41,6 +41,7 @@ func (p *Provisioner) ensureServiceAccounts(ctx context.Context) error {
 
 		p.newState.Projects[env] = ProvisionedProject{
 			ProjectID:       p.tenant.Metadata.Name + "-" + env,
+			ProjectNumber:   p.newState.Projects[env].ProjectNumber,
 			ServiceAccounts: serviceAccounts,
 		}
 	}

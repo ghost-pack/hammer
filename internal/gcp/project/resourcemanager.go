@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	resourcemanager "cloud.google.com/go/resourcemanager/apiv3"
 	resourcemanagerpb "cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
@@ -53,7 +54,7 @@ func (a *foldersAdapter) Close() error {
 
 type ResourceManagerClient interface {
 	EnsureFolderExists(ctx context.Context, displayName, parent string) (string, error)
-	EnsureProjectExists(ctx context.Context, projectID, displayName, parent string) error
+	EnsureProjectExists(ctx context.Context, projectID, displayName, parent string) (string, error)
 	Close() error
 }
 
@@ -142,23 +143,23 @@ func (c *ResourceManagerClientImpl) findFolder(ctx context.Context, displayName,
 }
 
 // EnsureProjectExists creates a project if it doesn't exist
-func (c *ResourceManagerClientImpl) EnsureProjectExists(ctx context.Context, projectID, displayName, parent string) error {
+func (c *ResourceManagerClientImpl) EnsureProjectExists(ctx context.Context, projectID, displayName, parent string) (string, error) {
 	ctx, span := tracing.Tracer("ensure project exists").Start(ctx, "ensure project exists",
 		trace.WithAttributes(
 			attribute.String("project ID", projectID)))
 	defer span.End()
-	_, err := c.projects.GetProject(ctx, &resourcemanagerpb.GetProjectRequest{
+	project, err := c.projects.GetProject(ctx, &resourcemanagerpb.GetProjectRequest{
 		Name: "projects/" + projectID,
 	})
 	if err == nil {
 		slog.InfoContext(ctx, "project already exists", "projectID", projectID)
 		span.SetStatus(otelCodes.Ok, "project already exists")
-		return nil
+		return strings.TrimPrefix(project.Name, "projects/"), nil
 	}
-	if status.Code(err) != codes.NotFound {
+	if status.Code(err) != codes.NotFound && status.Code(err) != codes.PermissionDenied {
 		span.RecordError(err)
 		span.SetStatus(otelCodes.Error, err.Error())
-		return fmt.Errorf("checking project %s: %w", projectID, err)
+		return "", fmt.Errorf("checking project %s: %w", projectID, err)
 	}
 
 	op, err := c.projects.CreateProject(ctx, &resourcemanagerpb.CreateProjectRequest{
@@ -171,14 +172,15 @@ func (c *ResourceManagerClientImpl) EnsureProjectExists(ctx context.Context, pro
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(otelCodes.Error, err.Error())
-		return fmt.Errorf("creating project %s: %w", projectID, err)
+		return "", fmt.Errorf("creating project %s: %w", projectID, err)
 	}
-	if _, err := op.Wait(ctx); err != nil {
+	project, err = op.Wait(ctx)
+	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(otelCodes.Error, err.Error())
-		return fmt.Errorf("waiting for project %s: %w", projectID, err)
+		return "", fmt.Errorf("waiting for project %s: %w", projectID, err)
 	}
 	slog.InfoContext(ctx, "project created", "projectID", projectID)
 	span.SetStatus(otelCodes.Ok, "project created")
-	return nil
+	return strings.TrimPrefix(project.Name, "projects/"), nil
 }

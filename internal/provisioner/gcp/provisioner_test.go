@@ -25,9 +25,10 @@ func (m *MockResourceManager) EnsureFolderExists(ctx context.Context, displayNam
 	return res, callArgs.Error(1)
 }
 
-func (m *MockResourceManager) EnsureProjectExists(ctx context.Context, projectID, displayName, parent string) error {
+func (m *MockResourceManager) EnsureProjectExists(ctx context.Context, projectID, displayName, parent string) (string, error) {
 	callArgs := m.Called(ctx, projectID, displayName, parent)
-	return callArgs.Error(0)
+	res, _ := callArgs.Get(0).(string)
+	return res, callArgs.Error(1)
 }
 
 func (m *MockResourceManager) Close() error {
@@ -214,7 +215,7 @@ func TestProvisionerApply(t *testing.T) {
 				mockResourceManager.On("EnsureFolderExists", mock.Anything, mock.Anything, mock.Anything).
 					Return("acme-corp", nil)
 				mockResourceManager.On("EnsureProjectExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
+					Return("12345", nil)
 				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockOrgPolicy.On("EnforcePolicy", mock.Anything, mock.Anything, mock.Anything).
@@ -241,6 +242,8 @@ func TestProvisionerApply(t *testing.T) {
 							return false
 						}
 						actual.AppliedAt = expected.AppliedAt
+						t.Logf("expected: %+v", expected)
+						t.Logf("actual:   %+v", actual)
 						return reflect.DeepEqual(expected, actual)
 					}),
 					mock.Anything,
@@ -280,7 +283,7 @@ func TestProvisionerApply(t *testing.T) {
 				mockResourceManager.On("EnsureFolderExists", mock.Anything, mock.Anything, mock.Anything).
 					Return("acme-corp", nil)
 				mockResourceManager.On("EnsureProjectExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
+					Return("12345", nil)
 				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockOrgPolicy.On("EnforcePolicy", mock.Anything, mock.Anything, mock.Anything).
@@ -348,7 +351,7 @@ func TestProvisionerApply(t *testing.T) {
 				mockResourceManager.On("EnsureFolderExists", mock.Anything, mock.Anything, mock.Anything).
 					Return("acme-corp", nil)
 				mockResourceManager.On("EnsureProjectExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
+					Return("12345", nil)
 				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockOrgPolicy.On("EnforcePolicy", mock.Anything, mock.Anything, mock.Anything).
@@ -424,7 +427,7 @@ func TestProvisionerApply(t *testing.T) {
 				mockCloudStorage.On("GetObject", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil, storage.ErrObjectNotExist)
 				mockResourceManager.On("EnsureProjectExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
+					Return("12345", nil)
 				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockOrgPolicy.On("EnforcePolicy", mock.Anything, mock.Anything, mock.Anything).
@@ -532,7 +535,7 @@ func TestProvisionerApply(t *testing.T) {
 				mockCloudStorage.On("GetObject", mock.Anything, mock.Anything, mock.Anything).
 					Return(lastAppliedState, nil)
 				mockResourceManager.On("EnsureProjectExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
+					Return("12345", nil)
 				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockOrgPolicy.On("EnforcePolicy", mock.Anything, mock.Anything, mock.Anything).
@@ -643,7 +646,7 @@ func TestProvisionerApply(t *testing.T) {
 				mockCloudStorage.On("GetObject", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil, storage.ErrObjectNotExist)
 				mockResourceManager.On("EnsureProjectExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
+					Return("12345", nil)
 				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockOrgPolicy.On("EnforcePolicy", mock.Anything, mock.Anything, mock.Anything).
@@ -707,7 +710,7 @@ func TestProvisionerApply(t *testing.T) {
 				mockCloudStorage.On("GetObject", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil, storage.ErrObjectNotExist)
 				mockResourceManager.On("EnsureProjectExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
+					Return("12345", nil)
 				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockOrgPolicy.On("EnforcePolicy", mock.Anything, mock.Anything, mock.Anything).
@@ -773,7 +776,7 @@ func TestProvisionerApply(t *testing.T) {
 				mockCloudStorage.On("GetObject", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil, storage.ErrObjectNotExist)
 				mockResourceManager.On("EnsureProjectExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
+					Return("12345", nil)
 				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockOrgPolicy.On("EnforcePolicy", mock.Anything, mock.Anything, mock.Anything).
@@ -856,7 +859,7 @@ func TestProvisionerApply(t *testing.T) {
 				mockCloudStorage.On("GetObject", mock.Anything, mock.Anything, mock.Anything).
 					Return(lastAppliedState, nil)
 				mockResourceManager.On("EnsureProjectExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
+					Return("12345", nil)
 				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockOrgPolicy.On("EnforcePolicy", mock.Anything, mock.Anything, mock.Anything).
@@ -939,7 +942,7 @@ func TestProvisionerApply(t *testing.T) {
 				mockCloudStorage.On("GetObject", mock.Anything, mock.Anything, mock.Anything).
 					Return(lastAppliedState, nil)
 				mockResourceManager.On("EnsureProjectExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
+					Return("12345", nil)
 				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockOrgPolicy.On("EnforcePolicy", mock.Anything, mock.Anything, mock.Anything).
@@ -993,7 +996,7 @@ func TestProvisionerApply(t *testing.T) {
 				mockResourceManager.On("EnsureFolderExists", mock.Anything, mock.Anything, mock.Anything).
 					Return("acme-corp", nil)
 				mockResourceManager.On("EnsureProjectExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
+					Return("12345", nil)
 				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockOrgPolicy.On("EnforcePolicy", mock.Anything, mock.Anything, mock.Anything).
@@ -1037,7 +1040,7 @@ func TestProvisionerApply(t *testing.T) {
 				mockResourceManager.On("EnsureFolderExists", mock.Anything, mock.Anything, mock.Anything).
 					Return("acme-corp", nil)
 				mockResourceManager.On("EnsureProjectExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
+					Return("12345", nil)
 				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockOrgPolicy.On("EnforcePolicy", mock.Anything, mock.Anything, mock.Anything).
@@ -1201,7 +1204,7 @@ func TestProvisionerApply(t *testing.T) {
 				mockResourceManager.On("EnsureFolderExists", mock.Anything, mock.Anything, mock.Anything).
 					Return("acme-corp", nil)
 				mockResourceManager.On("EnsureProjectExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(fmt.Errorf("error"))
+					Return("", fmt.Errorf("error"))
 			},
 			wantErr: true,
 		},
@@ -1234,7 +1237,7 @@ func TestProvisionerApply(t *testing.T) {
 				mockResourceManager.On("EnsureFolderExists", mock.Anything, mock.Anything, mock.Anything).
 					Return("acme-corp", nil)
 				mockResourceManager.On("EnsureProjectExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
+					Return("12345", nil)
 				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
 					Return(fmt.Errorf("error"))
 			},
@@ -1269,7 +1272,7 @@ func TestProvisionerApply(t *testing.T) {
 				mockResourceManager.On("EnsureFolderExists", mock.Anything, mock.Anything, mock.Anything).
 					Return("acme-corp", nil)
 				mockResourceManager.On("EnsureProjectExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
+					Return("12345", nil)
 				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockOrgPolicy.On("EnforcePolicy", mock.Anything, mock.Anything, mock.Anything).
@@ -1306,7 +1309,7 @@ func TestProvisionerApply(t *testing.T) {
 				mockResourceManager.On("EnsureFolderExists", mock.Anything, mock.Anything, mock.Anything).
 					Return("acme-corp", nil)
 				mockResourceManager.On("EnsureProjectExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
+					Return("12345", nil)
 				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockOrgPolicy.On("EnforcePolicy", mock.Anything, mock.Anything, mock.Anything).
@@ -1345,7 +1348,7 @@ func TestProvisionerApply(t *testing.T) {
 				mockResourceManager.On("EnsureFolderExists", mock.Anything, mock.Anything, mock.Anything).
 					Return("acme-corp", nil)
 				mockResourceManager.On("EnsureProjectExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
+					Return("12345", nil)
 				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockOrgPolicy.On("EnforcePolicy", mock.Anything, mock.Anything, mock.Anything).
@@ -1396,7 +1399,7 @@ func TestProvisionerApply(t *testing.T) {
 				mockResourceManager.On("EnsureFolderExists", mock.Anything, mock.Anything, mock.Anything).
 					Return("acme-corp", nil)
 				mockResourceManager.On("EnsureProjectExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
+					Return("12345", nil)
 				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockOrgPolicy.On("EnforcePolicy", mock.Anything, mock.Anything, mock.Anything).
@@ -1435,7 +1438,7 @@ func TestProvisionerApply(t *testing.T) {
 				mockResourceManager.On("EnsureFolderExists", mock.Anything, mock.Anything, mock.Anything).
 					Return("acme-corp", nil)
 				mockResourceManager.On("EnsureProjectExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
+					Return("12345", nil)
 				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockOrgPolicy.On("EnforcePolicy", mock.Anything, mock.Anything, mock.Anything).
@@ -1480,7 +1483,7 @@ func TestProvisionerApply(t *testing.T) {
 				mockResourceManager.On("EnsureFolderExists", mock.Anything, mock.Anything, mock.Anything).
 					Return("acme-corp", nil)
 				mockResourceManager.On("EnsureProjectExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
+					Return("12345", nil)
 				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockOrgPolicy.On("EnforcePolicy", mock.Anything, mock.Anything, mock.Anything).
@@ -1527,7 +1530,7 @@ func TestProvisionerApply(t *testing.T) {
 				mockResourceManager.On("EnsureFolderExists", mock.Anything, mock.Anything, mock.Anything).
 					Return("acme-corp", nil)
 				mockResourceManager.On("EnsureProjectExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
+					Return("12345", nil)
 				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockOrgPolicy.On("EnforcePolicy", mock.Anything, mock.Anything, mock.Anything).

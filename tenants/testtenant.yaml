@@ -3,8 +3,8 @@ kind: Tenant
 metadata:
   name: acme-corp
 spec:
-  billingAccount: "ABCDE-12345-FGHIJ"
-  parentFolder: "937506553540"   # or orgId
+  billingAccount: "011702-581654-89E222"
+  parentFolder: "organizations/937506553540"   # or orgId
   allowedAPIs:
     - run.googleapis.com
     - artifactregistry.googleapis.com
