@@ -203,4 +203,7 @@ var apiToRoles = map[string][]string{
 	"bigquery.googleapis.com": {
 		"roles/bigquery.admin",
 	},
+	"cloudresourcemanager.googleapis.com": {
+		"roles/resourcemanager.projectIamAdmin",
+	},
 }

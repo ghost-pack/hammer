@@ -16,6 +16,7 @@ spec:
     - monitoring.googleapis.com
     - pubsub.googleapis.com
     - cloudtrace.googleapis.com
+    - cloudresourcemanager.googleapis.com
   environments:
     - prod                         # hammer-central only has one environment
   serviceAccounts:
