@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	iam "cloud.google.com/go/iam/admin/apiv1"
 	adminpb "cloud.google.com/go/iam/admin/apiv1/adminpb"
@@ -234,8 +235,11 @@ func (c *IAMClientImpl) BindOrgRoles(ctx context.Context, orgID, saEmail string,
 			attribute.String("org", orgID),
 			attribute.String("serviceAccountEmail", saEmail)))
 	defer span.End()
+	resource := orgID
+	if !strings.HasPrefix(resource, "organizations/") {
+		resource = "organizations/" + orgID
+	}
 
-	resource := "organizations/" + orgID
 	member := "serviceAccount:" + saEmail
 
 	policy, err := c.organization.GetIamPolicy(ctx, &iampb.GetIamPolicyRequest{Resource: resource})
@@ -326,7 +330,10 @@ func (c *IAMClientImpl) UnbindOrgRoles(ctx context.Context, orgID, saEmail strin
 			attribute.String("serviceAccountEmail", saEmail)))
 	defer span.End()
 
-	resource := "organizations/" + orgID
+	resource := orgID
+	if !strings.HasPrefix(resource, "organizations/") {
+		resource = "organizations/" + orgID
+	}
 	member := "serviceAccount:" + saEmail
 
 	policy, err := c.organization.GetIamPolicy(ctx, &iampb.GetIamPolicyRequest{Resource: resource})

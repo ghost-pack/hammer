@@ -137,7 +137,9 @@ func convertApiToRole(apis []string) ([]string, error) {
 		if !ok {
 			return nil, fmt.Errorf("api %s is not supported", api)
 		}
-		roles = append(roles, rolesForApi...)
+		if rolesForApi != nil {
+			roles = append(roles, rolesForApi...)
+		}
 	}
 	return roles, nil
 }
@@ -203,16 +205,8 @@ var apiToRoles = map[string][]string{
 	"bigquery.googleapis.com": {
 		"roles/bigquery.admin",
 	},
-	"cloudresourcemanager.googleapis.com": {
-		"roles/resourcemanager.projectIamAdmin",
-	},
-	"cloudbilling.googleapis.com": {
-		"roles/billing.admin",
-	},
-	"orgpolicy.googleapis.com": {
-		"roles/orgpolicy.policyAdmin",
-	},
-	"serviceusage.googleapis.com": {
-		"roles/serviceusage.serviceUsageAdmin",
-	},
+	"cloudresourcemanager.googleapis.com": {},
+	"cloudbilling.googleapis.com":         {},
+	"orgpolicy.googleapis.com":            {},
+	"serviceusage.googleapis.com":         {},
 }

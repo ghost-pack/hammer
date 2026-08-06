@@ -60,10 +60,10 @@ func (p *Provisioner) Apply(ctx context.Context) error {
 		{"Ensure Folder Exists", p.ensureFolderExists},
 		{"Ensure Projects Exist", p.ensureProjectsExists},
 		{"Link Billing Accounts", p.linkBillingAccounts},
-		{"Apply Org Policies", p.applyOrgPolicies},
-		{"Enable APIs", p.enableApis},
 		{"Ensure Service Accounts", p.ensureServiceAccounts},
 		{"Apply Role Changes", p.applyRoleChanges},
+		{"Enable APIs", p.enableApis},
+		{"Apply Org Policies", p.applyOrgPolicies},
 		{"Write State to Registry", p.writeStateToRegistry},
 	}
 

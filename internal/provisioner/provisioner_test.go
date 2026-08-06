@@ -21,9 +21,10 @@ func (m *MockResourceManager) EnsureFolderExists(ctx context.Context, displayNam
 	return res, callArgs.Error(1)
 }
 
-func (m *MockResourceManager) EnsureProjectExists(ctx context.Context, projectID, displayName, parent string) error {
+func (m *MockResourceManager) EnsureProjectExists(ctx context.Context, projectID, displayName, parent string) (string, error) {
 	callArgs := m.Called(ctx, projectID, displayName, parent)
-	return callArgs.Error(0)
+	res, _ := callArgs.Get(0).(string)
+	return res, callArgs.Error(1)
 }
 
 func (m *MockResourceManager) Close() error {

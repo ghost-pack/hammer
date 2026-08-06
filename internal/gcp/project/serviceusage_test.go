@@ -49,8 +49,8 @@ func TestEnableAPIs(t *testing.T) {
 		mockAPI.On("BatchEnableServices", mock.Anything, mock.MatchedBy(func(req *serviceusagepb.BatchEnableServicesRequest) bool {
 			return req.Parent == "projects/my-project" &&
 				len(req.ServiceIds) == 2 &&
-				req.ServiceIds[0] == "projects/my-project/services/run.googleapis.com" &&
-				req.ServiceIds[1] == "projects/my-project/services/artifactregistry.googleapis.com"
+				req.ServiceIds[0] == "run.googleapis.com" &&
+				req.ServiceIds[1] == "artifactregistry.googleapis.com"
 		})).Return(mockOp, nil)
 
 		client := newServiceUsageClientWithAPI(mockAPI)

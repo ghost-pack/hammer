@@ -73,14 +73,9 @@ func (c *ServiceUsageClientImpl) EnableAPIs(ctx context.Context, projectID strin
 			attribute.String("apis", strings.Join(apis, ","))))
 	defer span.End()
 
-	serviceNames := make([]string, len(apis))
-	for i, api := range apis {
-		serviceNames[i] = fmt.Sprintf("projects/%s/services/%s", projectID, api)
-	}
-
 	op, err := c.client.BatchEnableServices(ctx, &serviceusagepb.BatchEnableServicesRequest{
 		Parent:     "projects/" + projectID,
-		ServiceIds: serviceNames,
+		ServiceIds: apis,
 	})
 	if err != nil {
 		span.RecordError(err)
