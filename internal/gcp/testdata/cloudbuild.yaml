@@ -12,6 +12,11 @@ substitutions:
   _GIT_REF: $(body.ref)
   _GIT_HEAD_SHA: $(body.head_commit.id)
 
+availableSecrets:
+  secretManager:
+    - versionName: projects/$PROJECT_ID/secrets/github-pat/versions/latest
+      env: 'GH_TOKEN'
+
 options:
   substitutionOption: ALLOW_LOOSE
   logging: CLOUD_LOGGING_ONLY

@@ -92,8 +92,19 @@ type cloudBuildConfig struct {
 		Args       []string `yaml:"args"`
 		Dir        string   `yaml:"dir"`
 		Env        []string `yaml:"env"`
+		SecretEnv  []string `yaml:"secretEnv,omitempty"`
 	} `yaml:"steps"`
-	Substitutions map[string]string `yaml:"substitutions"`
+	Substitutions    map[string]string `yaml:"substitutions,omitempty"`
+	AvailableSecrets *secrets          `yaml:"availableSecrets,omitempty"`
+}
+
+type secrets struct {
+	SecretManager []secretManagerSecret `yaml:"secretManager"`
+}
+
+type secretManagerSecret struct {
+	VersionName string `yaml:"versionName"`
+	Env         string `yaml:"env"`
 }
 
 type cloudBuildTestConfig struct {
@@ -139,10 +150,27 @@ func buildSteps(cfg *cloudBuildConfig) []*cloudbuildpb.BuildStep {
 			Args:       s.Args,
 			Dir:        s.Dir,
 			Env:        s.Env,
+			SecretEnv:  s.SecretEnv,
 		})
 	}
 
 	return steps
+}
+
+func availableSecrets(cfg *cloudBuildConfig) *cloudbuildpb.Secrets {
+	secretReferences := &cloudbuildpb.Secrets{}
+
+	if cfg.AvailableSecrets == nil {
+		return secretReferences
+	}
+	for _, s := range cfg.AvailableSecrets.SecretManager {
+		secretReferences.SecretManager = append(secretReferences.SecretManager, &cloudbuildpb.SecretManagerSecret{
+			VersionName: s.VersionName,
+			Env:         s.Env,
+		})
+	}
+
+	return secretReferences
 }
 
 func createBuild(
@@ -360,6 +388,7 @@ func createBuildTrigger(
 			SubstitutionOption: cloudbuildpb.BuildOptions_ALLOW_LOOSE,
 			Logging:            cloudbuildpb.BuildOptions_CLOUD_LOGGING_ONLY,
 		},
+		AvailableSecrets: availableSecrets(cfg),
 	}
 
 	return makeTrigger(

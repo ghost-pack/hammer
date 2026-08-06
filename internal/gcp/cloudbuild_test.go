@@ -316,6 +316,7 @@ func Test_buildSteps(t *testing.T) {
 						Args       []string `yaml:"args"`
 						Dir        string   `yaml:"dir"`
 						Env        []string `yaml:"env"`
+						SecretEnv  []string `yaml:"secretEnv,omitempty"`
 					}{
 						{
 							Name:       "golang",
@@ -440,6 +441,7 @@ func Test_createBuildTrigger(t *testing.T) {
 						Args       []string `yaml:"args"`
 						Dir        string   `yaml:"dir"`
 						Env        []string `yaml:"env"`
+						SecretEnv  []string `yaml:"secretEnv,omitempty"`
 					}{
 						{
 							Name:       "golang",
@@ -487,6 +489,7 @@ func Test_createBuildTrigger(t *testing.T) {
 								ApprovalRequired: false,
 							},
 						},
+						AvailableSecrets: &cloudbuildpb.Secrets{},
 						Steps: []*cloudbuildpb.BuildStep{
 							{
 								Name:       "golang",
@@ -757,6 +760,7 @@ func Test_parseCloudBuild(t *testing.T) {
 					Args       []string `yaml:"args"`
 					Dir        string   `yaml:"dir"`
 					Env        []string `yaml:"env"`
+					SecretEnv  []string `yaml:"secretEnv,omitempty"`
 				}{
 					{
 						Name:       "ubuntu",
@@ -772,6 +776,14 @@ func Test_parseCloudBuild(t *testing.T) {
 					"_GIT_CLONE_URL":       "$(body.repository.clone_url)",
 					"_GIT_REF":             "$(body.ref)",
 					"_GIT_HEAD_SHA":        "$(body.head_commit.id)",
+				},
+				AvailableSecrets: &secrets{
+					SecretManager: []secretManagerSecret{
+						{
+							VersionName: "projects/$PROJECT_ID/secrets/github-pat/versions/latest",
+							Env:         "GH_TOKEN",
+						},
+					},
 				},
 			},
 			wantErr: false,
