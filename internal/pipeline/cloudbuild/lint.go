@@ -16,18 +16,6 @@ import (
 //go:embed schema/cloudbuild.json
 var cloudBuildSchema []byte
 
-type properties struct {
-	Path             string       `yaml:"path"`
-	TriggerType      string       `yaml:"trigger_type"`
-	ManuallyApproved bool         `yaml:"manually_approved"`
-	PubSubTopic      string       `yaml:"pubsub_topic"`
-	Tests            []testConfig `yaml:"tests"`
-}
-type testConfig struct {
-	Path     string `yaml:"path"`
-	Required *bool  `yaml:"required"` // use pointer to detect if field was explicitly set
-}
-
 func (p *Pipeline) lint(ctx context.Context) error {
 	ctx, span := tracing.Tracer("cloudbuildlint").Start(ctx, "cloudbuildlint")
 	defer span.End()

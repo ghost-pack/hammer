@@ -18,6 +18,19 @@ func init() {
 	pipeline.Register("cloudbuild", New)
 }
 
+type properties struct {
+	Path             string       `yaml:"path"`
+	TriggerType      string       `yaml:"trigger_type"`
+	ManuallyApproved bool         `yaml:"manually_approved"`
+	PubSubTopic      string       `yaml:"pubsub_topic"`
+	ServiceAccount   string       `yaml:"service_account"`
+	Tests            []testConfig `yaml:"tests"`
+}
+type testConfig struct {
+	Path     string `yaml:"path"`
+	Required *bool  `yaml:"required"` // use pointer to detect if field was explicitly set
+}
+
 func New(component oam.Component, clients pipeline.DependencyClients) (pipeline.Pipeline, error) {
 	if component.Type != "cloudbuild" {
 		return nil, fmt.Errorf("cloudbuild component must be of type cloudbuild")

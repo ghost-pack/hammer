@@ -26,7 +26,7 @@ func (p *Pipeline) createOrUpdateTrigger(ctx context.Context) error {
 		triggerType = "webhook"
 	}
 
-	err = p.cloudBuildClient.CreateOrUpdateCloudBuildTrigger(ctx, "hammer-central-prod", "598451979611", "global", props.Path, triggerType, p.component.Name, props.PubSubTopic, props.ManuallyApproved)
+	err = p.cloudBuildClient.CreateOrUpdateCloudBuildTrigger(ctx, "hammer-central-prod", "598451979611", "global", props.Path, triggerType, p.component.Name, props.PubSubTopic, props.ServiceAccount, props.ManuallyApproved)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(otelCodes.Error, err.Error())

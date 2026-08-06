@@ -190,7 +190,7 @@ func TestCreateOrUpdateCloudBuildTrigger(t *testing.T) {
 		mockAPI := &MockCloudBuildApi{}
 
 		client := newCloudBuildClientWithAPI(mockAPI)
-		err := client.CreateOrUpdateCloudBuildTrigger(context.Background(), "my-project", "12345", "us-central1", "testdata/cloudbuild_bad_yaml.yaml", "webhook", "my_trigger", "", false)
+		err := client.CreateOrUpdateCloudBuildTrigger(context.Background(), "my-project", "12345", "us-central1", "testdata/cloudbuild_bad_yaml.yaml", "webhook", "my_trigger", "", "sa-pipeline@hammer-central-prod.iam.gserviceaccount.com", false)
 
 		require.Error(t, err)
 		mockAPI.AssertExpectations(t)
@@ -200,7 +200,7 @@ func TestCreateOrUpdateCloudBuildTrigger(t *testing.T) {
 		mockAPI := &MockCloudBuildApi{}
 
 		client := newCloudBuildClientWithAPI(mockAPI)
-		err := client.CreateOrUpdateCloudBuildTrigger(context.Background(), "my-project", "12345", "us-central1", "testdata/cloudbuild.yaml", "asdfoydfs", "my_trigger", "", false)
+		err := client.CreateOrUpdateCloudBuildTrigger(context.Background(), "my-project", "12345", "us-central1", "testdata/cloudbuild.yaml", "asdfoydfs", "my_trigger", "", "sa-pipeline@hammer-central-prod.iam.gserviceaccount.com", false)
 
 		require.Error(t, err)
 		mockAPI.AssertExpectations(t)
@@ -213,7 +213,7 @@ func TestCreateOrUpdateCloudBuildTrigger(t *testing.T) {
 			Return(nil, fmt.Errorf("some error"))
 
 		client := newCloudBuildClientWithAPI(mockAPI)
-		err := client.CreateOrUpdateCloudBuildTrigger(context.Background(), "my-project", "12345", "us-central1", "testdata/cloudbuild.yaml", "webhook", "my_trigger", "", false)
+		err := client.CreateOrUpdateCloudBuildTrigger(context.Background(), "my-project", "12345", "us-central1", "testdata/cloudbuild.yaml", "webhook", "my_trigger", "", "sa-pipeline@hammer-central-prod.iam.gserviceaccount.com", false)
 
 		require.Error(t, err)
 		mockAPI.AssertExpectations(t)
@@ -233,7 +233,7 @@ func TestCreateOrUpdateCloudBuildTrigger(t *testing.T) {
 			Return(nil, fmt.Errorf("some error"))
 
 		client := newCloudBuildClientWithAPI(mockAPI)
-		err := client.CreateOrUpdateCloudBuildTrigger(context.Background(), "my-project", "12345", "us-central1", "testdata/cloudbuild.yaml", "webhook", "my_trigger", "", false)
+		err := client.CreateOrUpdateCloudBuildTrigger(context.Background(), "my-project", "12345", "us-central1", "testdata/cloudbuild.yaml", "webhook", "my_trigger", "", "sa-pipeline@hammer-central-prod.iam.gserviceaccount.com", false)
 
 		require.Error(t, err)
 		mockAPI.AssertExpectations(t)
@@ -253,7 +253,7 @@ func TestCreateOrUpdateCloudBuildTrigger(t *testing.T) {
 			Return(nil, nil)
 
 		client := newCloudBuildClientWithAPI(mockAPI)
-		err := client.CreateOrUpdateCloudBuildTrigger(context.Background(), "my-project", "12345", "us-central1", "testdata/cloudbuild.yaml", "webhook", "my_trigger", "", false)
+		err := client.CreateOrUpdateCloudBuildTrigger(context.Background(), "my-project", "12345", "us-central1", "testdata/cloudbuild.yaml", "webhook", "my_trigger", "", "sa-pipeline@hammer-central-prod.iam.gserviceaccount.com", false)
 
 		require.NoError(t, err)
 		mockAPI.AssertExpectations(t)
@@ -271,7 +271,7 @@ func TestCreateOrUpdateCloudBuildTrigger(t *testing.T) {
 			Return(nil, fmt.Errorf("some error"))
 
 		client := newCloudBuildClientWithAPI(mockAPI)
-		err := client.CreateOrUpdateCloudBuildTrigger(context.Background(), "my-project", "12345", "us-central1", "testdata/cloudbuild.yaml", "webhook", "my_trigger", "", false)
+		err := client.CreateOrUpdateCloudBuildTrigger(context.Background(), "my-project", "12345", "us-central1", "testdata/cloudbuild.yaml", "webhook", "my_trigger", "", "sa-pipeline@hammer-central-prod.iam.gserviceaccount.com", false)
 
 		require.Error(t, err)
 		mockAPI.AssertExpectations(t)
@@ -289,7 +289,7 @@ func TestCreateOrUpdateCloudBuildTrigger(t *testing.T) {
 			Return(nil, nil)
 
 		client := newCloudBuildClientWithAPI(mockAPI)
-		err := client.CreateOrUpdateCloudBuildTrigger(context.Background(), "my-project", "12345", "us-central1", "testdata/cloudbuild.yaml", "webhook", "my_trigger", "", false)
+		err := client.CreateOrUpdateCloudBuildTrigger(context.Background(), "my-project", "12345", "us-central1", "testdata/cloudbuild.yaml", "webhook", "my_trigger", "", "sa-pipeline@hammer-central-prod.iam.gserviceaccount.com", false)
 
 		require.NoError(t, err)
 		mockAPI.AssertExpectations(t)
@@ -512,7 +512,7 @@ func Test_createBuildTrigger(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, _ := createBuildTrigger(tt.args.projectID, tt.args.projectNumber, tt.args.triggerName, "webhook", "", false, tt.args.cfg)
+			got, _ := createBuildTrigger(tt.args.projectID, tt.args.projectNumber, tt.args.triggerName, "webhook", "", "sa-pipeline@hammer-central-prod.iam.gserviceaccount.com", false, tt.args.cfg)
 			require.Equal(t, tt.want, got)
 		})
 	}

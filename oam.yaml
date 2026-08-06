@@ -14,6 +14,7 @@ spec:
       properties:
         path: ./cloudbuild/cloudbuild.yaml
         trigger_type: "webhook"
+        service_account: "sa-oam@hammer-central-prod.iam.gserviceaccount.com"
         tests:
           - path: ./cloudbuild/cloudbuild_test.yaml
             required: true

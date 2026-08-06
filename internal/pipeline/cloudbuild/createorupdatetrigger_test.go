@@ -32,7 +32,7 @@ func TestPipeline_createorupdatetrigger(t *testing.T) {
 				},
 			}},
 			setupMock: func(mockCloudBuildClient *MockCloudBuildClient) {
-				mockCloudBuildClient.On("CreateOrUpdateCloudBuildTrigger", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+				mockCloudBuildClient.On("CreateOrUpdateCloudBuildTrigger", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 			},
 			wantErr: false,
@@ -68,7 +68,7 @@ func TestPipeline_createorupdatetrigger(t *testing.T) {
 				},
 			},
 			setupMock: func(mockCloudBuildClient *MockCloudBuildClient) {
-				mockCloudBuildClient.On("CreateOrUpdateCloudBuildTrigger", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+				mockCloudBuildClient.On("CreateOrUpdateCloudBuildTrigger", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(errors.New("failed"))
 			},
 			wantErr: true,

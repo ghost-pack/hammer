@@ -20,7 +20,7 @@ import (
 
 type CloudBuildClient interface {
 	TestCloudBuild(ctx context.Context, projectID, location, cloudbuildPath, cloudBuildTestPath string) error
-	CreateOrUpdateCloudBuildTrigger(ctx context.Context, projectId, projectNumber, location, cloudBuildPath, triggerType, triggerName, pubsubTopic string, manuallyApproved bool) error
+	CreateOrUpdateCloudBuildTrigger(ctx context.Context, projectId, projectNumber, location, cloudBuildPath, triggerType, triggerName, pubsubTopic, serviceAccount string, manuallyApproved bool) error
 	Close() error
 }
 
@@ -252,7 +252,8 @@ func (c *CloudBuildClientImpl) CreateOrUpdateCloudBuildTrigger(
 	cloudBuildPath,
 	triggerType,
 	triggerName,
-	pubsubTopic string,
+	pubsubTopic,
+	serviceAccount string,
 	manuallyApproved bool,
 ) error {
 	ctx, span := tracing.Tracer("gcloud builds triggers").Start(ctx, "gcloud builds triggers",
@@ -273,6 +274,7 @@ func (c *CloudBuildClientImpl) CreateOrUpdateCloudBuildTrigger(
 		triggerName,
 		triggerType,
 		pubsubTopic,
+		serviceAccount,
 		manuallyApproved,
 		buildConfig,
 	)
@@ -359,7 +361,8 @@ func createBuildTrigger(
 	projectNumber,
 	triggerName,
 	triggerType,
-	pubsubTopic string,
+	pubsubTopic,
+	serviceAccount string,
 	manuallyApproved bool,
 	cfg *cloudBuildConfig,
 ) (*cloudbuildpb.BuildTrigger, error) {
@@ -372,7 +375,7 @@ func createBuildTrigger(
 	serviceAccountName := fmt.Sprintf(
 		"projects/%s/serviceAccounts/%s",
 		projectID,
-		"sa-pipeline@hammer-central-prod.iam.gserviceaccount.com",
+		serviceAccount,
 	)
 
 	build := &cloudbuildpb.Build{
