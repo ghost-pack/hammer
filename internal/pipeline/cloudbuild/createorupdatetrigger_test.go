@@ -25,10 +25,14 @@ func TestPipeline_createorupdatetrigger(t *testing.T) {
 				Content: []*yaml.Node{
 					{Kind: yaml.ScalarNode, Value: "path"},
 					{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild.yaml"},
+					{Kind: yaml.ScalarNode, Value: "trigger_type"},
+					{Kind: yaml.ScalarNode, Value: "manual"},
+					{Kind: yaml.ScalarNode, Value: "pubsub_topic"},
+					{Kind: yaml.ScalarNode, Value: "whatever"},
 				},
 			}},
 			setupMock: func(mockCloudBuildClient *MockCloudBuildClient) {
-				mockCloudBuildClient.On("CreateOrUpdateCloudBuildTrigger", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+				mockCloudBuildClient.On("CreateOrUpdateCloudBuildTrigger", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 			},
 			wantErr: false,
@@ -64,7 +68,7 @@ func TestPipeline_createorupdatetrigger(t *testing.T) {
 				},
 			},
 			setupMock: func(mockCloudBuildClient *MockCloudBuildClient) {
-				mockCloudBuildClient.On("CreateOrUpdateCloudBuildTrigger", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+				mockCloudBuildClient.On("CreateOrUpdateCloudBuildTrigger", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(errors.New("failed"))
 			},
 			wantErr: true,

@@ -60,7 +60,7 @@ func (p *Pipeline) CI(ctx context.Context) error {
 		}
 	}
 
-	var properties Properties
+	var properties properties
 	err := parseCloudBuildPath(p, &properties)
 	if err != nil {
 		span.RecordError(err)

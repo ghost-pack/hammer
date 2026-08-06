@@ -13,6 +13,7 @@ spec:
       type: cloudbuild
       properties:
         path: ./cloudbuild/cloudbuild.yaml
+        trigger_type: "webhook"
         tests:
           - path: ./cloudbuild/cloudbuild_test.yaml
             required: true

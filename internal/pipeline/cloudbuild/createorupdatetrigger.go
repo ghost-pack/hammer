@@ -11,15 +11,27 @@ func (p *Pipeline) createOrUpdateTrigger(ctx context.Context) error {
 	ctx, span := tracing.Tracer("creating cloud build trigger").Start(ctx, "creating cloud build trigger")
 	defer span.End()
 
-	var properties Properties
-	err := parseCloudBuildPath(p, &properties)
+	var props properties
+	err := parseCloudBuildPath(p, &props)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(otelCodes.Error, err.Error())
 		return err
 	}
 
-	err = p.cloudBuildClient.CreateOrUpdateCloudBuildTrigger(ctx, "hammer-central-prod", "598451979611", "global", properties.Path, "webhook", p.component.Name)
+	var triggerType string
+	if props.TriggerType != "" {
+		triggerType = props.TriggerType
+	} else {
+		triggerType = "webhook"
+	}
+
+	var pubSubTopic string
+	if props.PubSubTopic != "" {
+		pubSubTopic = props.PubSubTopic
+	}
+
+	err = p.cloudBuildClient.CreateOrUpdateCloudBuildTrigger(ctx, "hammer-central-prod", "598451979611", "global", props.Path, triggerType, p.component.Name, pubSubTopic, props.ManuallyApproved)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(otelCodes.Error, err.Error())

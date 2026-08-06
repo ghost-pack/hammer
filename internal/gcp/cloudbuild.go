@@ -20,7 +20,7 @@ import (
 
 type CloudBuildClient interface {
 	TestCloudBuild(ctx context.Context, projectID, location, cloudbuildPath, cloudBuildTestPath string) error
-	CreateOrUpdateCloudBuildTrigger(ctx context.Context, projectId, projectNumber, location, cloudBuildPath, triggerType, triggerName string) error
+	CreateOrUpdateCloudBuildTrigger(ctx context.Context, projectId, projectNumber, location, cloudBuildPath, triggerType, triggerName, pubsubTopic string, manuallyApproved bool) error
 	Close() error
 }
 
@@ -223,7 +223,9 @@ func (c *CloudBuildClientImpl) CreateOrUpdateCloudBuildTrigger(
 	location,
 	cloudBuildPath,
 	triggerType,
-	triggerName string,
+	triggerName,
+	pubsubTopic string,
+	manuallyApproved bool,
 ) error {
 	ctx, span := tracing.Tracer("gcloud builds triggers").Start(ctx, "gcloud builds triggers",
 		trace.WithAttributes(
@@ -242,6 +244,8 @@ func (c *CloudBuildClientImpl) CreateOrUpdateCloudBuildTrigger(
 		projectNumber,
 		triggerName,
 		triggerType,
+		pubsubTopic,
+		manuallyApproved,
 		buildConfig,
 	)
 	if err != nil {
@@ -326,7 +330,9 @@ func createBuildTrigger(
 	projectID,
 	projectNumber,
 	triggerName,
-	triggerType string,
+	triggerType,
+	pubsubTopic string,
+	manuallyApproved bool,
 	cfg *cloudBuildConfig,
 ) (*cloudbuildpb.BuildTrigger, error) {
 	secretResourceName := fmt.Sprintf(
@@ -345,6 +351,11 @@ func createBuildTrigger(
 		Steps:          buildSteps(cfg),
 		Substitutions:  cfg.Substitutions,
 		ServiceAccount: serviceAccountName,
+		Approval: &cloudbuildpb.BuildApproval{
+			Config: &cloudbuildpb.ApprovalConfig{
+				ApprovalRequired: manuallyApproved,
+			},
+		},
 		Options: &cloudbuildpb.BuildOptions{
 			SubstitutionOption: cloudbuildpb.BuildOptions_ALLOW_LOOSE,
 			Logging:            cloudbuildpb.BuildOptions_CLOUD_LOGGING_ONLY,
@@ -355,7 +366,7 @@ func createBuildTrigger(
 		triggerName,
 		triggerType,
 		secretResourceName,
-		"",
+		pubsubTopic,
 		build,
 		cfg.Substitutions,
 	)

@@ -23,8 +23,8 @@ func (m *MockCloudBuildClient) TestCloudBuild(ctx context.Context, projectID, lo
 	return callArgs.Error(0)
 }
 
-func (m *MockCloudBuildClient) CreateOrUpdateCloudBuildTrigger(ctx context.Context, projectID, projectNumber, location, cloudBuildPath, triggerName, triggerType string) error {
-	callArgs := m.Called(ctx, projectID, projectNumber, location, cloudBuildPath, triggerName, triggerType)
+func (m *MockCloudBuildClient) CreateOrUpdateCloudBuildTrigger(ctx context.Context, projectID, projectNumber, location, cloudBuildPath, triggerName, triggerType, pubsubTopic string, manuallyApproved bool) error {
+	callArgs := m.Called(ctx, projectID, projectNumber, location, cloudBuildPath, triggerName, triggerType, pubsubTopic, manuallyApproved)
 	return callArgs.Error(0)
 }
 
@@ -386,7 +386,7 @@ func TestPipeline_Deploy(t *testing.T) {
 				},
 			}},
 			setupMock: func(mockCloudBuildClient *MockCloudBuildClient) {
-				mockCloudBuildClient.On("CreateOrUpdateCloudBuildTrigger", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+				mockCloudBuildClient.On("CreateOrUpdateCloudBuildTrigger", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 			},
 			noOutput: false,
@@ -417,7 +417,7 @@ func TestPipeline_Deploy(t *testing.T) {
 				},
 			}},
 			setupMock: func(mockCloudBuildClient *MockCloudBuildClient) {
-				mockCloudBuildClient.On("CreateOrUpdateCloudBuildTrigger", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+				mockCloudBuildClient.On("CreateOrUpdateCloudBuildTrigger", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(errors.New("error"))
 			},
 			noOutput: false,

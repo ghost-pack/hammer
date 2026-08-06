@@ -12,23 +12,23 @@ func (p *Pipeline) submitTest(ctx context.Context) error {
 	ctx, span := tracing.Tracer("testing cloud build pipelines").Start(ctx, "testing cloud build pipelines")
 	defer span.End()
 
-	var properties Properties
-	err := parseCloudBuildPath(p, &properties)
+	var props properties
+	err := parseCloudBuildPath(p, &props)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(otelCodes.Error, err.Error())
 		return err
 	}
-	if properties.Tests == nil {
+	if props.Tests == nil {
 		noCloudBuildTestErrors := fmt.Errorf("cloud build tests required")
 		span.RecordError(noCloudBuildTestErrors)
 		span.SetStatus(otelCodes.Error, noCloudBuildTestErrors.Error())
 		return noCloudBuildTestErrors
 	}
 
-	for _, ph := range properties.Tests {
+	for _, ph := range props.Tests {
 		required := ph.Required != nil && *ph.Required
-		err := p.cloudBuildClient.TestCloudBuild(ctx, "hammer-central-prod", "global", properties.Path, ph.Path)
+		err := p.cloudBuildClient.TestCloudBuild(ctx, "hammer-central-prod", "global", props.Path, ph.Path)
 		if err != nil && required {
 			span.RecordError(err)
 			span.SetStatus(otelCodes.Error, err.Error())
@@ -45,7 +45,7 @@ func (p *Pipeline) submitTest(ctx context.Context) error {
 	return nil
 }
 
-func parseCloudBuildPath(p *Pipeline, properties *Properties) error {
+func parseCloudBuildPath(p *Pipeline, properties *properties) error {
 	if err := p.component.Properties.Decode(&properties); err != nil {
 		return fmt.Errorf("decoding properties: %w", err)
 	}
