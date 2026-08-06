@@ -40,7 +40,6 @@ spec:
       description: "Runs CI/CD pipelines interpreting OAM files"
       roles:
         project:
-          - roles/iam.serviceAccountTokenCreator
           - roles/artifactregistry.writer
           - roles/cloudbuild.builds.editor
           - roles/storage.objectAdmin
