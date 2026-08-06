@@ -5,7 +5,7 @@ import (
 )
 
 func (p *Pipeline) ensureBucketExists(ctx context.Context) error {
-	err := p.cloudStorageClient.EnsureBucketExists(ctx, "hammer-bootstrap", "us-central1", p.component.Name)
+	err := p.cloudStorageClient.EnsureBucketExists(ctx, "hammer-central-prod", "us-central1", p.component.Name)
 	if err != nil {
 		return err
 	}

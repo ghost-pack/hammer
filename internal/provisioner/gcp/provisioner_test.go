@@ -156,7 +156,7 @@ func TestNewProvisioner(t *testing.T) {
 				tenant:           &tenant.Tenant{Metadata: tenant.Metadata{Name: "acme-corp"}},
 				clients:          &provisioner.DependencyClients{},
 				registryBucket:   "hammer-platform-registry",
-				platformProject:  "hammer-bootstrap",
+				platformProject:  "hammer-central-prod",
 				defaultRegion:    "us-central1",
 				newState:         &TenantState{},
 				lastAppliedState: &TenantState{},

@@ -14,7 +14,7 @@ func (p *Pipeline) push(ctx context.Context) error {
 		tag = "dev"
 	}
 
-	fullImageTag := fmt.Sprintf("us-central1-docker.pkg.dev/hammer-bootstrap/%s/%s:%s", p.component.Name, p.component.Name, tag)
+	fullImageTag := fmt.Sprintf("us-central1-docker.pkg.dev/hammer-central-prod/%s/%s:%s", p.component.Name, p.component.Name, tag)
 
 	err := p.dockerClient.Push(ctx, "./apko-wolfi.tar", fullImageTag)
 	if err != nil {

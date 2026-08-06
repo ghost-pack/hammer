@@ -145,7 +145,7 @@ func TestGrantRepositoryReader(t *testing.T) {
 		mockAPI.On("SetIamPolicy", mock.Anything, mock.Anything).Return(nil, nil)
 
 		client := newGarClientWithAPI(mockAPI)
-		err := client.GrantRepositoryReader(context.Background(), "my-project", "us-central1", "my-repo", "sa-pipeline@hammer-bootstrap.iam.gserviceaccount.com")
+		err := client.GrantRepositoryReader(context.Background(), "my-project", "us-central1", "my-repo", "sa-pipeline@hammer-central-prod.iam.gserviceaccount.com")
 		require.NoError(t, err)
 
 		mockAPI.AssertExpectations(t)
@@ -158,7 +158,7 @@ func TestGrantRepositoryReader(t *testing.T) {
 		})).Return(nil, fmt.Errorf("some error"))
 
 		client := newGarClientWithAPI(mockAPI)
-		err := client.GrantRepositoryReader(context.Background(), "my-project", "us-central1", "my-repo", "sa-pipeline@hammer-bootstrap.iam.gserviceaccount.com")
+		err := client.GrantRepositoryReader(context.Background(), "my-project", "us-central1", "my-repo", "sa-pipeline@hammer-central-prod.iam.gserviceaccount.com")
 		require.Error(t, err)
 
 		mockAPI.AssertExpectations(t)
@@ -173,7 +173,7 @@ func TestGrantRepositoryReader(t *testing.T) {
 		mockAPI.On("SetIamPolicy", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("some error"))
 
 		client := newGarClientWithAPI(mockAPI)
-		err := client.GrantRepositoryReader(context.Background(), "my-project", "us-central1", "my-repo", "sa-pipeline@hammer-bootstrap.iam.gserviceaccount.com")
+		err := client.GrantRepositoryReader(context.Background(), "my-project", "us-central1", "my-repo", "sa-pipeline@hammer-central-prod.iam.gserviceaccount.com")
 		require.Error(t, err)
 
 		mockAPI.AssertExpectations(t)

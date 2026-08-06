@@ -5,7 +5,7 @@ import (
 )
 
 func (p *Pipeline) createGar(ctx context.Context) error {
-	err := p.garClient.EnsureRepository(ctx, "hammer-bootstrap", "us-central1", p.component.Name)
+	err := p.garClient.EnsureRepository(ctx, "hammer-central-prod", "us-central1", p.component.Name)
 	if err != nil {
 		return err
 	}

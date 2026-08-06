@@ -20,8 +20,8 @@ func New(t *tenant.Tenant, clients *provisioner.DependencyClients) (provisioner.
 	return &Provisioner{
 		tenant:           t,
 		clients:          clients,
-		registryBucket:   "hammer-platform-registry",
-		platformProject:  "hammer-bootstrap",
+		registryBucket:   "hammer-registry",
+		platformProject:  "hammer-central-prod",
 		defaultRegion:    "us-central1",
 		newState:         &TenantState{},
 		lastAppliedState: &TenantState{},
