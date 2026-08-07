@@ -33,6 +33,31 @@ func (m *MockCloudBuildClient) Close() error {
 	return callArgs.Error(0)
 }
 
+type MockPubSubClient struct {
+	mock.Mock
+}
+
+func (m *MockPubSubClient) EnsureTopic(ctx context.Context, projectID, topicID, publisherSA string) error {
+	callArgs := m.Called(ctx, projectID, topicID, publisherSA)
+	return callArgs.Error(0)
+}
+
+func (m *MockPubSubClient) DeleteTopic(ctx context.Context, projectID, topicID string) error {
+	callArgs := m.Called(ctx, projectID, topicID)
+	return callArgs.Error(0)
+}
+
+func (m *MockPubSubClient) PublishMessage(ctx context.Context, projectID, topicID string, data []byte, attributes map[string]string) (string, error) {
+	callArgs := m.Called(ctx, projectID, topicID, data, attributes)
+	res, _ := callArgs.Get(0).(string)
+	return res, callArgs.Error(1)
+}
+
+func (m *MockPubSubClient) Close() error {
+	callArgs := m.Called()
+	return callArgs.Error(0)
+}
+
 func TestNewPipeline(t *testing.T) {
 	type args struct {
 		component        oam.Component

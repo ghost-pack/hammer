@@ -3,6 +3,7 @@ package cloudbuild
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/ghost-pack/hammer/internal/oam"
@@ -15,7 +16,7 @@ func TestPipeline_createorupdatetrigger(t *testing.T) {
 	tests := []struct {
 		name      string
 		component *oam.Component
-		setupMock func(*MockCloudBuildClient)
+		setupMock func(*MockCloudBuildClient, *MockPubSubClient)
 		wantErr   bool
 	}{
 		{
@@ -26,16 +27,41 @@ func TestPipeline_createorupdatetrigger(t *testing.T) {
 					{Kind: yaml.ScalarNode, Value: "path"},
 					{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild.yaml"},
 					{Kind: yaml.ScalarNode, Value: "trigger_type"},
-					{Kind: yaml.ScalarNode, Value: "manual"},
+					{Kind: yaml.ScalarNode, Value: "pubsub"},
 					{Kind: yaml.ScalarNode, Value: "pubsub_topic"},
 					{Kind: yaml.ScalarNode, Value: "whatever"},
+					{Kind: yaml.ScalarNode, Value: "service_account"},
+					{Kind: yaml.ScalarNode, Value: "sa-oam@hammer-central-prod.iam.gserviceaccount.com"},
 				},
 			}},
-			setupMock: func(mockCloudBuildClient *MockCloudBuildClient) {
+			setupMock: func(mockCloudBuildClient *MockCloudBuildClient, mockPubSubClient *MockPubSubClient) {
 				mockCloudBuildClient.On("CreateOrUpdateCloudBuildTrigger", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockPubSubClient.On("EnsureTopic", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).
 					Return(nil)
 			},
 			wantErr: false,
+		},
+		{
+			name: "fail to create pubsub topic",
+			component: &oam.Component{Name: "testComponent", Type: "cloudbuild", Properties: yaml.Node{
+				Kind: yaml.MappingNode,
+				Content: []*yaml.Node{
+					{Kind: yaml.ScalarNode, Value: "path"},
+					{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild.yaml"},
+					{Kind: yaml.ScalarNode, Value: "trigger_type"},
+					{Kind: yaml.ScalarNode, Value: "pubsub"},
+					{Kind: yaml.ScalarNode, Value: "pubsub_topic"},
+					{Kind: yaml.ScalarNode, Value: "whatever"},
+					{Kind: yaml.ScalarNode, Value: "service_account"},
+					{Kind: yaml.ScalarNode, Value: "sa-oam@hammer-central-prod.iam.gserviceaccount.com"},
+				},
+			}},
+			setupMock: func(mockCloudBuildClient *MockCloudBuildClient, mockPubSubClient *MockPubSubClient) {
+				mockPubSubClient.On("EnsureTopic", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).
+					Return(fmt.Errorf("error"))
+			},
+			wantErr: true,
 		},
 		{
 			name: "FailedCreateOrUpdateTriggerTestPipeline_bad_component",
@@ -55,7 +81,7 @@ func TestPipeline_createorupdatetrigger(t *testing.T) {
 					},
 				},
 			},
-			setupMock: func(mockCloudBuildClient *MockCloudBuildClient) {
+			setupMock: func(mockCloudBuildClient *MockCloudBuildClient, mockPubSubClient *MockPubSubClient) {
 			},
 			wantErr: true,
 		},
@@ -67,7 +93,7 @@ func TestPipeline_createorupdatetrigger(t *testing.T) {
 					Content: []*yaml.Node{},
 				},
 			},
-			setupMock: func(mockCloudBuildClient *MockCloudBuildClient) {
+			setupMock: func(mockCloudBuildClient *MockCloudBuildClient, mockPubSubClient *MockPubSubClient) {
 				mockCloudBuildClient.On("CreateOrUpdateCloudBuildTrigger", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(errors.New("failed"))
 			},
@@ -77,11 +103,13 @@ func TestPipeline_createorupdatetrigger(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockCloudBuildClient := new(MockCloudBuildClient)
-			tt.setupMock(mockCloudBuildClient)
+			mockPubSubClient := new(MockPubSubClient)
+			tt.setupMock(mockCloudBuildClient, mockPubSubClient)
 
 			p := &Pipeline{
 				component:        tt.component,
 				cloudBuildClient: mockCloudBuildClient,
+				pubsubClient:     mockPubSubClient,
 			}
 
 			err := p.createOrUpdateTrigger(context.Background())
@@ -93,6 +121,7 @@ func TestPipeline_createorupdatetrigger(t *testing.T) {
 			}
 
 			mockCloudBuildClient.AssertExpectations(t)
+			mockPubSubClient.AssertExpectations(t)
 		})
 	}
 }

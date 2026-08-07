@@ -26,6 +26,15 @@ func (p *Pipeline) createOrUpdateTrigger(ctx context.Context) error {
 		triggerType = "webhook"
 	}
 
+	if triggerType == "pubsub" {
+		err = p.pubsubClient.EnsureTopic(ctx, "hammer-central-prod", props.PubSubTopic, props.ServiceAccount)
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(otelCodes.Error, err.Error())
+			return err
+		}
+	}
+
 	err = p.cloudBuildClient.CreateOrUpdateCloudBuildTrigger(ctx, "hammer-central-prod", "598451979611", "global", props.Path, triggerType, p.component.Name, props.PubSubTopic, props.ServiceAccount, props.ManuallyApproved)
 	if err != nil {
 		span.RecordError(err)

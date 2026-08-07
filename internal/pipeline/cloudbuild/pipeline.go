@@ -39,12 +39,14 @@ func New(component oam.Component, clients pipeline.DependencyClients) (pipeline.
 	return &Pipeline{
 		component:        &component,
 		cloudBuildClient: clients.CloudBuild,
+		pubsubClient:     clients.PubSub,
 	}, nil
 }
 
 type Pipeline struct {
 	component        *oam.Component
 	cloudBuildClient gcp.CloudBuildClient
+	pubsubClient     gcp.PubsubClient
 	cioutput         string
 }
 
