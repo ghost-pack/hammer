@@ -9,6 +9,8 @@ require (
 	cloud.google.com/go/iam v1.11.0
 	cloud.google.com/go/longrunning v1.0.0
 	cloud.google.com/go/orgpolicy v1.20.0
+	cloud.google.com/go/pubsub v1.50.2
+	cloud.google.com/go/pubsub/v2 v2.6.1
 	cloud.google.com/go/resourcemanager v1.15.0
 	cloud.google.com/go/serviceusage v1.14.0
 	cloud.google.com/go/storage v1.63.0
