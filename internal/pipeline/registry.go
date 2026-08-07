@@ -16,6 +16,7 @@ type DependencyClients struct {
 	GarClient    project.GarClient
 	CloudBuild   gcp.CloudBuildClient
 	CloudStorage gcp.CloudStorageClient
+	PubSub       gcp.PubsubClient
 }
 
 var registry = map[string]Factory{}

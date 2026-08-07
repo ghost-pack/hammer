@@ -45,3 +45,4 @@ spec:
           - roles/storage.objectAdmin
           - roles/pubsub.publisher
           - roles/pubsub.subscriber
+          - roles/pubsub.editor

@@ -52,6 +52,12 @@ func newCICmd() *cobra.Command {
 			}
 			defer cloudStorageClient.Close()
 
+			pubsubClient, err := gcp.NewPubsubClient(cmd.Context())
+			if err != nil {
+				return err
+			}
+			defer pubsubClient.Close()
+
 			app, err := oam.Load(flagOAMFile)
 			if err != nil {
 				return err
@@ -60,7 +66,14 @@ func newCICmd() *cobra.Command {
 			onMain := os.Getenv("BRANCH_NAME") == "main"
 
 			for _, component := range app.Spec.Components {
-				componentPipeline, err := pipeline.For(component, pipeline.DependencyClients{DockerClient: dockerClient, GarClient: garClient, CloudBuild: cloudBuildClient, CloudStorage: cloudStorageClient})
+				componentPipeline, err := pipeline.For(component,
+					pipeline.DependencyClients{
+						DockerClient: dockerClient,
+						GarClient:    garClient,
+						CloudBuild:   cloudBuildClient,
+						CloudStorage: cloudStorageClient,
+						PubSub:       pubsubClient,
+					})
 				if err != nil {
 					return err
 				}
