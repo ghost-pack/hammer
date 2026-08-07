@@ -94,6 +94,11 @@ func (m *MockIam) UnbindOrgRoles(ctx context.Context, projectID, saEmail string,
 	return callArgs.Error(0)
 }
 
+func (m *MockIam) AllowImpersonation(ctx context.Context, projectID, targetSAEmail, impersonatorEmail string) error {
+	callArgs := m.Called(ctx, projectID, projectID, targetSAEmail, impersonatorEmail)
+	return callArgs.Error(0)
+}
+
 func (m *MockIam) Close() error {
 	callArgs := m.Called()
 	return callArgs.Error(0)
