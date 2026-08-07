@@ -18,23 +18,25 @@ func init() {
 
 func New(t *tenant.Tenant, clients *provisioner.DependencyClients) (provisioner.Provisioner, error) {
 	return &Provisioner{
-		tenant:           t,
-		clients:          clients,
-		registryBucket:   "hammer-registry",
-		platformProject:  "hammer-central-prod",
-		defaultRegion:    "us-central1",
-		newState:         &TenantState{},
-		lastAppliedState: &TenantState{},
+		tenant:                    t,
+		clients:                   clients,
+		registryBucket:            "hammer-registry",
+		platformProject:           "hammer-central-prod",
+		platformOAMServiceAccount: "sa-oam@hammer-central-prod.iam.gserviceaccount.com",
+		defaultRegion:             "us-central1",
+		newState:                  &TenantState{},
+		lastAppliedState:          &TenantState{},
 	}, nil
 }
 
 type Provisioner struct {
 	// config — set at construction, never changes
-	tenant          *tenant.Tenant
-	clients         *provisioner.DependencyClients
-	registryBucket  string
-	platformProject string
-	defaultRegion   string
+	tenant                    *tenant.Tenant
+	clients                   *provisioner.DependencyClients
+	registryBucket            string
+	platformProject           string
+	defaultRegion             string
+	platformOAMServiceAccount string
 
 	// loaded from GCS at start of run — nil if first run
 	lastAppliedState *TenantState

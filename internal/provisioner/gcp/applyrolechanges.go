@@ -95,6 +95,10 @@ func applySaPipelineRoles(ctx context.Context, p *Provisioner, env string, proje
 		}
 	}
 
+	if err := p.clients.IAM.AllowImpersonation(ctx, projectID, pipelineSAEmail, p.platformOAMServiceAccount); err != nil {
+		return fmt.Errorf("granting sa-oam impersonation of sa-pipeline for %s: %w", env, err)
+	}
+
 	// compute final sa-pipeline roles for newState
 	allPipelineRoles, err := convertApiToRole(p.tenant.Spec.AllowedApis)
 	if err != nil {
