@@ -11,11 +11,12 @@ type App struct {
 
 type Metadata struct {
 	Name        string            `yaml:"name"`
-	Annotations map[string]string `json:"annotations,omitempty"`
+	Annotations map[string]string `yaml:"annotations,omitempty"`
 }
 
 type Spec struct {
-	Components []Component `json:"components"`
+	Components []Component `yaml:"components"`
+	Policies   []Policy    `yaml:"policies,omitempty"`
 }
 
 type Component struct {
@@ -28,4 +29,21 @@ type Component struct {
 type Trait struct {
 	Type       string    `yaml:"type"`
 	Properties yaml.Node `yaml:"properties,omitempty"`
+}
+
+type Policy struct {
+	Name       string           `yaml:"name"`
+	Type       string           `yaml:"type"`
+	Properties PolicyProperties `yaml:"properties,omitempty"`
+}
+
+type PolicyProperties struct {
+	Environment string     `yaml:"environment"`
+	Overrides   []Override `yaml:"overrides,omitempty"`
+}
+
+type Override struct {
+	Component  string    `yaml:"component"`
+	Properties yaml.Node `yaml:"properties,omitempty"`
+	Traits     []Trait   `yaml:"traits,omitempty"`
 }

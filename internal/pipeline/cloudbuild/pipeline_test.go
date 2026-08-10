@@ -70,9 +70,14 @@ func TestNewPipeline(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "SuccessfulNewPipeline",
-			args:    args{component: oam.Component{Name: "testComponent", Type: "cloudbuild"}, cloudBuildClient: &MockCloudBuildClient{}},
-			want:    &Pipeline{component: &oam.Component{Name: "testComponent", Type: "cloudbuild"}, cloudBuildClient: &MockCloudBuildClient{}},
+			name: "SuccessfulNewPipeline",
+			args: args{component: oam.Component{Name: "testComponent", Type: "cloudbuild"}, cloudBuildClient: &MockCloudBuildClient{}},
+			want: &Pipeline{
+				component:             &oam.Component{Name: "testComponent", Type: "cloudbuild"},
+				cloudBuildClient:      &MockCloudBuildClient{},
+				platformProject:       "hammer-central-prod",
+				platformProjectNumber: "598451979611",
+			},
 			wantErr: false,
 		},
 		{

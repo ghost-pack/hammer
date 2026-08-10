@@ -9,3 +9,12 @@ spec:
   components:
     - name: hammer
       type: goservice
+  policies:
+    - name: prod
+      type: environment
+      properties:
+        environment: prod
+        overrides:
+          - component: hammer
+            properties:
+              service_account: "sa-oam@hammer-central-prod.iam.gserviceaccount.com"

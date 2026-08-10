@@ -96,6 +96,9 @@ func newCICmd() *cobra.Command {
 					}
 				}
 			}
+			// Here, do these things:
+			// 1. Upload OAM file into a cloud storage bucket that looks like this: gs://acme-corp-dev-state/deployments/oam/a1b2c3d.yaml
+			// 2. Handle OAM policies here - for each OAM policy topology thing
 
 			slog.InfoContext(ctx, "ci complete")
 			return nil

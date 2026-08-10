@@ -152,6 +152,13 @@ func (c *CloudStorageClientImpl) EnsureBucketExists(ctx context.Context, project
 					Action:    storage.LifecycleAction{Type: "Delete"},
 					Condition: storage.LifecycleCondition{DaysSinceNoncurrentTime: 90, NumNewerVersions: 3},
 				},
+				{
+					Action: storage.LifecycleAction{Type: "Delete"},
+					Condition: storage.LifecycleCondition{
+						AgeInDays:     30,
+						MatchesPrefix: []string{"deployments/oam/", "deployments/plans/", "deployments/cloudbuild/"},
+					},
+				},
 			},
 		},
 		PublicAccessPrevention: storage.PublicAccessPreventionEnforced,

@@ -26,11 +26,12 @@ spec:
       type: opentofu
       properties:
         path: ./opentofu
-#      traits:
-#        - type: resources
-#          properties:
-#            cpu: "1000m"
-#            memory: 1Gi
-#        - type: scalar
-#          properties:
-#            replicas: 2
+  policies:
+    - name: prod
+      type: environment
+      properties:
+        environment: prod
+        overrides:
+          - component: hammer-cicd
+            properties:
+              service_account: "sa-oam@hammer-central-prod.iam.gserviceaccount.com"

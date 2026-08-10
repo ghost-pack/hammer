@@ -28,7 +28,7 @@ func (p *Pipeline) submitTest(ctx context.Context) error {
 
 	for _, ph := range props.Tests {
 		required := ph.Required != nil && *ph.Required
-		err := p.cloudBuildClient.TestCloudBuild(ctx, "hammer-central-prod", "global", props.Path, ph.Path)
+		err := p.cloudBuildClient.TestCloudBuild(ctx, p.platformProject, "global", props.Path, ph.Path)
 		if err != nil && required {
 			span.RecordError(err)
 			span.SetStatus(otelCodes.Error, err.Error())
