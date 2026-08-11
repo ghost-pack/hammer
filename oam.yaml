@@ -1,9 +1,9 @@
 apiVersion: core.oam.dev/v1beta1
 kind: Application
 metadata:
-  name: hammer
+  name: hammer-central
   annotations:
-    team: "hammer-central-prod"
+    team: "hammer-central"
     description: "The hammer CLI."
 spec:
   components:

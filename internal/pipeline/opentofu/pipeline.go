@@ -44,7 +44,7 @@ func (p *Pipeline) ComponentType() string {
 	return p.component.Type
 }
 
-func (p *Pipeline) CI(ctx context.Context) error {
+func (p *Pipeline) CI(ctx context.Context) (*pipeline.Artifact, error) {
 	ctx, span := tracing.Tracer(fmt.Sprintf("%s CI", p.ComponentType())).Start(ctx, fmt.Sprintf("%s CI", p.ComponentType()),
 		trace.WithAttributes(
 			attribute.String("cmd", fmt.Sprintf("%s CI", p.ComponentType()))))
@@ -67,12 +67,12 @@ func (p *Pipeline) CI(ctx context.Context) error {
 			slog.InfoContext(ctx, "phase start", "phase", ph.name)
 			if err := ph.run(ctx, env); err != nil {
 				slog.ErrorContext(ctx, "phase error", "phase", ph.name, "error", err)
-				return fmt.Errorf("phase %s error: %w", ph.name, err)
+				return nil, fmt.Errorf("phase %s error: %w", ph.name, err)
 			}
 		}
 	}
 
-	return nil
+	return nil, nil
 }
 
 func (p *Pipeline) Analyze(ctx context.Context) error {

@@ -68,9 +68,10 @@ func (m *MockPipeline) ComponentType() string {
 	return args.String(0)
 }
 
-func (m *MockPipeline) CI(ctx context.Context) error {
+func (m *MockPipeline) CI(ctx context.Context) (*Artifact, error) {
 	args := m.Called(ctx)
-	return args.Error(0)
+	op, _ := args.Get(0).(*Artifact)
+	return op, args.Error(1)
 }
 
 func (m *MockPipeline) Deploy(ctx context.Context) error {

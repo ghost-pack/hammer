@@ -11,6 +11,7 @@ import (
 	"cloud.google.com/go/storage"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
 
@@ -37,6 +38,11 @@ func (m *MockBucketHandleAPI) Object(name string) objectHandleAPI {
 	return m.Called(name).Get(0).(objectHandleAPI)
 }
 
+func (m *MockBucketHandleAPI) Objects(ctx context.Context, q *storage.Query) objectIteratorAPI {
+	// ctx and q can be ignored or asserted with matchers
+	return m.Called(ctx, q).Get(0).(objectIteratorAPI)
+}
+
 type MockObjectHandleAPI struct{ mock.Mock }
 
 func (m *MockObjectHandleAPI) NewReader(ctx context.Context) (io.ReadCloser, error) {
@@ -58,6 +64,18 @@ func (m *MockStorageWriterAPI) Write(p []byte) (int, error) {
 }
 func (m *MockStorageWriterAPI) Close() error                           { return m.Called().Error(0) }
 func (m *MockStorageWriterAPI) SetMetadata(metadata map[string]string) { m.Called(metadata) }
+
+type MockObjectIteratorAPI struct {
+	mock.Mock
+}
+
+func (m *MockObjectIteratorAPI) Next() (*storage.ObjectAttrs, error) {
+	args := m.Called()
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*storage.ObjectAttrs), args.Error(1)
+}
 
 func TestWriteObject(t *testing.T) {
 	t.Run("writes object successfully", func(t *testing.T) {
@@ -303,4 +321,63 @@ func TestNewCloudStorageClient(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestListPrefixes(t *testing.T) {
+
+	t.Run("successfully list prefixes", func(t *testing.T) {
+		mockBucket := new(MockBucketHandleAPI)
+		mockClient := new(MockStorageClientAPI)
+
+		// Setup: client.Bucket("my-bucket") returns mockBucket
+		mockClient.On("Bucket", "my-bucket").Return(mockBucket)
+
+		// The iterator mock – we’ll make it return two prefixes then finish
+		mockIter := new(MockObjectIteratorAPI)
+		// First call returns a Prefix
+		mockIter.On("Next").Return(&storage.ObjectAttrs{Prefix: "tenants/tenant-a/"}, nil).Once()
+		// Second call returns another Prefix
+		mockIter.On("Next").Return(&storage.ObjectAttrs{Prefix: "tenants/tenant-b/"}, nil).Once()
+		// Third call signals done
+		mockIter.On("Next").Return(nil, iterator.Done).Once()
+
+		mockBucket.On("Objects", mock.Anything, mock.Anything).Return(mockIter)
+
+		client := newCloudStorageClientWithAPI(mockClient)
+
+		prefixes, err := client.ListPrefixes(context.Background(), "my-bucket", "tenants/", "/")
+		require.NoError(t, err)
+		require.Equal(t, []string{"tenants/tenant-a/", "tenants/tenant-b/"}, prefixes)
+
+		mockClient.AssertExpectations(t)
+		mockBucket.AssertExpectations(t)
+		mockIter.AssertExpectations(t)
+	})
+
+	t.Run("Error list prefixes captured correctly", func(t *testing.T) {
+		mockBucket := new(MockBucketHandleAPI)
+		mockClient := new(MockStorageClientAPI)
+
+		// Setup: client.Bucket("my-bucket") returns mockBucket
+		mockClient.On("Bucket", "my-bucket").Return(mockBucket)
+
+		// The iterator mock – we’ll make it return two prefixes then finish
+		mockIter := new(MockObjectIteratorAPI)
+		// First call returns a Prefix
+		mockIter.On("Next").Return(&storage.ObjectAttrs{Prefix: "tenants/tenant-a/"}, nil).Once()
+		// Second call returns another Prefix
+		mockIter.On("Next").Return(nil, fmt.Errorf("some error")).Once()
+
+		mockBucket.On("Objects", mock.Anything, mock.Anything).Return(mockIter)
+
+		client := newCloudStorageClientWithAPI(mockClient)
+
+		prefixes, err := client.ListPrefixes(context.Background(), "my-bucket", "tenants/", "/")
+		require.Error(t, err)
+		require.Empty(t, prefixes)
+
+		mockClient.AssertExpectations(t)
+		mockBucket.AssertExpectations(t)
+		mockIter.AssertExpectations(t)
+	})
 }

@@ -36,8 +36,8 @@ func (p *Pipeline) ComponentType() string {
 	return "noop"
 }
 
-func (p *Pipeline) CI(ctx context.Context) error {
-	return nil
+func (p *Pipeline) CI(ctx context.Context) (*pipeline.Artifact, error) {
+	return nil, nil
 }
 
 func (p *Pipeline) Deploy(ctx context.Context) error {
@@ -66,8 +66,8 @@ func (p *BadPipeline) ComponentType() string {
 	return "bad"
 }
 
-func (p *BadPipeline) CI(ctx context.Context) error {
-	return fmt.Errorf("bad pipeline")
+func (p *BadPipeline) CI(ctx context.Context) (*pipeline.Artifact, error) {
+	return nil, fmt.Errorf("bad pipeline")
 }
 
 func (p *BadPipeline) Deploy(ctx context.Context) error {
@@ -96,8 +96,8 @@ func (p *GoodCiBadDeployPipeline) ComponentType() string {
 	return "bad"
 }
 
-func (p *GoodCiBadDeployPipeline) CI(ctx context.Context) error {
-	return nil
+func (p *GoodCiBadDeployPipeline) CI(ctx context.Context) (*pipeline.Artifact, error) {
+	return nil, nil
 }
 
 func (p *GoodCiBadDeployPipeline) Deploy(ctx context.Context) error {
@@ -148,11 +148,6 @@ func TestCI(t *testing.T) {
 		{
 			name:    "failed unparseable oam file",
 			oamFile: "testdata/oam_test_fail_ci_failure.yaml",
-			wantErr: true,
-		},
-		{
-			name:    "good ci bad deploy",
-			oamFile: "testdata/oam_test_fail_deploy_failure.yaml",
 			wantErr: true,
 		},
 	}

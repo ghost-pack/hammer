@@ -12,20 +12,34 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	otelCodes "go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
+	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
 
 // -- interfaces for each level of the chain --
+
+type CloudStorageClient interface {
+	EnsureBucketExists(ctx context.Context, projectId, location, bucketName string) error
+	GetObject(ctx context.Context, bucket, object string) ([]byte, error)
+	WriteObject(ctx context.Context, bucket, object string, data []byte, metadata map[string]string) error
+	ListPrefixes(ctx context.Context, bucket, prefix, delimiter string) ([]string, error)
+	Close() error
+}
 
 type storageClientAPI interface {
 	Bucket(name string) bucketHandleAPI
 	Close() error
 }
 
+type objectIteratorAPI interface {
+	Next() (*storage.ObjectAttrs, error)
+}
+
 type bucketHandleAPI interface {
 	Attrs(ctx context.Context) (*storage.BucketAttrs, error)
 	Create(ctx context.Context, projectID string, attrs *storage.BucketAttrs) error
 	Object(name string) objectHandleAPI
+	Objects(ctx context.Context, q *storage.Query) objectIteratorAPI
 }
 
 type objectHandleAPI interface {
@@ -33,12 +47,12 @@ type objectHandleAPI interface {
 	NewWriter(ctx context.Context) storageWriterAPI
 }
 
+// -- adapters --
+
 type storageWriterAPI interface {
 	io.WriteCloser
 	SetMetadata(metadata map[string]string)
 }
-
-// -- adapters --
 
 type storageClientAdapter struct {
 	client *storage.Client
@@ -68,6 +82,18 @@ func (a *bucketHandleAdapter) Object(name string) objectHandleAPI {
 	return &objectHandleAdapter{handle: a.handle.Object(name)}
 }
 
+func (a *bucketHandleAdapter) Objects(ctx context.Context, q *storage.Query) objectIteratorAPI {
+	return &bucketIteratorAdapter{it: a.handle.Objects(ctx, q)}
+}
+
+type bucketIteratorAdapter struct {
+	it *storage.ObjectIterator
+}
+
+func (a *bucketIteratorAdapter) Next() (*storage.ObjectAttrs, error) {
+	return a.it.Next()
+}
+
 type objectHandleAdapter struct {
 	handle *storage.ObjectHandle
 }
@@ -94,13 +120,6 @@ func (a *storageWriterAdapter) Close() error {
 
 func (a *storageWriterAdapter) SetMetadata(metadata map[string]string) {
 	a.writer.Metadata = metadata
-}
-
-type CloudStorageClient interface {
-	EnsureBucketExists(ctx context.Context, projectId, location, bucketName string) error
-	GetObject(ctx context.Context, bucket, object string) ([]byte, error)
-	WriteObject(ctx context.Context, bucket, object string, data []byte, metadata map[string]string) error
-	Close() error
 }
 
 type CloudStorageClientImpl struct {
@@ -224,4 +243,26 @@ func (c *CloudStorageClientImpl) WriteObject(ctx context.Context, bucket, object
 	slog.InfoContext(ctx, fmt.Sprintf("wrote gs://%s/%s", bucket, object))
 	span.SetStatus(otelCodes.Ok, "Object wrote")
 	return nil
+}
+
+func (c *CloudStorageClientImpl) ListPrefixes(ctx context.Context, bucket, prefix, delimiter string) ([]string, error) {
+	q := &storage.Query{
+		Prefix:    prefix,
+		Delimiter: delimiter,
+	}
+	it := c.client.Bucket(bucket).Objects(ctx, q)
+	var prefixes []string
+	for {
+		attrs, err := it.Next()
+		if errors.Is(err, iterator.Done) {
+			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("listing prefixes: %w", err)
+		}
+		if attrs.Prefix != "" {
+			prefixes = append(prefixes, attrs.Prefix)
+		}
+	}
+	return prefixes, nil
 }

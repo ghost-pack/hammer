@@ -207,7 +207,8 @@ func TestPipeline_CI(t *testing.T) {
 				garClient:    mockGarClient,
 			}
 
-			err := p.CI(context.Background())
+			// Don't need to test for artifact here since toolkit never makes one.
+			_, err := p.CI(context.Background())
 
 			if tt.wantErr {
 				require.Error(t, err)

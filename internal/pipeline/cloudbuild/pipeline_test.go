@@ -286,7 +286,8 @@ func TestPipeline_CI(t *testing.T) {
 				cloudBuildClient: mockCloudBuildClient,
 			}
 
-			err := p.CI(context.Background())
+			// TODO: test for artifact
+			_, err := p.CI(context.Background())
 
 			if tt.wantErr {
 				assert.Error(t, err)

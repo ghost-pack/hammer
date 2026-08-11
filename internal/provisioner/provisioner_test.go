@@ -120,6 +120,12 @@ func (m *MockCloudStorage) WriteObject(ctx context.Context, bucket, object strin
 	return callArgs.Error(0)
 }
 
+func (m *MockCloudStorage) ListPrefixes(ctx context.Context, bucket, prefix, delimiter string) ([]string, error) {
+	callArgs := m.Called(ctx, bucket, prefix, delimiter)
+	res, _ := callArgs.Get(0).([]string)
+	return res, callArgs.Error(1)
+}
+
 func (m *MockCloudStorage) Close() error {
 	callArgs := m.Called()
 	return callArgs.Error(0)
