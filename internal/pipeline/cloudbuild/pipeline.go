@@ -40,6 +40,7 @@ func New(component oam.Component, clients pipeline.DependencyClients) (pipeline.
 		component:             &component,
 		cloudBuildClient:      clients.CloudBuild,
 		pubsubClient:          clients.PubSub,
+		cloudStorageClient:    clients.CloudStorage,
 		platformProject:       "hammer-central-prod",
 		platformProjectNumber: "598451979611",
 	}, nil
@@ -49,6 +50,7 @@ type Pipeline struct {
 	component             *oam.Component
 	cloudBuildClient      gcp.CloudBuildClient
 	pubsubClient          gcp.PubsubClient
+	cloudStorageClient    gcp.CloudStorageClient
 	platformProject       string
 	platformProjectNumber string
 	cioutput              string
@@ -70,6 +72,7 @@ func (p *Pipeline) CI(ctx context.Context) (*pipeline.Artifact, error) {
 	phases = []phase{
 		{"lint", p.lint},
 		{"submittest", p.submitTest},
+		//{"writeOutput", p.writeOutput},
 	}
 
 	for _, ph := range phases {
