@@ -142,42 +142,104 @@ func (c *CICmd) Execute(ctx context.Context, args []string) (err error) {
 		}
 	}
 
-	// Steps mentioned in the comments (only on main)
 	if onMain {
 		if len(artifacts) == 0 {
 			slog.InfoContext(ctx, "ci complete - no artifacts uploaded")
 			return nil
 		}
 
-		oamPath, err := c.uploadOamFile(ctx, app)
-		if err != nil {
-			return err
+		if app.Metadata.Annotations["platform.hammerplatform.dev/deployment-strategy"] == "per-component" {
+			err = c.triggerPerComponentCdPipeline(ctx, app, artifacts)
+		} else {
+			err = c.triggerUnifiedCdPipeline(ctx, app, artifacts)
 		}
-
-		routingSlip, err := c.createRoutingSlip(ctx, app)
-		if err != nil {
-			return err
-		}
-
-		topicLocation, routingSlip := routingSlip[0], routingSlip[1:]
-
-		pubSubMessage := &pipeline.CIPubSubMessage{
-			Tenant:      app.Metadata.Name,
-			CommitSha:   os.Getenv("COMMIT_SHA"),
-			Branch:      "main",
-			PublishedAt: time.Now(),
-			OAMPath:     oamPath,
-			Artifacts:   artifacts,
-			RoutingSlip: routingSlip,
-		}
-
-		err = c.pushToPubSub(ctx, topicLocation, pubSubMessage)
 		if err != nil {
 			return err
 		}
 	}
 
 	slog.InfoContext(ctx, "ci complete")
+	return nil
+}
+
+func (c *CICmd) triggerPerComponentCdPipeline(ctx context.Context, app *oam.App, artifacts map[string]pipeline.Artifact) error {
+	oamPath, err := c.uploadOamFile(ctx, app)
+	if err != nil {
+		return err
+	}
+
+	routingSlip, err := c.createRoutingSlip(ctx, app)
+	if err != nil {
+		return err
+	}
+
+	topicLocation, routingSlip := routingSlip[0], routingSlip[1:]
+
+	reconciliationPubSubMessage := &pipeline.CIPubSubMessage{
+		Tenant:      app.Metadata.Name,
+		CommitSha:   os.Getenv("COMMIT_SHA"),
+		Branch:      "main",
+		PublishedAt: time.Now(),
+		OAMPath:     oamPath,
+		Artifacts:   artifacts,
+		Reconcile:   true,
+		RoutingSlip: routingSlip,
+	}
+
+	err = c.pushToPubSub(ctx, topicLocation, reconciliationPubSubMessage)
+	if err != nil {
+		return err
+	}
+
+	for componentName, artifact := range artifacts {
+		componentPubSubMessage := &pipeline.CIPubSubMessage{
+			Tenant:      app.Metadata.Name,
+			CommitSha:   os.Getenv("COMMIT_SHA"),
+			Branch:      "main",
+			PublishedAt: time.Now(),
+			OAMPath:     oamPath,
+			Artifacts: map[string]pipeline.Artifact{
+				componentName: artifact,
+			},
+			RoutingSlip: routingSlip,
+		}
+		err = c.pushToPubSub(ctx, topicLocation, componentPubSubMessage)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *CICmd) triggerUnifiedCdPipeline(ctx context.Context, app *oam.App, artifacts map[string]pipeline.Artifact) error {
+	oamPath, err := c.uploadOamFile(ctx, app)
+	if err != nil {
+		return err
+	}
+
+	routingSlip, err := c.createRoutingSlip(ctx, app)
+	if err != nil {
+		return err
+	}
+
+	topicLocation, routingSlip := routingSlip[0], routingSlip[1:]
+
+	pubSubMessage := &pipeline.CIPubSubMessage{
+		Tenant:      app.Metadata.Name,
+		CommitSha:   os.Getenv("COMMIT_SHA"),
+		Branch:      "main",
+		PublishedAt: time.Now(),
+		OAMPath:     oamPath,
+		Artifacts:   artifacts,
+		Reconcile:   true,
+		RoutingSlip: routingSlip,
+	}
+
+	err = c.pushToPubSub(ctx, topicLocation, pubSubMessage)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

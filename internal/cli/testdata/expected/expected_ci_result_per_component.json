@@ -12,7 +12,6 @@
       }
     }
   },
-  "reconcile": true,
   "routingSlip": [
     {
       "env": "prod",

@@ -1,0 +1,12 @@
+apiVersion: core.oam.dev/v1beta1
+kind: Application
+metadata:
+  name: acme-corp
+  annotations:
+    team: "ghost-pack"
+    description: "The hammer CLI."
+    platform.hammerplatform.dev/deployment-strategy: per-component
+spec:
+  components:
+    - name: hammer
+      type: noop

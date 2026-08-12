@@ -3,7 +3,7 @@ kind: Tenant
 metadata:
   name: hammer-central
   annotations:
-    platform.hammerplatform.dev/platform-project: "true"
+    platform.hammerplatform.dev/platform-project: "true" # actually use this at some point.
 spec:
   billingAccount: "011702-581654-89E222"
   parentFolder: "organizations/937506553540"
