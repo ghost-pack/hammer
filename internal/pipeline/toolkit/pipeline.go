@@ -19,7 +19,7 @@ func init() {
 	pipeline.Register("toolkit", New)
 }
 
-func New(component oam.Component, clients pipeline.DependencyClients) (pipeline.Pipeline, error) {
+func New(component oam.Component, app oam.App, clients pipeline.DependencyClients) (pipeline.Pipeline, error) {
 	if component.Type != "toolkit" {
 		return nil, fmt.Errorf("toolkit component must be of type toolkit")
 	}

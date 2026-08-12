@@ -19,6 +19,7 @@ import (
 	"github.com/spf13/cobra"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 	"gopkg.in/yaml.v3"
 )
@@ -114,7 +115,9 @@ func (c *CICmd) Execute(ctx context.Context, args []string) (err error) {
 
 	artifacts := make(map[string]pipeline.Artifact)
 	for _, component := range app.Spec.Components {
-		componentPipeline, err := pipeline.For(component,
+		componentPipeline, err := pipeline.For(
+			component,
+			*app,
 			pipeline.DependencyClients{
 				DockerClient: c.Docker,
 				GarClient:    c.Gar,
@@ -183,7 +186,7 @@ func (c *CICmd) triggerCdPipeline(ctx context.Context, app *oam.App, artifacts m
 
 	topicLocation, routingSlip := routingSlip[0], routingSlip[1:]
 
-	mainMsg := buildCdPubSubMessage(app, oamPath, artifacts, routingSlip, true)
+	mainMsg := buildCdPubSubMessage(ctx, app, oamPath, artifacts, routingSlip, true)
 	if err := c.pushToPubSub(ctx, topicLocation, mainMsg); err != nil {
 		return err
 	}
@@ -191,7 +194,7 @@ func (c *CICmd) triggerCdPipeline(ctx context.Context, app *oam.App, artifacts m
 	if perComponent {
 		for componentName, artifact := range artifacts {
 			componentArtifacts := map[string]pipeline.Artifact{componentName: artifact}
-			componentMsg := buildCdPubSubMessage(app, oamPath, componentArtifacts, routingSlip, false)
+			componentMsg := buildCdPubSubMessage(ctx, app, oamPath, componentArtifacts, routingSlip, false)
 			if err := c.pushToPubSub(ctx, topicLocation, componentMsg); err != nil {
 				return err
 			}
@@ -201,7 +204,14 @@ func (c *CICmd) triggerCdPipeline(ctx context.Context, app *oam.App, artifacts m
 	return nil
 }
 
-func buildCdPubSubMessage(app *oam.App, oamPath string, artifacts map[string]pipeline.Artifact, routingSlip []pipeline.RoutingSlipEntry, reconcile bool) *pipeline.CIPubSubMessage {
+func buildCdPubSubMessage(ctx context.Context, app *oam.App, oamPath string, artifacts map[string]pipeline.Artifact, routingSlip []pipeline.RoutingSlipEntry, reconcile bool) *pipeline.CIPubSubMessage {
+	// Create a carrier to hold the W3C trace headers
+	carrier := propagation.MapCarrier{}
+
+	// Inject the current span's context into the carrier
+	propagator := propagation.TraceContext{}
+	propagator.Inject(ctx, carrier)
+
 	return &pipeline.CIPubSubMessage{
 		Tenant:      app.Metadata.Name,
 		CommitSha:   os.Getenv("COMMIT_SHA"),
@@ -211,6 +221,7 @@ func buildCdPubSubMessage(app *oam.App, oamPath string, artifacts map[string]pip
 		Artifacts:   artifacts,
 		Reconcile:   reconcile,
 		RoutingSlip: routingSlip,
+		Traceparent: carrier.Get("traceparent"),
 	}
 }
 func (c *CICmd) uploadOamFile(ctx context.Context, app *oam.App) (string, error) {

@@ -20,7 +20,7 @@ func init() {
 	pipeline.Register("gocli", New)
 }
 
-func New(component oam.Component, clients pipeline.DependencyClients) (pipeline.Pipeline, error) {
+func New(component oam.Component, app oam.App, clients pipeline.DependencyClients) (pipeline.Pipeline, error) {
 	if component.Type != "goservice" && component.Type != "gocli" {
 		return nil, fmt.Errorf("goservice component must be of type goservice")
 	}

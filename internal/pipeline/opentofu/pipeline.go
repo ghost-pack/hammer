@@ -18,7 +18,7 @@ func init() {
 	pipeline.Register("opentofu", New)
 }
 
-func New(component oam.Component, client pipeline.DependencyClients) (pipeline.Pipeline, error) {
+func New(component oam.Component, app oam.App, client pipeline.DependencyClients) (pipeline.Pipeline, error) {
 	if component.Type != "opentofu" {
 		return nil, fmt.Errorf("opentofu component must be of type opentofu")
 	}

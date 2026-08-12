@@ -9,7 +9,7 @@ import (
 	"github.com/ghost-pack/hammer/internal/oam"
 )
 
-type Factory func(oam.Component, DependencyClients) (Pipeline, error)
+type Factory func(oam.Component, oam.App, DependencyClients) (Pipeline, error)
 
 type DependencyClients struct {
 	DockerClient docker.Client
@@ -34,7 +34,7 @@ func Register(componentType string, f Factory) {
 	registry[componentType] = f
 }
 
-func For(component oam.Component, dependencies DependencyClients) (Pipeline, error) {
+func For(component oam.Component, app oam.App, dependencies DependencyClients) (Pipeline, error) {
 	if component.Type == "" {
 		return nil, fmt.Errorf("componentType is nil")
 	}
@@ -43,5 +43,5 @@ func For(component oam.Component, dependencies DependencyClients) (Pipeline, err
 	if !ok {
 		return nil, fmt.Errorf("componentType %s is not registered", component.Type)
 	}
-	return f(component, dependencies)
+	return f(component, app, dependencies)
 }

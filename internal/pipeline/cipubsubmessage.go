@@ -17,6 +17,7 @@ type CIPubSubMessage struct {
 	OAMPath     string `json:"oamPath"`
 	TraceParent string `json:"traceParent"`
 	Reconcile   bool   `json:"reconcile"`
+	Traceparent string `json:"traceparent,omitempty"`
 
 	// Artifacts produced by CI, keyed by component name
 	Artifacts map[string]Artifact `json:"artifacts"`

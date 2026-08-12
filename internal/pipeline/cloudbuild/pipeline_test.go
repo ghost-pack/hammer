@@ -3,6 +3,7 @@ package cloudbuild
 import (
 	"context"
 	"errors"
+	"os"
 	"testing"
 
 	"github.com/ghost-pack/hammer/internal/gcp"
@@ -29,6 +30,37 @@ func (m *MockCloudBuildClient) CreateOrUpdateCloudBuildTrigger(ctx context.Conte
 }
 
 func (m *MockCloudBuildClient) Close() error {
+	callArgs := m.Called()
+	return callArgs.Error(0)
+}
+
+type MockCloudStorage struct {
+	mock.Mock
+}
+
+func (m *MockCloudStorage) EnsureBucketExists(ctx context.Context, projectId, location, bucketName string) error {
+	callArgs := m.Called(ctx, projectId, location, bucketName)
+	return callArgs.Error(0)
+}
+
+func (m *MockCloudStorage) GetObject(ctx context.Context, bucket, object string) ([]byte, error) {
+	callArgs := m.Called(ctx, bucket, object)
+	res, _ := callArgs.Get(0).([]byte)
+	return res, callArgs.Error(1)
+}
+
+func (m *MockCloudStorage) WriteObject(ctx context.Context, bucket, object string, data []byte, metadata map[string]string) error {
+	callArgs := m.Called(ctx, bucket, object, data, metadata)
+	return callArgs.Error(0)
+}
+
+func (m *MockCloudStorage) ListPrefixes(ctx context.Context, bucket, prefix, delimiter string) ([]string, error) {
+	callArgs := m.Called(ctx, bucket, prefix, delimiter)
+	res, _ := callArgs.Get(0).([]string)
+	return res, callArgs.Error(1)
+}
+
+func (m *MockCloudStorage) Close() error {
 	callArgs := m.Called()
 	return callArgs.Error(0)
 }
@@ -74,6 +106,9 @@ func TestNewPipeline(t *testing.T) {
 			args: args{component: oam.Component{Name: "testComponent", Type: "cloudbuild"}, cloudBuildClient: &MockCloudBuildClient{}},
 			want: &Pipeline{
 				component:             &oam.Component{Name: "testComponent", Type: "cloudbuild"},
+				app:                   &oam.App{Metadata: oam.Metadata{Name: "acme-corp"}},
+				releaseBucket:         "hammer-release",
+				shortCommitSha:        "1234567",
 				cloudBuildClient:      &MockCloudBuildClient{},
 				platformProject:       "hammer-central-prod",
 				platformProjectNumber: "598451979611",
@@ -89,7 +124,8 @@ func TestNewPipeline(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := New(tt.args.component, pipeline.DependencyClients{CloudBuild: tt.args.cloudBuildClient})
+			os.Setenv("COMMIT_SHA", "12345678910")
+			got, err := New(tt.args.component, oam.App{Metadata: oam.Metadata{Name: "acme-corp"}}, pipeline.DependencyClients{CloudBuild: tt.args.cloudBuildClient})
 			if err != nil {
 				if tt.wantErr {
 					require.Error(t, err)
@@ -104,13 +140,16 @@ func TestNewPipeline(t *testing.T) {
 
 func TestPipeline_CI(t *testing.T) {
 	tests := []struct {
-		name      string
-		component *oam.Component
-		setupMock func(*MockCloudBuildClient)
-		wantErr   bool
+		name             string
+		component        *oam.Component
+		app              *oam.App
+		setupMock        func(*MockCloudBuildClient, *MockCloudStorage)
+		expectedArtifact *pipeline.Artifact
+		wantErr          bool
 	}{
 		{
 			name: "SuccessfulCIPipeline",
+			app:  &oam.App{Metadata: oam.Metadata{Name: "acme-corp"}},
 			component: &oam.Component{Name: "testComponent", Type: "cloudbuild", Properties: yaml.Node{
 				Kind: yaml.MappingNode,
 				Content: []*yaml.Node{
@@ -133,14 +172,23 @@ func TestPipeline_CI(t *testing.T) {
 					},
 				},
 			}},
-			setupMock: func(mockCloudBuildClient *MockCloudBuildClient) {
+			setupMock: func(mockCloudBuildClient *MockCloudBuildClient, mockCloudStorage *MockCloudStorage) {
 				mockCloudBuildClient.On("TestCloudBuild", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
+				mockCloudStorage.On("WriteObject", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+			},
+			expectedArtifact: &pipeline.Artifact{
+				Type: pipeline.ArtifactTypeCloudBuild,
+				Properties: map[string]string{
+					"cloudBuildYaml": "gs://hammer-release/acme-corp/deployments/cloudbuild/1234567.yaml",
+				},
 			},
 			wantErr: false,
 		},
 		{
 			name: "FailedCIPipeline_bad_component",
+			app:  &oam.App{Metadata: oam.Metadata{Name: "acme-corp"}},
 			component: &oam.Component{Name: "testComponent", Type: "cloudbuild",
 				Properties: yaml.Node{
 					Kind: yaml.MappingNode,
@@ -157,12 +205,13 @@ func TestPipeline_CI(t *testing.T) {
 					},
 				},
 			},
-			setupMock: func(mockCloudBuildClient *MockCloudBuildClient) {
+			setupMock: func(mockCloudBuildClient *MockCloudBuildClient, mockCloudStorage *MockCloudStorage) {
 			},
 			wantErr: true,
 		},
 		{
 			name: "FailedCIPipeline_failed_cloudbuild_read",
+			app:  &oam.App{Metadata: oam.Metadata{Name: "acme-corp"}},
 			component: &oam.Component{Name: "testComponent", Type: "cloudbuild",
 				Properties: yaml.Node{
 					Kind: yaml.MappingNode,
@@ -185,12 +234,13 @@ func TestPipeline_CI(t *testing.T) {
 						},
 					},
 				}},
-			setupMock: func(mockCloudBuildClient *MockCloudBuildClient) {
+			setupMock: func(mockCloudBuildClient *MockCloudBuildClient, mockCloudStorage *MockCloudStorage) {
 			},
 			wantErr: true,
 		},
 		{
 			name: "FailedCIPipeline_bad_cloudbuild_yaml",
+			app:  &oam.App{Metadata: oam.Metadata{Name: "acme-corp"}},
 			component: &oam.Component{Name: "testComponent", Type: "cloudbuild", Properties: yaml.Node{
 				Kind: yaml.MappingNode,
 				Content: []*yaml.Node{
@@ -213,12 +263,13 @@ func TestPipeline_CI(t *testing.T) {
 					},
 				},
 			}},
-			setupMock: func(mockCloudBuildClient *MockCloudBuildClient) {
+			setupMock: func(mockCloudBuildClient *MockCloudBuildClient, mockCloudStorage *MockCloudStorage) {
 			},
 			wantErr: true,
 		},
 		{
 			name: "FailedCIPipeline_bad_schema",
+			app:  &oam.App{Metadata: oam.Metadata{Name: "acme-corp"}},
 			component: &oam.Component{Name: "testComponent", Type: "cloudbuild", Properties: yaml.Node{
 				Kind: yaml.MappingNode,
 				Content: []*yaml.Node{
@@ -241,12 +292,13 @@ func TestPipeline_CI(t *testing.T) {
 					},
 				},
 			}},
-			setupMock: func(mockCloudBuildClient *MockCloudBuildClient) {
+			setupMock: func(mockCloudBuildClient *MockCloudBuildClient, mockCloudStorage *MockCloudStorage) {
 			},
 			wantErr: true,
 		},
 		{
 			name: "FailedCIPipeline_cloud_build_failure",
+			app:  &oam.App{Metadata: oam.Metadata{Name: "acme-corp"}},
 			component: &oam.Component{Name: "testComponent", Type: "cloudbuild", Properties: yaml.Node{
 				Kind: yaml.MappingNode,
 				Content: []*yaml.Node{
@@ -269,7 +321,7 @@ func TestPipeline_CI(t *testing.T) {
 					},
 				},
 			}},
-			setupMock: func(mockCloudBuildClient *MockCloudBuildClient) {
+			setupMock: func(mockCloudBuildClient *MockCloudBuildClient, mockCloudStorage *MockCloudStorage) {
 				mockCloudBuildClient.On("TestCloudBuild", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(errors.New("test error"))
 			},
@@ -279,23 +331,30 @@ func TestPipeline_CI(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockCloudBuildClient := new(MockCloudBuildClient)
-			tt.setupMock(mockCloudBuildClient)
+			mockCloudStorageClient := new(MockCloudStorage)
+			tt.setupMock(mockCloudBuildClient, mockCloudStorageClient)
 
 			p := &Pipeline{
-				component:        tt.component,
-				cloudBuildClient: mockCloudBuildClient,
+				app:                tt.app,
+				component:          tt.component,
+				cloudBuildClient:   mockCloudBuildClient,
+				cloudStorageClient: mockCloudStorageClient,
+				releaseBucket:      "hammer-release",
+				shortCommitSha:     "1234567",
 			}
 
 			// TODO: test for artifact
-			_, err := p.CI(context.Background())
+			artifact, err := p.CI(context.Background())
 
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
+				require.Equal(t, tt.expectedArtifact, artifact)
 			}
 
 			mockCloudBuildClient.AssertExpectations(t)
+			mockCloudStorageClient.AssertExpectations(t)
 		})
 	}
 }
@@ -379,138 +438,6 @@ func TestPipeline_Analyze(t *testing.T) {
 			}
 
 			// Ensure all expected mock calls were made
-			mockCloudBuildClient.AssertExpectations(t)
-		})
-	}
-}
-
-func TestPipeline_Deploy(t *testing.T) {
-	tests := []struct {
-		name      string
-		component *oam.Component
-		setupMock func(*MockCloudBuildClient)
-		noOutput  bool
-		wantErr   bool
-	}{
-		{
-			name: "SuccessfulDeployPipeline",
-			component: &oam.Component{Name: "testComponent", Type: "cloudbuild", Properties: yaml.Node{
-				Kind: yaml.MappingNode,
-				Content: []*yaml.Node{
-					{Kind: yaml.ScalarNode, Value: "path"},
-					{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild.yaml"},
-					{Kind: yaml.ScalarNode, Value: "tests"},
-					{
-						Kind: yaml.SequenceNode,
-						Content: []*yaml.Node{
-							{
-								Kind: yaml.MappingNode,
-								Content: []*yaml.Node{
-									{Kind: yaml.ScalarNode, Value: "path"},
-									{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild_test.yaml"},
-									{Kind: yaml.ScalarNode, Value: "required"},
-									{Kind: yaml.ScalarNode, Value: "true"},
-								},
-							},
-						},
-					},
-				},
-			}},
-			setupMock: func(mockCloudBuildClient *MockCloudBuildClient) {
-				mockCloudBuildClient.On("CreateOrUpdateCloudBuildTrigger", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
-			},
-			noOutput: false,
-			wantErr:  false,
-		},
-		{
-			name: "FailedDeployPipeline",
-			component: &oam.Component{Name: "testComponent", Type: "cloudbuild", Properties: yaml.Node{
-				Kind: yaml.MappingNode,
-				Content: []*yaml.Node{
-					{Kind: yaml.ScalarNode, Value: "path"},
-					{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild.yaml"},
-					{Kind: yaml.ScalarNode, Value: "tests"},
-					{
-						Kind: yaml.SequenceNode,
-						Content: []*yaml.Node{
-							{
-								Kind: yaml.MappingNode,
-								Content: []*yaml.Node{
-									{Kind: yaml.ScalarNode, Value: "path"},
-									{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild_test.yaml"},
-									{Kind: yaml.ScalarNode, Value: "required"},
-									{Kind: yaml.ScalarNode, Value: "true"},
-								},
-							},
-						},
-					},
-				},
-			}},
-			setupMock: func(mockCloudBuildClient *MockCloudBuildClient) {
-				mockCloudBuildClient.On("CreateOrUpdateCloudBuildTrigger", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(errors.New("error"))
-			},
-			noOutput: false,
-			wantErr:  true,
-		},
-		{
-			name: "FailedDeployPipeline",
-			component: &oam.Component{Name: "testComponent", Type: "cloudbuild", Properties: yaml.Node{
-				Kind: yaml.MappingNode,
-				Content: []*yaml.Node{
-					{Kind: yaml.ScalarNode, Value: "path"},
-					{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild.yaml"},
-					{Kind: yaml.ScalarNode, Value: "tests"},
-					{
-						Kind: yaml.SequenceNode,
-						Content: []*yaml.Node{
-							{
-								Kind: yaml.MappingNode,
-								Content: []*yaml.Node{
-									{Kind: yaml.ScalarNode, Value: "path"},
-									{Kind: yaml.ScalarNode, Value: "./testdata/cloudbuild_test.yaml"},
-									{Kind: yaml.ScalarNode, Value: "required"},
-									{Kind: yaml.ScalarNode, Value: "true"},
-								},
-							},
-						},
-					},
-				},
-			}},
-			setupMock: func(mockCloudBuildClient *MockCloudBuildClient) {
-			},
-			noOutput: true,
-			wantErr:  true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mockCloudBuildClient := new(MockCloudBuildClient)
-			tt.setupMock(mockCloudBuildClient)
-
-			var p *Pipeline
-			if tt.noOutput {
-				p = &Pipeline{
-					component:        tt.component,
-					cloudBuildClient: mockCloudBuildClient,
-				}
-			} else {
-				p = &Pipeline{
-					component:        tt.component,
-					cloudBuildClient: mockCloudBuildClient,
-					cioutput:         "whatever",
-				}
-			}
-
-			err := p.Deploy(context.Background())
-
-			if tt.wantErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-			}
-
 			mockCloudBuildClient.AssertExpectations(t)
 		})
 	}

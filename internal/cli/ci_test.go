@@ -19,7 +19,7 @@ func init() {
 }
 
 // The noop component is only used for testing.
-func New(component oam.Component, client pipeline.DependencyClients) (pipeline.Pipeline, error) {
+func New(component oam.Component, app oam.App, client pipeline.DependencyClients) (pipeline.Pipeline, error) {
 	if component.Type != "noop" {
 		return nil, fmt.Errorf("noop component must be of type noop")
 	}

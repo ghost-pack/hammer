@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 
 	"github.com/ghost-pack/hammer/internal/gcp"
 	"github.com/ghost-pack/hammer/internal/oam"
 	"github.com/ghost-pack/hammer/internal/observability/tracing"
 	"github.com/ghost-pack/hammer/internal/pipeline"
 	"go.opentelemetry.io/otel/attribute"
-	otelCodes "go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -31,16 +31,19 @@ type testConfig struct {
 	Required *bool  `yaml:"required"` // use pointer to detect if field was explicitly set
 }
 
-func New(component oam.Component, clients pipeline.DependencyClients) (pipeline.Pipeline, error) {
+func New(component oam.Component, app oam.App, clients pipeline.DependencyClients) (pipeline.Pipeline, error) {
 	if component.Type != "cloudbuild" {
 		return nil, fmt.Errorf("cloudbuild component must be of type cloudbuild")
 	}
 
 	return &Pipeline{
 		component:             &component,
+		app:                   &app,
 		cloudBuildClient:      clients.CloudBuild,
 		pubsubClient:          clients.PubSub,
 		cloudStorageClient:    clients.CloudStorage,
+		releaseBucket:         "hammer-release",
+		shortCommitSha:        os.Getenv("COMMIT_SHA")[:7],
 		platformProject:       "hammer-central-prod",
 		platformProjectNumber: "598451979611",
 	}, nil
@@ -48,19 +51,20 @@ func New(component oam.Component, clients pipeline.DependencyClients) (pipeline.
 
 type Pipeline struct {
 	component             *oam.Component
+	app                   *oam.App
 	cloudBuildClient      gcp.CloudBuildClient
 	pubsubClient          gcp.PubsubClient
 	cloudStorageClient    gcp.CloudStorageClient
 	platformProject       string
 	platformProjectNumber string
-	cioutput              string
+	releaseBucket         string
+	shortCommitSha        string
 }
 
 func (p *Pipeline) ComponentType() string {
 	return p.component.Type
 }
 
-// This thing has to also write the cloud build yaml to a (centralized) cloud storage location.
 func (p *Pipeline) CI(ctx context.Context) (*pipeline.Artifact, error) {
 	ctx, span := tracing.Tracer(fmt.Sprintf("%s CI", p.ComponentType())).Start(ctx, fmt.Sprintf("%s CI", p.ComponentType()),
 		trace.WithAttributes(
@@ -72,7 +76,7 @@ func (p *Pipeline) CI(ctx context.Context) (*pipeline.Artifact, error) {
 	phases = []phase{
 		{"lint", p.lint},
 		{"submittest", p.submitTest},
-		//{"writeOutput", p.writeOutput},
+		{"writeOutput", p.writeOutput},
 	}
 
 	for _, ph := range phases {
@@ -83,16 +87,13 @@ func (p *Pipeline) CI(ctx context.Context) (*pipeline.Artifact, error) {
 		}
 	}
 
-	var properties properties
-	err := parseCloudBuildPath(p, &properties)
-	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(otelCodes.Error, err.Error())
-		return nil, err
+	artifact := &pipeline.Artifact{
+		Type: pipeline.ArtifactTypeCloudBuild,
+		Properties: map[string]string{
+			"cloudBuildYaml": fmt.Sprintf("gs://%s/%s/deployments/cloudbuild/%s.yaml", p.releaseBucket, p.app.Metadata.Name, p.shortCommitSha),
+		},
 	}
-
-	p.cioutput = properties.Path
-	return nil, nil
+	return artifact, nil
 }
 
 func (p *Pipeline) Analyze(ctx context.Context) error {
@@ -117,30 +118,24 @@ func (p *Pipeline) Analyze(ctx context.Context) error {
 }
 
 func (p *Pipeline) Deploy(ctx context.Context) error {
-	ctx, span := tracing.Tracer(fmt.Sprintf("%s Deploy", p.ComponentType())).Start(ctx, fmt.Sprintf("%s Deploy", p.ComponentType()),
-		trace.WithAttributes(
-			attribute.String("cmd", fmt.Sprintf("%s Deploy", p.ComponentType()))))
-	defer span.End()
-	if p.cioutput == "" {
-		err := fmt.Errorf("no ci output")
-		span.RecordError(err)
-		span.SetStatus(otelCodes.Error, "no ci output")
-		return err
-	}
-
-	var phases []phase
-
-	phases = []phase{
-		{"createOrUpdateTrigger", p.createOrUpdateTrigger},
-	}
-
-	for _, ph := range phases {
-		slog.InfoContext(ctx, "phase start", "phase", ph.name)
-		if err := ph.run(ctx); err != nil {
-			slog.ErrorContext(ctx, "phase error", "phase", ph.name, "error", err)
-			return fmt.Errorf("phase %s error: %w", ph.name, err)
-		}
-	}
+	//ctx, span := tracing.Tracer(fmt.Sprintf("%s Deploy", p.ComponentType())).Start(ctx, fmt.Sprintf("%s Deploy", p.ComponentType()),
+	//	trace.WithAttributes(
+	//		attribute.String("cmd", fmt.Sprintf("%s Deploy", p.ComponentType()))))
+	//defer span.End()
+	//
+	//var phases []phase
+	//
+	//phases = []phase{
+	//	{"createOrUpdateTrigger", p.createOrUpdateTrigger},
+	//}
+	//
+	//for _, ph := range phases {
+	//	slog.InfoContext(ctx, "phase start", "phase", ph.name)
+	//	if err := ph.run(ctx); err != nil {
+	//		slog.ErrorContext(ctx, "phase error", "phase", ph.name, "error", err)
+	//		return fmt.Errorf("phase %s error: %w", ph.name, err)
+	//	}
+	//}
 	return nil
 }
 

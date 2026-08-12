@@ -16,7 +16,7 @@ func init() {
 	pipeline.Register("GoodCiBadDeployPipeline", NewGoodCiBadDeployPipeline)
 }
 
-func NewBadPipeline(component oam.Component, client pipeline.DependencyClients) (pipeline.Pipeline, error) {
+func NewBadPipeline(component oam.Component, app oam.App, client pipeline.DependencyClients) (pipeline.Pipeline, error) {
 	if component.Type != "bad" {
 		return nil, fmt.Errorf("bad component must be of type bad")
 	}
@@ -46,7 +46,7 @@ func (p *BadPipeline) Analyze(ctx context.Context) error {
 	return fmt.Errorf("bad pipeline")
 }
 
-func NewGoodCiBadDeployPipeline(component oam.Component, client pipeline.DependencyClients) (pipeline.Pipeline, error) {
+func NewGoodCiBadDeployPipeline(component oam.Component, app oam.App, client pipeline.DependencyClients) (pipeline.Pipeline, error) {
 	if component.Type != "GoodCiBadDeployPipeline" {
 		return nil, fmt.Errorf("GoodCiBadDeployPipeline component must be of type GoodCiBadDeployPipeline")
 	}
