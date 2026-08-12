@@ -1,0 +1,21 @@
+{
+  "tenant": "acme-corp",
+  "commitSha": "1234567",
+  "branch": "main",
+  "publishedAt": "2026-08-10T14:00:00Z",
+  "oamPath": "gs://hammer-release/acme-corp/deployments/oam/1234567.yaml",
+  "artifacts": {
+    "hammer": {
+      "type": "cloudbuild",
+      "properties": {
+        "cloudBuildYaml": "gs://hammer-release/acme-corp/deployments/cloudbuild/1234567.yaml"
+      }
+    }
+  },
+  "routingSlip": [
+    {
+      "env": "prod",
+      "pubSubTopic": "NOT SURE YET"
+    }
+  ]
+}

@@ -58,6 +58,7 @@ func (p *Pipeline) ComponentType() string {
 	return p.component.Type
 }
 
+// This thing has to also write the cloud build yaml to a (centralized) cloud storage location.
 func (p *Pipeline) CI(ctx context.Context) (*pipeline.Artifact, error) {
 	ctx, span := tracing.Tracer(fmt.Sprintf("%s CI", p.ComponentType())).Start(ctx, fmt.Sprintf("%s CI", p.ComponentType()),
 		trace.WithAttributes(

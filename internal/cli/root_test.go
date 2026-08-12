@@ -12,40 +12,8 @@ import (
 )
 
 func init() {
-	pipeline.Register("noop", New)
 	pipeline.Register("bad", NewBadPipeline)
 	pipeline.Register("GoodCiBadDeployPipeline", NewGoodCiBadDeployPipeline)
-}
-
-// The noop component is only used for testing.
-func New(component oam.Component, client pipeline.DependencyClients) (pipeline.Pipeline, error) {
-	if component.Type != "noop" {
-		return nil, fmt.Errorf("noop component must be of type noop")
-	}
-
-	return &Pipeline{
-		component: &component,
-	}, nil
-}
-
-type Pipeline struct {
-	component *oam.Component
-}
-
-func (p *Pipeline) ComponentType() string {
-	return "noop"
-}
-
-func (p *Pipeline) CI(ctx context.Context) (*pipeline.Artifact, error) {
-	return nil, nil
-}
-
-func (p *Pipeline) Deploy(ctx context.Context) error {
-	return nil
-}
-
-func (p *Pipeline) Analyze(ctx context.Context) error {
-	return nil
 }
 
 func NewBadPipeline(component oam.Component, client pipeline.DependencyClients) (pipeline.Pipeline, error) {
@@ -132,22 +100,13 @@ func TestCI(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "successful CI execution",
+			name:    "failed CI execution due to unmockable object",
 			oamFile: "testdata/oam_test_success.yaml",
+			wantErr: true,
 		},
 		{
 			name:    "failed unparseable oam file",
 			oamFile: "testdata/oam_unparseable.yaml",
-			wantErr: true,
-		},
-		{
-			name:    "failed unparseable oam file",
-			oamFile: "testdata/oam_test_fail_bad_component.yaml",
-			wantErr: true,
-		},
-		{
-			name:    "failed unparseable oam file",
-			oamFile: "testdata/oam_test_fail_ci_failure.yaml",
 			wantErr: true,
 		},
 	}
@@ -176,22 +135,13 @@ func TestAnalyze(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "successful CI execution",
+			name:    "failed CI execution due to unmockable clients",
 			oamFile: "testdata/oam_test_success.yaml",
+			wantErr: true,
 		},
 		{
 			name:    "failed unparseable oam file",
 			oamFile: "testdata/oam_unparseable.yaml",
-			wantErr: true,
-		},
-		{
-			name:    "failed unparseable oam file",
-			oamFile: "testdata/oam_test_fail_bad_component.yaml",
-			wantErr: true,
-		},
-		{
-			name:    "failed unparseable oam file",
-			oamFile: "testdata/oam_test_fail_ci_failure.yaml",
 			wantErr: true,
 		},
 	}

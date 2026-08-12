@@ -6,6 +6,3 @@ metadata:
     team: "ghost-pack"
     description: "The hammer CLI."
 spec:
-  components:
-    - name: hammer
-      type: noop

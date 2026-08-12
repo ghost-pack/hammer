@@ -15,10 +15,15 @@ import (
 	"google.golang.org/api/option"
 )
 
+type BillingClient interface {
+	LinkBillingAccount(ctx context.Context, projectID, billingAccount string) error
+	Close() error
+}
 type billingAPI interface {
 	UpdateProjectBillingInfo(ctx context.Context, req *billingpb.UpdateProjectBillingInfoRequest, opts ...gax.CallOption) (*billingpb.ProjectBillingInfo, error)
 	Close() error
 }
+
 type billingAdapter struct {
 	client *billing.CloudBillingClient
 }
@@ -29,11 +34,6 @@ func (a *billingAdapter) UpdateProjectBillingInfo(ctx context.Context, req *bill
 
 func (a *billingAdapter) Close() error {
 	return a.client.Close()
-}
-
-type BillingClient interface {
-	LinkBillingAccount(ctx context.Context, projectID, billingAccount string) error
-	Close() error
 }
 
 type BillingClientImpl struct {
