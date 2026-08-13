@@ -126,7 +126,7 @@ func setupSaOamOnTenantProject(ctx context.Context, p *Provisioner, env string, 
 	if err := p.clients.IAM.BindProjectRoles(
 		ctx,
 		projectID,
-		pipelineSAEmail,
+		p.platformOAMServiceAccount,
 		[]string{
 			"roles/storage.objectViewer",
 			"roles/iam.serviceAccountCreator",
