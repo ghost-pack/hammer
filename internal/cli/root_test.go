@@ -38,10 +38,6 @@ func (p *BadPipeline) CI(ctx context.Context) (*ci.Artifact, error) {
 	return nil, fmt.Errorf("bad ci pipeline")
 }
 
-func (p *BadPipeline) Deploy(ctx context.Context) error {
-	return fmt.Errorf("bad ci pipeline")
-}
-
 func (p *BadPipeline) Analyze(ctx context.Context) error {
 	return fmt.Errorf("bad ci pipeline")
 }
@@ -66,10 +62,6 @@ func (p *GoodCiBadDeployPipeline) ComponentType() string {
 
 func (p *GoodCiBadDeployPipeline) CI(ctx context.Context) (*ci.Artifact, error) {
 	return nil, nil
-}
-
-func (p *GoodCiBadDeployPipeline) Deploy(ctx context.Context) error {
-	return fmt.Errorf("bad ci pipeline")
 }
 
 func (p *GoodCiBadDeployPipeline) Analyze(ctx context.Context) error {

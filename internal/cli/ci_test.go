@@ -44,10 +44,6 @@ func (p *Pipeline) CI(ctx context.Context) (*ci.Artifact, error) {
 		nil
 }
 
-func (p *Pipeline) Deploy(ctx context.Context) error {
-	return nil
-}
-
 func (p *Pipeline) Analyze(ctx context.Context) error {
 	return nil
 }

@@ -96,34 +96,6 @@ func (p *Pipeline) Analyze(ctx context.Context) error {
 	return nil
 }
 
-func (p *Pipeline) Deploy(ctx context.Context) error {
-	//ctx, span := tracing.Tracer(fmt.Sprintf("%s Deploy", p.ComponentType())).Start(ctx, fmt.Sprintf("%s Deploy", p.ComponentType()),
-	//	trace.WithAttributes(
-	//		attribute.String("cmd", fmt.Sprintf("%s Deploy", p.ComponentType()))))
-	//defer span.End()
-	//if p.cioutput == "" {
-	//	err := fmt.Errorf("no ci output")
-	//	span.RecordError(err)
-	//	span.SetStatus(otelCodes.Error, "no ci output")
-	//	return err
-	//}
-	//
-	//var phases []phase
-	//
-	//phases = []phase{
-	//	{"createOrUpdateTrigger", p.createOrUpdateTrigger},
-	//}
-	//
-	//for _, ph := range phases {
-	//	slog.InfoContext(ctx, "phase start", "phase", ph.name)
-	//	if err := ph.run(ctx); err != nil {
-	//		slog.ErrorContext(ctx, "phase error", "phase", ph.name, "error", err)
-	//		return fmt.Errorf("phase %s error: %w", ph.name, err)
-	//	}
-	//}
-	return nil
-}
-
 type phase struct {
 	name string
 	run  func(context.Context, string) error
