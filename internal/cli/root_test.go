@@ -6,17 +6,17 @@ import (
 	"os"
 	"testing"
 
+	"github.com/ghost-pack/hammer/internal/ci"
 	"github.com/ghost-pack/hammer/internal/oam"
-	"github.com/ghost-pack/hammer/internal/pipeline"
 	"github.com/stretchr/testify/require"
 )
 
 func init() {
-	pipeline.Register("bad", NewBadPipeline)
-	pipeline.Register("GoodCiBadDeployPipeline", NewGoodCiBadDeployPipeline)
+	ci.Register("bad", NewBadPipeline)
+	ci.Register("GoodCiBadDeployPipeline", NewGoodCiBadDeployPipeline)
 }
 
-func NewBadPipeline(component oam.Component, app oam.App, client pipeline.DependencyClients) (pipeline.Pipeline, error) {
+func NewBadPipeline(component oam.Component, app oam.App, client ci.DependencyClients) (ci.Pipeline, error) {
 	if component.Type != "bad" {
 		return nil, fmt.Errorf("bad component must be of type bad")
 	}
@@ -34,19 +34,19 @@ func (p *BadPipeline) ComponentType() string {
 	return "bad"
 }
 
-func (p *BadPipeline) CI(ctx context.Context) (*pipeline.Artifact, error) {
-	return nil, fmt.Errorf("bad pipeline")
+func (p *BadPipeline) CI(ctx context.Context) (*ci.Artifact, error) {
+	return nil, fmt.Errorf("bad ci pipeline")
 }
 
 func (p *BadPipeline) Deploy(ctx context.Context) error {
-	return fmt.Errorf("bad pipeline")
+	return fmt.Errorf("bad ci pipeline")
 }
 
 func (p *BadPipeline) Analyze(ctx context.Context) error {
-	return fmt.Errorf("bad pipeline")
+	return fmt.Errorf("bad ci pipeline")
 }
 
-func NewGoodCiBadDeployPipeline(component oam.Component, app oam.App, client pipeline.DependencyClients) (pipeline.Pipeline, error) {
+func NewGoodCiBadDeployPipeline(component oam.Component, app oam.App, client ci.DependencyClients) (ci.Pipeline, error) {
 	if component.Type != "GoodCiBadDeployPipeline" {
 		return nil, fmt.Errorf("GoodCiBadDeployPipeline component must be of type GoodCiBadDeployPipeline")
 	}
@@ -64,16 +64,16 @@ func (p *GoodCiBadDeployPipeline) ComponentType() string {
 	return "bad"
 }
 
-func (p *GoodCiBadDeployPipeline) CI(ctx context.Context) (*pipeline.Artifact, error) {
+func (p *GoodCiBadDeployPipeline) CI(ctx context.Context) (*ci.Artifact, error) {
 	return nil, nil
 }
 
 func (p *GoodCiBadDeployPipeline) Deploy(ctx context.Context) error {
-	return fmt.Errorf("bad pipeline")
+	return fmt.Errorf("bad ci pipeline")
 }
 
 func (p *GoodCiBadDeployPipeline) Analyze(ctx context.Context) error {
-	return fmt.Errorf("bad pipeline")
+	return fmt.Errorf("bad ci pipeline")
 }
 
 func Test_newRootCmd(t *testing.T) {

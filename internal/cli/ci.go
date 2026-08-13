@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ghost-pack/hammer/internal/ci"
 	"github.com/ghost-pack/hammer/internal/docker"
 	"github.com/ghost-pack/hammer/internal/gcp"
 	"github.com/ghost-pack/hammer/internal/gcp/project"
 	"github.com/ghost-pack/hammer/internal/oam"
 	"github.com/ghost-pack/hammer/internal/observability/tracing"
-	"github.com/ghost-pack/hammer/internal/pipeline"
 	"github.com/ghost-pack/hammer/internal/tenant"
 	"github.com/spf13/cobra"
 	"go.opentelemetry.io/otel/attribute"
@@ -148,14 +148,14 @@ func (c *CICmd) runPreCiPhases(ctx context.Context, app *oam.App, onMain bool) e
 	return nil
 }
 
-func (c *CICmd) runCiOrAnalyze(ctx context.Context, app *oam.App, onMain bool) (map[string]pipeline.Artifact, error) {
+func (c *CICmd) runCiOrAnalyze(ctx context.Context, app *oam.App, onMain bool) (map[string]ci.Artifact, error) {
 	// Run component CI or Analyze
-	artifacts := make(map[string]pipeline.Artifact)
+	artifacts := make(map[string]ci.Artifact)
 	for _, component := range app.Spec.Components {
-		componentPipeline, err := pipeline.For(
+		componentPipeline, err := ci.For(
 			component,
 			*app,
-			pipeline.DependencyClients{
+			ci.DependencyClients{
 				DockerClient: c.Docker,
 				GarClient:    c.Gar,
 				CloudBuild:   c.CloudBuild,
@@ -184,7 +184,7 @@ func (c *CICmd) runCiOrAnalyze(ctx context.Context, app *oam.App, onMain bool) (
 	return artifacts, nil
 }
 
-func (c *CICmd) runPostCiPhases(ctx context.Context, artifacts map[string]pipeline.Artifact, app *oam.App) error {
+func (c *CICmd) runPostCiPhases(ctx context.Context, artifacts map[string]ci.Artifact, app *oam.App) error {
 	if len(artifacts) == 0 {
 		slog.InfoContext(ctx, "ci complete - no artifacts uploaded")
 		return nil
@@ -234,7 +234,7 @@ func (c *CICmd) uploadOamFilePhase(app *oam.App) func(context.Context) error {
 	}
 }
 
-func (c *CICmd) publishCdMessagesPhase(app *oam.App, artifacts map[string]pipeline.Artifact) func(context.Context) error {
+func (c *CICmd) publishCdMessagesPhase(app *oam.App, artifacts map[string]ci.Artifact) func(context.Context) error {
 	return func(ctx context.Context) error {
 		routingSlip, err := c.createRoutingSlip(ctx, app)
 		if err != nil {
@@ -251,14 +251,14 @@ func (c *CICmd) publishCdMessagesPhase(app *oam.App, artifacts map[string]pipeli
 	}
 }
 
-func (c *CICmd) triggerPerComponentCdPipeline(ctx context.Context, app *oam.App, artifacts map[string]pipeline.Artifact, oamPath string, routingSlip []pipeline.RoutingSlipEntry, topicLocation pipeline.RoutingSlipEntry) error {
+func (c *CICmd) triggerPerComponentCdPipeline(ctx context.Context, app *oam.App, artifacts map[string]ci.Artifact, oamPath string, routingSlip []ci.RoutingSlipEntry, topicLocation ci.RoutingSlipEntry) error {
 	mainMsg := buildCdPubSubMessage(ctx, app, oamPath, artifacts, routingSlip, true)
 	if err := c.pushToPubSub(ctx, topicLocation, mainMsg); err != nil {
 		return err
 	}
 
 	for componentName, artifact := range artifacts {
-		componentArtifacts := map[string]pipeline.Artifact{componentName: artifact}
+		componentArtifacts := map[string]ci.Artifact{componentName: artifact}
 		componentMsg := buildCdPubSubMessage(ctx, app, oamPath, componentArtifacts, routingSlip, false)
 		if err := c.pushToPubSub(ctx, topicLocation, componentMsg); err != nil {
 			return err
@@ -268,12 +268,12 @@ func (c *CICmd) triggerPerComponentCdPipeline(ctx context.Context, app *oam.App,
 	return nil
 }
 
-func (c *CICmd) triggerUnifiedCdPipeline(ctx context.Context, app *oam.App, artifacts map[string]pipeline.Artifact, oamPath string, routingSlip []pipeline.RoutingSlipEntry, topicLocation pipeline.RoutingSlipEntry) error {
+func (c *CICmd) triggerUnifiedCdPipeline(ctx context.Context, app *oam.App, artifacts map[string]ci.Artifact, oamPath string, routingSlip []ci.RoutingSlipEntry, topicLocation ci.RoutingSlipEntry) error {
 	mainMsg := buildCdPubSubMessage(ctx, app, oamPath, artifacts, routingSlip, true)
 	return c.pushToPubSub(ctx, topicLocation, mainMsg)
 }
 
-func buildCdPubSubMessage(ctx context.Context, app *oam.App, oamPath string, artifacts map[string]pipeline.Artifact, routingSlip []pipeline.RoutingSlipEntry, reconcile bool) *pipeline.CIPubSubMessage {
+func buildCdPubSubMessage(ctx context.Context, app *oam.App, oamPath string, artifacts map[string]ci.Artifact, routingSlip []ci.RoutingSlipEntry, reconcile bool) *ci.CIPubSubMessage {
 	// Create a carrier to hold the W3C trace headers
 	carrier := propagation.MapCarrier{}
 
@@ -281,7 +281,7 @@ func buildCdPubSubMessage(ctx context.Context, app *oam.App, oamPath string, art
 	propagator := propagation.TraceContext{}
 	propagator.Inject(ctx, carrier)
 
-	return &pipeline.CIPubSubMessage{
+	return &ci.CIPubSubMessage{
 		Tenant:      app.Metadata.Name,
 		CommitSha:   os.Getenv("COMMIT_SHA"),
 		Branch:      "main",
@@ -328,7 +328,7 @@ func (c *CICmd) ensureBucketExistence(ctx context.Context) error {
 	return nil
 }
 
-func (c *CICmd) createRoutingSlip(ctx context.Context, app *oam.App) ([]pipeline.RoutingSlipEntry, error) {
+func (c *CICmd) createRoutingSlip(ctx context.Context, app *oam.App) ([]ci.RoutingSlipEntry, error) {
 	tenantBytes, err := c.CloudStorage.GetObject(
 		ctx,
 		"hammer-registry",
@@ -343,9 +343,9 @@ func (c *CICmd) createRoutingSlip(ctx context.Context, app *oam.App) ([]pipeline
 		return nil, fmt.Errorf("unmarshalling tenant state: %w", err)
 	}
 
-	var routingSlip []pipeline.RoutingSlipEntry
+	var routingSlip []ci.RoutingSlipEntry
 	for _, env := range currentTenant.Spec.Environments {
-		routingSlip = append(routingSlip, pipeline.RoutingSlipEntry{
+		routingSlip = append(routingSlip, ci.RoutingSlipEntry{
 			Env:         env,
 			PubSubTopic: "NOT SURE YET",
 		})
@@ -353,7 +353,7 @@ func (c *CICmd) createRoutingSlip(ctx context.Context, app *oam.App) ([]pipeline
 	return routingSlip, nil
 }
 
-func (c *CICmd) pushToPubSub(ctx context.Context, entry pipeline.RoutingSlipEntry, pubSubMessage *pipeline.CIPubSubMessage) error {
+func (c *CICmd) pushToPubSub(ctx context.Context, entry ci.RoutingSlipEntry, pubSubMessage *ci.CIPubSubMessage) error {
 	jsonBytes, err := json.Marshal(pubSubMessage)
 	if err != nil {
 		return err

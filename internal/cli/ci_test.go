@@ -8,18 +8,18 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/ghost-pack/hammer/internal/ci"
 	"github.com/ghost-pack/hammer/internal/oam"
-	"github.com/ghost-pack/hammer/internal/pipeline"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
 func init() {
-	pipeline.Register("noop", New)
+	ci.Register("noop", New)
 }
 
 // The noop component is only used for testing.
-func New(component oam.Component, app oam.App, client pipeline.DependencyClients) (pipeline.Pipeline, error) {
+func New(component oam.Component, app oam.App, client ci.DependencyClients) (ci.Pipeline, error) {
 	if component.Type != "noop" {
 		return nil, fmt.Errorf("noop component must be of type noop")
 	}
@@ -37,9 +37,9 @@ func (p *Pipeline) ComponentType() string {
 	return "noop"
 }
 
-func (p *Pipeline) CI(ctx context.Context) (*pipeline.Artifact, error) {
-	return &pipeline.Artifact{
-			Type:       pipeline.ArtifactTypeCloudBuild,
+func (p *Pipeline) CI(ctx context.Context) (*ci.Artifact, error) {
+	return &ci.Artifact{
+			Type:       ci.ArtifactTypeCloudBuild,
 			Properties: map[string]string{"cloudBuildYaml": fmt.Sprintf("gs://hammer-release/acme-corp/deployments/cloudbuild/%s.yaml", os.Getenv("COMMIT_SHA"))}},
 		nil
 }
@@ -135,7 +135,7 @@ func TestCIExecute(t *testing.T) {
 					mock.Anything,
 					mock.Anything,
 					mock.MatchedBy(func(data []byte) bool {
-						var expected, actual pipeline.CIPubSubMessage
+						var expected, actual ci.CIPubSubMessage
 						if err := json.Unmarshal(expectedBytes, &expected); err != nil {
 							return false
 						}
@@ -173,7 +173,7 @@ func TestCIExecute(t *testing.T) {
 					mock.MatchedBy(func(data []byte) bool {
 						expectedBytes, _ := os.ReadFile("testdata/expected/expected_ci_result.json")
 
-						var expected, actual pipeline.CIPubSubMessage
+						var expected, actual ci.CIPubSubMessage
 						if err := json.Unmarshal(expectedBytes, &expected); err != nil {
 							return false
 						}
@@ -195,7 +195,7 @@ func TestCIExecute(t *testing.T) {
 					mock.MatchedBy(func(data []byte) bool {
 						expectedBytes, _ := os.ReadFile("testdata/expected/expected_ci_result_per_component.json")
 
-						var expected, actual pipeline.CIPubSubMessage
+						var expected, actual ci.CIPubSubMessage
 						if err := json.Unmarshal(expectedBytes, &expected); err != nil {
 							return false
 						}
@@ -233,7 +233,7 @@ func TestCIExecute(t *testing.T) {
 					mock.MatchedBy(func(data []byte) bool {
 						expectedBytes, _ := os.ReadFile("testdata/expected/expected_ci_result.json")
 
-						var expected, actual pipeline.CIPubSubMessage
+						var expected, actual ci.CIPubSubMessage
 						if err := json.Unmarshal(expectedBytes, &expected); err != nil {
 							return false
 						}
@@ -255,7 +255,7 @@ func TestCIExecute(t *testing.T) {
 					mock.MatchedBy(func(data []byte) bool {
 						expectedBytes, _ := os.ReadFile("testdata/expected/expected_ci_result_per_component.json")
 
-						var expected, actual pipeline.CIPubSubMessage
+						var expected, actual ci.CIPubSubMessage
 						if err := json.Unmarshal(expectedBytes, &expected); err != nil {
 							return false
 						}
@@ -293,7 +293,7 @@ func TestCIExecute(t *testing.T) {
 					mock.MatchedBy(func(data []byte) bool {
 						expectedBytes, _ := os.ReadFile("testdata/expected/expected_ci_result.json")
 
-						var expected, actual pipeline.CIPubSubMessage
+						var expected, actual ci.CIPubSubMessage
 						if err := json.Unmarshal(expectedBytes, &expected); err != nil {
 							return false
 						}

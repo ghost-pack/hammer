@@ -1,4 +1,4 @@
-package pipeline
+package ci
 
 import (
 	"fmt"
@@ -23,13 +23,13 @@ var registry = map[string]Factory{}
 
 func Register(componentType string, f Factory) {
 	if componentType == "" {
-		panic("pipeline.Registry: componentType is empty")
+		panic("ci.Registry: componentType is empty")
 	}
 	if f == nil {
-		panic("pipeline.Registry: factory is nil")
+		panic("ci.Registry: factory is nil")
 	}
 	if _, exists := registry[componentType]; exists {
-		panic("pipeline.Registry: componentType already registered")
+		panic("ci.Registry: componentType already registered")
 	}
 	registry[componentType] = f
 }

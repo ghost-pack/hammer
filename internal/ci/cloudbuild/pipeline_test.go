@@ -6,9 +6,9 @@ import (
 	"os"
 	"testing"
 
+	"github.com/ghost-pack/hammer/internal/ci"
 	"github.com/ghost-pack/hammer/internal/gcp"
 	"github.com/ghost-pack/hammer/internal/oam"
-	"github.com/ghost-pack/hammer/internal/pipeline"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -98,7 +98,7 @@ func TestNewPipeline(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    pipeline.Pipeline
+		want    ci.Pipeline
 		wantErr bool
 	}{
 		{
@@ -125,7 +125,7 @@ func TestNewPipeline(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			os.Setenv("COMMIT_SHA", "12345678910")
-			got, err := New(tt.args.component, oam.App{Metadata: oam.Metadata{Name: "acme-corp"}}, pipeline.DependencyClients{CloudBuild: tt.args.cloudBuildClient})
+			got, err := New(tt.args.component, oam.App{Metadata: oam.Metadata{Name: "acme-corp"}}, ci.DependencyClients{CloudBuild: tt.args.cloudBuildClient})
 			if err != nil {
 				if tt.wantErr {
 					require.Error(t, err)
@@ -144,7 +144,7 @@ func TestPipeline_CI(t *testing.T) {
 		component        *oam.Component
 		app              *oam.App
 		setupMock        func(*MockCloudBuildClient, *MockCloudStorage)
-		expectedArtifact *pipeline.Artifact
+		expectedArtifact *ci.Artifact
 		wantErr          bool
 	}{
 		{
@@ -178,8 +178,8 @@ func TestPipeline_CI(t *testing.T) {
 				mockCloudStorage.On("WriteObject", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 			},
-			expectedArtifact: &pipeline.Artifact{
-				Type: pipeline.ArtifactTypeCloudBuild,
+			expectedArtifact: &ci.Artifact{
+				Type: ci.ArtifactTypeCloudBuild,
 				Properties: map[string]string{
 					"cloudBuildYaml": "gs://hammer-release/acme-corp/deployments/cloudbuild/1234567.yaml",
 				},

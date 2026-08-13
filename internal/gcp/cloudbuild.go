@@ -497,7 +497,7 @@ func makeTrigger(
 	case "manual":
 		// No trigger source required.
 	default:
-		return nil, fmt.Errorf("unsupported pipeline type %q", triggerType)
+		return nil, fmt.Errorf("unsupported ci type %q", triggerType)
 	}
 	return t, nil
 }

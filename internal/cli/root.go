@@ -5,9 +5,9 @@ import (
 	"context"
 	"log/slog"
 
-	_ "github.com/ghost-pack/hammer/internal/pipeline/cloudbuild"
-	_ "github.com/ghost-pack/hammer/internal/pipeline/goservice"
-	_ "github.com/ghost-pack/hammer/internal/pipeline/toolkit"
+	_ "github.com/ghost-pack/hammer/internal/ci/cloudbuild"
+	_ "github.com/ghost-pack/hammer/internal/ci/goservice"
+	_ "github.com/ghost-pack/hammer/internal/ci/toolkit"
 	_ "github.com/ghost-pack/hammer/internal/provisioner/gcp"
 	"github.com/spf13/cobra"
 )

@@ -6,16 +6,16 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/ghost-pack/hammer/internal/ci"
 	"github.com/ghost-pack/hammer/internal/gcp"
 	"github.com/ghost-pack/hammer/internal/oam"
 	"github.com/ghost-pack/hammer/internal/observability/tracing"
-	"github.com/ghost-pack/hammer/internal/pipeline"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
 
 func init() {
-	pipeline.Register("cloudbuild", New)
+	ci.Register("cloudbuild", New)
 }
 
 type properties struct {
@@ -31,7 +31,7 @@ type testConfig struct {
 	Required *bool  `yaml:"required"` // use pointer to detect if field was explicitly set
 }
 
-func New(component oam.Component, app oam.App, clients pipeline.DependencyClients) (pipeline.Pipeline, error) {
+func New(component oam.Component, app oam.App, clients ci.DependencyClients) (ci.Pipeline, error) {
 	if component.Type != "cloudbuild" {
 		return nil, fmt.Errorf("cloudbuild component must be of type cloudbuild")
 	}
@@ -65,7 +65,7 @@ func (p *Pipeline) ComponentType() string {
 	return p.component.Type
 }
 
-func (p *Pipeline) CI(ctx context.Context) (*pipeline.Artifact, error) {
+func (p *Pipeline) CI(ctx context.Context) (*ci.Artifact, error) {
 	ctx, span := tracing.Tracer(fmt.Sprintf("%s CI", p.ComponentType())).Start(ctx, fmt.Sprintf("%s CI", p.ComponentType()),
 		trace.WithAttributes(
 			attribute.String("cmd", fmt.Sprintf("%s CI", p.ComponentType()))))
@@ -87,8 +87,8 @@ func (p *Pipeline) CI(ctx context.Context) (*pipeline.Artifact, error) {
 		}
 	}
 
-	artifact := &pipeline.Artifact{
-		Type: pipeline.ArtifactTypeCloudBuild,
+	artifact := &ci.Artifact{
+		Type: ci.ArtifactTypeCloudBuild,
 		Properties: map[string]string{
 			"cloudBuildYaml": fmt.Sprintf("gs://%s/%s/deployments/cloudbuild/%s.yaml", p.releaseBucket, p.app.Metadata.Name, p.shortCommitSha),
 		},

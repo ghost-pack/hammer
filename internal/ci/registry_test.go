@@ -1,4 +1,4 @@
-package pipeline
+package ci
 
 import (
 	"context"
@@ -186,7 +186,7 @@ func TestRegister(t *testing.T) {
 				},
 			},
 			preRegister:  true,
-			panicMessage: "pipeline.Registry: componentType already registered",
+			panicMessage: "ci.Registry: componentType already registered",
 		},
 		{
 			name: "FailedRegister_noFactory",
@@ -195,7 +195,7 @@ func TestRegister(t *testing.T) {
 				f:             nil,
 			},
 			preRegister:  false,
-			panicMessage: "pipeline.Registry: factory is nil",
+			panicMessage: "ci.Registry: factory is nil",
 		},
 		{
 			name: "FailedRegister_noComponentType",
@@ -206,7 +206,7 @@ func TestRegister(t *testing.T) {
 				},
 			},
 			preRegister:  false,
-			panicMessage: "pipeline.Registry: componentType is empty",
+			panicMessage: "ci.Registry: componentType is empty",
 		},
 	}
 	for _, tt := range tests {

@@ -5,22 +5,22 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/ghost-pack/hammer/internal/ci"
 	"github.com/ghost-pack/hammer/internal/docker"
 	"github.com/ghost-pack/hammer/internal/gcp/project"
 	"github.com/ghost-pack/hammer/internal/oam"
 	"github.com/ghost-pack/hammer/internal/observability/tracing"
-	"github.com/ghost-pack/hammer/internal/pipeline"
 	"github.com/ghost-pack/hammer/internal/runner"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
 
 func init() {
-	pipeline.Register("goservice", New)
-	pipeline.Register("gocli", New)
+	ci.Register("goservice", New)
+	ci.Register("gocli", New)
 }
 
-func New(component oam.Component, app oam.App, clients pipeline.DependencyClients) (pipeline.Pipeline, error) {
+func New(component oam.Component, app oam.App, clients ci.DependencyClients) (ci.Pipeline, error) {
 	if component.Type != "goservice" && component.Type != "gocli" {
 		return nil, fmt.Errorf("goservice component must be of type goservice")
 	}
@@ -44,7 +44,7 @@ func (p *Pipeline) ComponentType() string {
 	return p.component.Type
 }
 
-func (p *Pipeline) CI(ctx context.Context) (*pipeline.Artifact, error) {
+func (p *Pipeline) CI(ctx context.Context) (*ci.Artifact, error) {
 	ctx, span := tracing.Tracer(fmt.Sprintf("%s CI", p.ComponentType())).Start(ctx, fmt.Sprintf("%s CI", p.ComponentType()),
 		trace.WithAttributes(
 			attribute.String("cmd", fmt.Sprintf("%s CI", p.ComponentType()))))

@@ -5,11 +5,11 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/ghost-pack/hammer/internal/ci"
 	"github.com/ghost-pack/hammer/internal/docker"
 	"github.com/ghost-pack/hammer/internal/gcp"
 	"github.com/ghost-pack/hammer/internal/gcp/project"
 	"github.com/ghost-pack/hammer/internal/oam"
-	"github.com/ghost-pack/hammer/internal/pipeline"
 	"github.com/ghost-pack/hammer/internal/runner"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -75,7 +75,7 @@ func TestNewPipeline(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    pipeline.Pipeline
+		want    ci.Pipeline
 		wantErr bool
 	}{
 		{
@@ -93,7 +93,7 @@ func TestNewPipeline(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := New(tt.args.component, oam.App{}, pipeline.DependencyClients{DockerClient: tt.args.client, GarClient: tt.args.garClient, CloudBuild: tt.args.cloudBuildClient})
+			got, err := New(tt.args.component, oam.App{}, ci.DependencyClients{DockerClient: tt.args.client, GarClient: tt.args.garClient, CloudBuild: tt.args.cloudBuildClient})
 			if err != nil {
 				if tt.wantErr {
 					require.Error(t, err)
