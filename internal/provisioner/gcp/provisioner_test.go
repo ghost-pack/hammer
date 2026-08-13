@@ -739,6 +739,72 @@ func TestProvisionerApply(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "failure due to failed project role binding on custom service accounts",
+			tenant: &tenant.Tenant{
+				APIVersion: "core.oam.dev/v1beta1",
+				Kind:       "Tenant",
+				Metadata:   tenant.Metadata{Name: "hammer-central"},
+				Spec: tenant.Spec{
+					BillingAccount: "ABCDE-12345-FGHIJ",
+					ParentFolder:   "937506553540",
+					AllowedApis: []string{
+						"cloudbuild.googleapis.com",
+						"artifactregistry.googleapis.com",
+						"storage.googleapis.com",
+						"secretmanager.googleapis.com",
+						"logging.googleapis.com",
+						"monitoring.googleapis.com",
+						"pubsub.googleapis.com",
+						"cloudtrace.googleapis.com",
+					},
+					Environments: []string{
+						"prod",
+					},
+					ServiceAccounts: []tenant.ServiceAccountSpec{
+						{
+							Name:        "custom",
+							Description: "provisioner",
+							Roles: tenant.SARoleBinding{
+								Project: []string{"roles/storage.objectAdmin"},
+								Organization: []string{
+									"roles/resourcemanager.projectCreator",
+									"roles/resourcemanager.folderCreator",
+									"roles/orgpolicy.policyAdmin",
+									"roles/iam.serviceAccountAdmin",
+									"roles/serviceusage.serviceUsageAdmin",
+									"roles/billing.user",
+									"roles/resourcemanager.organizationAdmin",
+								},
+							},
+						},
+					},
+				},
+			},
+			setupMock: func(mockResourceManager *MockResourceManager, mockServiceUsage *MockServiceUsage, mockOrgPolicy *MockOrgPolicy, mockIam *MockIam, mockBilling *MockBilling, mockCloudStorage *MockCloudStorage) {
+				mockCloudStorage.On("EnsureBucketExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockCloudStorage.On("GetObject", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, storage.ErrObjectNotExist)
+				mockResourceManager.On("EnsureProjectExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return("12345", nil)
+				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return("sa-pipeline@hammer-central-prod.iam.gserviceaccount.com", nil).Once()
+				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return("custom@hammer-central-prod.iam.gserviceaccount.com", nil).Once()
+				mockIam.On("AllowImpersonation", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				mockIam.On("BindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil).Once()
+				mockIam.On("BindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil).Once()
+				mockIam.On("BindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(fmt.Errorf("error")).Once()
+			},
+			wantErr: true,
+		},
+		{
 			name: "failure due to failed org role binding on custom service accounts",
 			tenant: &tenant.Tenant{
 				APIVersion: "core.oam.dev/v1beta1",
@@ -793,6 +859,8 @@ func TestProvisionerApply(t *testing.T) {
 					Return("sa-pipeline@hammer-central-prod.iam.gserviceaccount.com", nil).Once()
 				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return("custom@hammer-central-prod.iam.gserviceaccount.com", nil).Once()
+				mockIam.On("BindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil).Once()
 				mockIam.On("BindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil).Once()
 				mockIam.On("AllowImpersonation", mock.Anything, mock.Anything, mock.Anything, mock.Anything).

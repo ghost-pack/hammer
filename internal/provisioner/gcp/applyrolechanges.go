@@ -95,8 +95,9 @@ func applySaPipelineRoles(ctx context.Context, p *Provisioner, env string, proje
 		}
 	}
 
-	if err := p.clients.IAM.AllowImpersonation(ctx, projectID, pipelineSAEmail, p.platformOAMServiceAccount); err != nil {
-		return fmt.Errorf("granting sa-oam impersonation of sa-pipeline for %s: %w", env, err)
+	err = setupSaOamOnTenantProject(ctx, p, env, projectID, pipelineSAEmail)
+	if err != nil {
+		return err
 	}
 
 	// compute final sa-pipeline roles for newState
@@ -111,6 +112,29 @@ func applySaPipelineRoles(ctx context.Context, p *Provisioner, env string, proje
 	pipelineSA.ProjectRoles = allPipelineRoles
 	project.ServiceAccounts["sa-pipeline"] = pipelineSA
 	p.newState.Projects[env] = project
+	return nil
+}
+
+func setupSaOamOnTenantProject(ctx context.Context, p *Provisioner, env string, projectID string, pipelineSAEmail string) error {
+	// Allowing sa-oam to impersonate sa-pipeline
+	if err := p.clients.IAM.AllowImpersonation(ctx, projectID, pipelineSAEmail, p.platformOAMServiceAccount); err != nil {
+		return fmt.Errorf("granting sa-oam impersonation of sa-pipeline for %s: %w", env, err)
+	}
+
+	// Giving sa-oam the ability to create service accounts (for cloud run) on tenant projects,
+	// as well as view cloud storage (for opentofu plan)
+	if err := p.clients.IAM.BindProjectRoles(
+		ctx,
+		projectID,
+		pipelineSAEmail,
+		[]string{
+			"roles/storage.objectViewer",
+			"roles/iam.serviceAccountCreator",
+			"roles/iam.serviceAccountAdmin",
+		},
+	); err != nil {
+		return fmt.Errorf("binding sa-oam roles for %s: %w", env, err)
+	}
 	return nil
 }
 
