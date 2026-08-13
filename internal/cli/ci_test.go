@@ -273,6 +273,72 @@ func TestCIExecute(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name:    "failed CI execution with per-component due to pubsub failure on reconcile",
+			oamFile: "testdata/oam_test_success_per_component.yaml",
+			setupMocks: func(cloudStorageMock *MockCloudStorage, pubSubMock *MockPubSubClient) {
+				cloudStorageMock.On("ListPrefixes", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return([]string{"tenants/hammer-central/", "tenants/acme-corp/"}, nil)
+				cloudStorageMock.On("EnsureBucketExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				cloudStorageMock.On("WriteObject", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				tenantBytes, _ := os.ReadFile("testdata/tenantGood/tenant_test_regular.yaml")
+				cloudStorageMock.On("GetObject", mock.Anything, mock.Anything, mock.Anything).
+					Return(tenantBytes, nil)
+				pubSubMock.On(
+					"PublishMessage",
+					mock.Anything,
+					mock.Anything,
+					mock.Anything,
+					mock.MatchedBy(func(data []byte) bool {
+						expectedBytes, _ := os.ReadFile("testdata/expected/expected_ci_result.json")
+
+						var expected, actual pipeline.CIPubSubMessage
+						if err := json.Unmarshal(expectedBytes, &expected); err != nil {
+							return false
+						}
+						if err := json.Unmarshal(data, &actual); err != nil {
+							return false
+						}
+						actual.PublishedAt = expected.PublishedAt
+						t.Logf("expected: %+v", expected)
+						t.Logf("actual:   %+v", actual)
+						return reflect.DeepEqual(expected, actual)
+					}),
+					mock.Anything,
+				).Return("", fmt.Errorf("some error")).Once()
+			},
+			wantErr: true,
+		},
+		{
+			name:    "failed CI execution with per-component fail to get envs",
+			oamFile: "testdata/oam_test_success_per_component.yaml",
+			setupMocks: func(cloudStorageMock *MockCloudStorage, pubSubMock *MockPubSubClient) {
+				cloudStorageMock.On("ListPrefixes", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return([]string{"tenants/hammer-central/", "tenants/acme-corp/"}, nil)
+				cloudStorageMock.On("EnsureBucketExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				cloudStorageMock.On("WriteObject", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				cloudStorageMock.On("GetObject", mock.Anything, mock.Anything, mock.Anything).
+					Return(nil, fmt.Errorf("some error")).Once()
+			},
+			wantErr: true,
+		},
+		{
+			name:    "failed CI execution fail to write OAM file",
+			oamFile: "testdata/oam_test_success_per_component.yaml",
+			setupMocks: func(cloudStorageMock *MockCloudStorage, pubSubMock *MockPubSubClient) {
+				cloudStorageMock.On("ListPrefixes", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return([]string{"tenants/hammer-central/", "tenants/acme-corp/"}, nil)
+				cloudStorageMock.On("EnsureBucketExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil)
+				cloudStorageMock.On("WriteObject", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(fmt.Errorf("some error")).Once()
+			},
+			wantErr: true,
+		},
+		{
 			name:    "successful CI execution no artifacts",
 			oamFile: "testdata/oam_test_success_no_components.yaml",
 			setupMocks: func(cloudStorageMock *MockCloudStorage, pubSubMock *MockPubSubClient) {
@@ -420,8 +486,6 @@ func TestCIExecuteAnalyze(t *testing.T) {
 			setupMocks: func(cloudStorageMock *MockCloudStorage, pubSubMock *MockPubSubClient) {
 				cloudStorageMock.On("ListPrefixes", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return([]string{"tenants/hammer-central/", "tenants/acme-corp/"}, nil)
-				cloudStorageMock.On("EnsureBucketExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
 			},
 			wantErr: false,
 		},
@@ -431,8 +495,6 @@ func TestCIExecuteAnalyze(t *testing.T) {
 			setupMocks: func(cloudStorageMock *MockCloudStorage, pubSubMock *MockPubSubClient) {
 				cloudStorageMock.On("ListPrefixes", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return([]string{"tenants/hammer-central/", "tenants/test/"}, nil)
-				cloudStorageMock.On("EnsureBucketExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
 			},
 			wantErr: true,
 		},

@@ -67,7 +67,7 @@ func (p *Pipeline) CI(ctx context.Context) (*pipeline.Artifact, error) {
 			{"containerize", p.containerize},
 			{"ensureGarExists", p.createGar},
 			{"push", p.push},
-			// deploy to cloud run also
+			// create artifact.
 		}
 	}
 

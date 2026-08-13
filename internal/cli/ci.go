@@ -76,6 +76,12 @@ type CICmd struct {
 	CloudStorage gcp.CloudStorageClient
 	PubSub       gcp.PubsubClient
 	OAMFile      string
+	OAMPath      string
+}
+
+type phase struct {
+	name string
+	run  func(context.Context) error
 }
 
 func (c *CICmd) Execute(ctx context.Context, args []string) (err error) {
@@ -96,23 +102,54 @@ func (c *CICmd) Execute(ctx context.Context, args []string) (err error) {
 
 	slog.InfoContext(ctx, "ci start", "file", c.OAMFile)
 
+	// Load OAM file first (needed for pre-CI validation)
 	app, err := oam.Load(c.OAMFile)
-	if err != nil {
-		return err
-	}
-
-	err = c.checkTenantValidity(ctx, app)
-	if err != nil {
-		return err
-	}
-
-	err = c.ensureBucketExistence(ctx)
 	if err != nil {
 		return err
 	}
 
 	onMain := os.Getenv("BRANCH_NAME") == "main"
 
+	if err = c.runPreCiPhases(ctx, app, onMain); err != nil {
+		return err
+	}
+
+	artifacts, err := c.runCiOrAnalyze(ctx, app, onMain)
+	if err != nil {
+		return err
+	}
+
+	if onMain {
+		if err := c.runPostCiPhases(ctx, artifacts, app); err != nil {
+			return err
+		}
+	}
+
+	slog.InfoContext(ctx, "ci complete")
+	return nil
+}
+
+func (c *CICmd) runPreCiPhases(ctx context.Context, app *oam.App, onMain bool) error {
+	// pre-CI phases
+	preCIPhases := []phase{
+		{"checkTenantValidity", c.checkTenantValidityPhase(app)},
+	}
+	if onMain {
+		preCIPhases = append(
+			preCIPhases,
+			phase{"ensureBucketExistence", c.ensureBucketExistencePhase()},
+		)
+	}
+
+	err := c.runPhases(ctx, preCIPhases, "pre-ci")
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *CICmd) runCiOrAnalyze(ctx context.Context, app *oam.App, onMain bool) (map[string]pipeline.Artifact, error) {
+	// Run component CI or Analyze
 	artifacts := make(map[string]pipeline.Artifact)
 	for _, component := range app.Spec.Components {
 		componentPipeline, err := pipeline.For(
@@ -126,13 +163,13 @@ func (c *CICmd) Execute(ctx context.Context, args []string) (err error) {
 				PubSub:       c.PubSub,
 			})
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if onMain {
 			artifact, err := componentPipeline.CI(ctx)
 
 			if err != nil {
-				return err
+				return nil, err
 			}
 
 			if artifact != nil {
@@ -140,68 +177,100 @@ func (c *CICmd) Execute(ctx context.Context, args []string) (err error) {
 			}
 		} else {
 			if err := componentPipeline.Analyze(ctx); err != nil {
-				return err
+				return nil, err
 			}
 		}
 	}
+	return artifacts, nil
+}
 
-	if onMain {
-		if len(artifacts) == 0 {
-			slog.InfoContext(ctx, "ci complete - no artifacts uploaded")
-			return nil
-		}
-
-		if app.Metadata.Annotations["platform.hammerplatform.dev/deployment-strategy"] == "per-component" {
-			err = c.triggerPerComponentCdPipeline(ctx, app, artifacts)
-		} else {
-			err = c.triggerUnifiedCdPipeline(ctx, app, artifacts)
-		}
-		if err != nil {
-			return err
-		}
+func (c *CICmd) runPostCiPhases(ctx context.Context, artifacts map[string]pipeline.Artifact, app *oam.App) error {
+	if len(artifacts) == 0 {
+		slog.InfoContext(ctx, "ci complete - no artifacts uploaded")
+		return nil
 	}
 
-	slog.InfoContext(ctx, "ci complete")
+	postCIPhases := []phase{
+		{"uploadOamFile", c.uploadOamFilePhase(app)},
+		{"publishCdMessages", c.publishCdMessagesPhase(app, artifacts)},
+	}
+
+	// Run post-CI phases
+	err := c.runPhases(ctx, postCIPhases, "post-ci")
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
-func (c *CICmd) triggerPerComponentCdPipeline(ctx context.Context, app *oam.App, artifacts map[string]pipeline.Artifact) error {
-	return c.triggerCdPipeline(ctx, app, artifacts, true)
+func (c *CICmd) runPhases(ctx context.Context, phases []phase, phaseType string) error {
+	for _, ph := range phases {
+		slog.InfoContext(ctx, fmt.Sprintf("%s phase start", phaseType), "phase", ph.name)
+		if err := ph.run(ctx); err != nil {
+			slog.ErrorContext(ctx, fmt.Sprintf("%s phase error", phaseType), "phase", ph.name, "error", err)
+			return fmt.Errorf("%s phase %s error: %w", phaseType, ph.name, err)
+		}
+	}
+	return nil
 }
 
-func (c *CICmd) triggerUnifiedCdPipeline(ctx context.Context, app *oam.App, artifacts map[string]pipeline.Artifact) error {
-	return c.triggerCdPipeline(ctx, app, artifacts, false)
+func (c *CICmd) checkTenantValidityPhase(app *oam.App) func(context.Context) error {
+	return func(ctx context.Context) error {
+		return c.checkTenantValidity(ctx, app)
+	}
 }
 
-func (c *CICmd) triggerCdPipeline(ctx context.Context, app *oam.App, artifacts map[string]pipeline.Artifact, perComponent bool) error {
-	oamPath, err := c.uploadOamFile(ctx, app)
-	if err != nil {
+func (c *CICmd) ensureBucketExistencePhase() func(context.Context) error {
+	return func(ctx context.Context) error {
+		return c.ensureBucketExistence(ctx)
+	}
+}
+
+func (c *CICmd) uploadOamFilePhase(app *oam.App) func(context.Context) error {
+	return func(ctx context.Context) error {
+		path, err := c.uploadOamFile(ctx, app)
+		c.OAMPath = path
 		return err
 	}
+}
 
-	routingSlip, err := c.createRoutingSlip(ctx, app)
-	if err != nil {
-		return err
+func (c *CICmd) publishCdMessagesPhase(app *oam.App, artifacts map[string]pipeline.Artifact) func(context.Context) error {
+	return func(ctx context.Context) error {
+		routingSlip, err := c.createRoutingSlip(ctx, app)
+		if err != nil {
+			return err
+		}
+
+		topicLocation, routingSlip := routingSlip[0], routingSlip[1:]
+
+		if app.Metadata.Annotations[oam.AnnotationDeploymentStrategy] == oam.DeploymentStrategyPerComponent {
+			return c.triggerPerComponentCdPipeline(ctx, app, artifacts, c.OAMPath, routingSlip, topicLocation)
+		} else {
+			return c.triggerUnifiedCdPipeline(ctx, app, artifacts, c.OAMPath, routingSlip, topicLocation)
+		}
 	}
+}
 
-	topicLocation, routingSlip := routingSlip[0], routingSlip[1:]
-
+func (c *CICmd) triggerPerComponentCdPipeline(ctx context.Context, app *oam.App, artifacts map[string]pipeline.Artifact, oamPath string, routingSlip []pipeline.RoutingSlipEntry, topicLocation pipeline.RoutingSlipEntry) error {
 	mainMsg := buildCdPubSubMessage(ctx, app, oamPath, artifacts, routingSlip, true)
 	if err := c.pushToPubSub(ctx, topicLocation, mainMsg); err != nil {
 		return err
 	}
 
-	if perComponent {
-		for componentName, artifact := range artifacts {
-			componentArtifacts := map[string]pipeline.Artifact{componentName: artifact}
-			componentMsg := buildCdPubSubMessage(ctx, app, oamPath, componentArtifacts, routingSlip, false)
-			if err := c.pushToPubSub(ctx, topicLocation, componentMsg); err != nil {
-				return err
-			}
+	for componentName, artifact := range artifacts {
+		componentArtifacts := map[string]pipeline.Artifact{componentName: artifact}
+		componentMsg := buildCdPubSubMessage(ctx, app, oamPath, componentArtifacts, routingSlip, false)
+		if err := c.pushToPubSub(ctx, topicLocation, componentMsg); err != nil {
+			return err
 		}
 	}
 
 	return nil
+}
+
+func (c *CICmd) triggerUnifiedCdPipeline(ctx context.Context, app *oam.App, artifacts map[string]pipeline.Artifact, oamPath string, routingSlip []pipeline.RoutingSlipEntry, topicLocation pipeline.RoutingSlipEntry) error {
+	mainMsg := buildCdPubSubMessage(ctx, app, oamPath, artifacts, routingSlip, true)
+	return c.pushToPubSub(ctx, topicLocation, mainMsg)
 }
 
 func buildCdPubSubMessage(ctx context.Context, app *oam.App, oamPath string, artifacts map[string]pipeline.Artifact, routingSlip []pipeline.RoutingSlipEntry, reconcile bool) *pipeline.CIPubSubMessage {
