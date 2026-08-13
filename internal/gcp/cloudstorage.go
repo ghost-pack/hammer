@@ -175,7 +175,7 @@ func (c *CloudStorageClientImpl) EnsureBucketExists(ctx context.Context, project
 					Action: storage.LifecycleAction{Type: "Delete"},
 					Condition: storage.LifecycleCondition{
 						AgeInDays:     30,
-						MatchesPrefix: []string{"deployments/oam/", "deployments/plans/", "deployments/cloudbuild/"},
+						MatchesPrefix: []string{"deployments/oam/", "deployments/opentofu/", "deployments/cloudbuild/"},
 					},
 				},
 			},

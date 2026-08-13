@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 
 	"github.com/ghost-pack/hammer/internal/ci"
 	"github.com/ghost-pack/hammer/internal/docker"
@@ -26,18 +27,20 @@ func New(component oam.Component, app oam.App, clients ci.DependencyClients) (ci
 	}
 
 	return &Pipeline{
-		component:    &component,
-		runner:       runner.New(),
-		dockerClient: clients.DockerClient,
-		garClient:    clients.GarClient,
+		component:      &component,
+		runner:         runner.New(),
+		dockerClient:   clients.DockerClient,
+		garClient:      clients.GarClient,
+		shortCommitSha: os.Getenv("COMMIT_SHA")[:7],
 	}, nil
 }
 
 type Pipeline struct {
-	component    *oam.Component
-	runner       runner.Runner
-	dockerClient docker.Client
-	garClient    project.GarClient
+	component      *oam.Component
+	runner         runner.Runner
+	dockerClient   docker.Client
+	garClient      project.GarClient
+	shortCommitSha string
 }
 
 func (p *Pipeline) ComponentType() string {
@@ -52,6 +55,7 @@ func (p *Pipeline) CI(ctx context.Context) (*ci.Artifact, error) {
 
 	var phases []phase
 
+	var artifact *ci.Artifact
 	if p.ComponentType() == "gocli" {
 		phases = []phase{
 			{"test", p.test},
@@ -67,7 +71,13 @@ func (p *Pipeline) CI(ctx context.Context) (*ci.Artifact, error) {
 			{"containerize", p.containerize},
 			{"ensureGarExists", p.createGar},
 			{"push", p.push},
-			// create artifact.
+		}
+
+		artifact = &ci.Artifact{
+			Type: ci.ArtifactTypeCloudRun,
+			Properties: map[string]string{
+				"artifactRegistryLocation": fmt.Sprintf("us-central1-docker.pkg.dev/hammer-central-prod/%s/%s:%s", p.component.Name, p.component.Name, p.shortCommitSha),
+			},
 		}
 	}
 
@@ -78,7 +88,7 @@ func (p *Pipeline) CI(ctx context.Context) (*ci.Artifact, error) {
 			return nil, fmt.Errorf("phase %s error: %w", ph.name, err)
 		}
 	}
-	return nil, nil
+	return artifact, nil
 }
 
 func (p *Pipeline) Analyze(ctx context.Context) error {

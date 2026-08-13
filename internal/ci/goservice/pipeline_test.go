@@ -3,6 +3,7 @@ package goservice
 import (
 	"context"
 	"errors"
+	"os"
 	"testing"
 
 	"github.com/ghost-pack/hammer/internal/ci"
@@ -11,7 +12,6 @@ import (
 	"github.com/ghost-pack/hammer/internal/gcp/project"
 	"github.com/ghost-pack/hammer/internal/oam"
 	"github.com/ghost-pack/hammer/internal/runner"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -81,7 +81,7 @@ func TestNewPipeline(t *testing.T) {
 		{
 			name:    "SuccessfulNewPipeline",
 			args:    args{component: oam.Component{Name: "testComponent", Type: "goservice"}, client: &MockDockerClient{}, garClient: &MockGarClient{}},
-			want:    &Pipeline{component: &oam.Component{Name: "testComponent", Type: "goservice"}, runner: runner.New(), dockerClient: &MockDockerClient{}, garClient: &MockGarClient{}},
+			want:    &Pipeline{component: &oam.Component{Name: "testComponent", Type: "goservice"}, runner: runner.New(), dockerClient: &MockDockerClient{}, garClient: &MockGarClient{}, shortCommitSha: "1234567"},
 			wantErr: false,
 		},
 		{
@@ -93,6 +93,7 @@ func TestNewPipeline(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			os.Setenv("COMMIT_SHA", "1234567")
 			got, err := New(tt.args.component, oam.App{}, ci.DependencyClients{DockerClient: tt.args.client, GarClient: tt.args.garClient, CloudBuild: tt.args.cloudBuildClient})
 			if err != nil {
 				if tt.wantErr {
@@ -108,10 +109,12 @@ func TestNewPipeline(t *testing.T) {
 
 func TestPipeline_CI(t *testing.T) {
 	tests := []struct {
-		name      string
-		component *oam.Component
-		setupMock func(*MockRunner, *MockDockerClient, *MockGarClient)
-		wantErr   bool
+		name             string
+		component        *oam.Component
+		setupMock        func(*MockRunner, *MockDockerClient, *MockGarClient)
+		expectedArtifact *ci.Artifact
+		shortCommitSha   string
+		wantErr          bool
 	}{
 		{
 			name:      "SuccessfulCIPipeline",
@@ -128,7 +131,14 @@ func TestPipeline_CI(t *testing.T) {
 				mockDockerClient.On("Push", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 			},
-			wantErr: false,
+			expectedArtifact: &ci.Artifact{
+				Type: ci.ArtifactTypeCloudRun,
+				Properties: map[string]string{
+					"artifactRegistryLocation": "us-central1-docker.pkg.dev/hammer-central-prod/testComponent/testComponent:1234567",
+				},
+			},
+			shortCommitSha: "1234567",
+			wantErr:        false,
 		},
 		{
 			name:      "SuccessfulCIPipeline",
@@ -163,7 +173,14 @@ func TestPipeline_CI(t *testing.T) {
 					Return(nil)
 				t.Setenv("COMMIT_SHA", "abc1234")
 			},
-			wantErr: false,
+			expectedArtifact: &ci.Artifact{
+				Type: ci.ArtifactTypeCloudRun,
+				Properties: map[string]string{
+					"artifactRegistryLocation": "us-central1-docker.pkg.dev/hammer-central-prod/testComponent/testComponent:1234567",
+				},
+			},
+			shortCommitSha: "1234567",
+			wantErr:        false,
 		},
 		{
 			name:      "FailedCIPipeline Containerization",
@@ -279,19 +296,21 @@ func TestPipeline_CI(t *testing.T) {
 			tt.setupMock(mockRunner, mockDockerClient, mockGarClient)
 
 			p := &Pipeline{
-				component:    tt.component,
-				runner:       mockRunner,
-				dockerClient: mockDockerClient,
-				garClient:    mockGarClient,
+				component:      tt.component,
+				runner:         mockRunner,
+				dockerClient:   mockDockerClient,
+				garClient:      mockGarClient,
+				shortCommitSha: tt.shortCommitSha,
 			}
 
 			// TODO: test for artifact
-			_, err := p.CI(context.Background())
+			actualArtifact, err := p.CI(context.Background())
 
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
+				require.Equal(t, tt.expectedArtifact, actualArtifact)
 			}
 
 			// Ensure all expected mock calls were made
@@ -345,9 +364,9 @@ func TestPipeline_Analyze(t *testing.T) {
 			err := p.Analyze(context.Background())
 
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 
 			// Ensure all expected mock calls were made
