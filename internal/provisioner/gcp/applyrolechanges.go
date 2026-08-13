@@ -121,16 +121,13 @@ func setupSaOamOnTenantProject(ctx context.Context, p *Provisioner, env string, 
 		return fmt.Errorf("granting sa-oam impersonation of sa-pipeline for %s: %w", env, err)
 	}
 
-	// Giving sa-oam the ability to create service accounts (for cloud run) on tenant projects,
-	// as well as view cloud storage (for opentofu plan)
+	// Giving sa-oam the ability to view cloud storage (for opentofu plan)
 	if err := p.clients.IAM.BindProjectRoles(
 		ctx,
 		projectID,
 		p.platformOAMServiceAccount,
 		[]string{
 			"roles/storage.objectViewer",
-			"roles/iam.serviceAccountCreator",
-			"roles/iam.serviceAccountAdmin",
 		},
 	); err != nil {
 		return fmt.Errorf("binding sa-oam roles for %s: %w", env, err)
