@@ -354,6 +354,7 @@ func (c *CICmd) createRoutingSlip(ctx context.Context, app *oam.App) ([]ci.Routi
 }
 
 func (c *CICmd) pushToPubSub(ctx context.Context, entry ci.RoutingSlipEntry, pubSubMessage *ci.CIPubSubMessage) error {
+	pubSubMessage.Env = entry.Env
 	jsonBytes, err := json.Marshal(pubSubMessage)
 	if err != nil {
 		return err

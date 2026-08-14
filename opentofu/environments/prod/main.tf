@@ -1,5 +1,5 @@
 module "infra" {
-  source = "../modules/infra"
+  source = "../../modules/infra"
 
   first_file_name    = "prod_art_of_war.txt"
   second_file_name   = "prod_another_art.txt"

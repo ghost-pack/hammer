@@ -12,6 +12,7 @@ type CIPubSubMessage struct {
 	CommitSha   string    `json:"commitSha"`
 	Branch      string    `json:"branch"`
 	PublishedAt time.Time `json:"publishedAt"`
+	Env         string    `json:"env"`
 
 	// OAM file for this commit — CD reads desired state from here
 	OAMPath     string `json:"oamPath"`

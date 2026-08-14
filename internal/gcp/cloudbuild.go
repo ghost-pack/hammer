@@ -487,7 +487,7 @@ func makeTrigger(
 	case "webhook":
 		t.WebhookConfig = &cloudbuildpb.WebhookConfig{
 			AuthMethod: &cloudbuildpb.WebhookConfig_Secret{
-				Secret: webhookSecret,
+				Secret: webhookSecret, // TODO: Generate this on the fly during CD.
 			},
 		}
 	case "pubsub":
