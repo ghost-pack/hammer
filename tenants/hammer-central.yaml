@@ -20,6 +20,7 @@ spec:
     - cloudbilling.googleapis.com
     - orgpolicy.googleapis.com
     - serviceusage.googleapis.com
+    - run.googleapis.com
   environments:
     - prod                         # hammer-central only has one environment
   serviceAccounts:
