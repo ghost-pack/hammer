@@ -30,14 +30,28 @@ func New(component oam.Component, app oam.App, client ci.DependencyClients) (ci.
 	}, nil
 }
 
+type properties struct {
+	Path string `yaml:"path"`
+}
 type Pipeline struct {
 	component          *oam.Component
+	app                *oam.App
 	runner             runner.Runner
 	cloudStorageClient gcp.CloudStorageClient
 }
 
 type Properties struct {
 	Path string `yaml:"path"`
+}
+
+func parseOpenTofuPath(p *Pipeline, properties *properties) error {
+	if err := p.component.Properties.Decode(&properties); err != nil {
+		return fmt.Errorf("decoding properties: %w", err)
+	}
+	if properties.Path == "" {
+		properties.Path = "opentofu"
+	}
+	return nil
 }
 
 func (p *Pipeline) ComponentType() string {
@@ -50,16 +64,36 @@ func (p *Pipeline) CI(ctx context.Context) (*ci.Artifact, error) {
 			attribute.String("cmd", fmt.Sprintf("%s CI", p.ComponentType()))))
 	defer span.End()
 
+	// Before doing anything:
+	// Enumerate environments in Terraform and in the tenant. Diff them, use them to create "supported environments" array.
+	supportedEnvironments, err := p.getSupportedEnvironments(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if len(supportedEnvironments) == 0 {
+		return nil, fmt.Errorf("no supported environments found")
+	}
+	// Next, try to find tfstate in each environment. Save off next to env. I guess env thing can be a map.
+
+	// Before looping through each environment, do:
+	// 1. tofu fmt -recursive -check.
+	// 2. tflint
+	// 3. checkov
+
 	var phases []phase
 
-	//phases = []phase{
-	//	{"ensureBucketExists", p.ensureBucketExists},
-	//	{"format", p.format},
-	//	{"init", p.init},
-	//	{"validate", p.validate},
-	//	{"tflint", p.tflint},
-	//	{"checkov", p.checkov},
-	//	{"plan", p.plan},
+	// For each support environment,
+	// 1. tofu init
+	// 2. tofu validate
+	// 3. tofu plan
+
+	// If all of those phases pass,
+	// 1. Tar the entire opentofu directory.
+	// 2. Upload to cloud storage. Artifact should look like this:
+	//"type": "opentofu",
+	//"properties": {
+	//	"packageUri": "gs://hammer-release/acme-corp/deployments/opentofu/1234567.tar.gz",
+	//	"supportedEnvironments": ["dev", "prod"]
 	//}
 
 	for _, env := range []string{"dev", "prod"} {

@@ -5,6 +5,7 @@
   "publishedAt": "2026-08-10T14:00:00Z",
   "env": "dev",
   "oamPath": "gs://hammer-release/acme-corp/deployments/oam/1234567.yaml",
+  "reconcileOnly": false,
   "artifacts": {
     "hammer": {
       "type": "cloudbuild",

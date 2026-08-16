@@ -18,6 +18,8 @@ func init() {
 	ci.Register("cloudbuild", New)
 }
 
+// Needs to handle overrides. But also most of these are only useful for CD?
+// Like PubSubTopic, ManuallyApproved, and ServiceAccount probably could be overridden, but that's it.
 type properties struct {
 	Path             string       `yaml:"path"`
 	TriggerType      string       `yaml:"trigger_type"`

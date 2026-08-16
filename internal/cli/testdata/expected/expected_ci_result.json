@@ -13,7 +13,7 @@
       }
     }
   },
-  "reconcile": true,
+  "reconcileOnly": false,
   "routingSlip": [
     {
       "env": "prod",

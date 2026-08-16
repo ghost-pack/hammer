@@ -15,10 +15,9 @@ type CIPubSubMessage struct {
 	Env         string    `json:"env"`
 
 	// OAM file for this commit — CD reads desired state from here
-	OAMPath     string `json:"oamPath"`
-	TraceParent string `json:"traceParent"`
-	Reconcile   bool   `json:"reconcile"`
-	Traceparent string `json:"traceparent,omitempty"`
+	OAMPath       string `json:"oamPath"`
+	ReconcileOnly bool   `json:"reconcileOnly"`
+	Traceparent   string `json:"traceparent"`
 
 	// Artifacts produced by CI, keyed by component name
 	Artifacts map[string]Artifact `json:"artifacts"`

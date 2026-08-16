@@ -167,7 +167,7 @@ func TestCIExecute(t *testing.T) {
 					mock.Anything,
 					mock.Anything,
 					mock.MatchedBy(func(data []byte) bool {
-						expectedBytes, _ := os.ReadFile("testdata/expected/expected_ci_result.json")
+						expectedBytes, _ := os.ReadFile("testdata/expected/expected_ci_result_reconcile_only.json")
 
 						var expected, actual ci.CIPubSubMessage
 						if err := json.Unmarshal(expectedBytes, &expected); err != nil {
@@ -227,7 +227,7 @@ func TestCIExecute(t *testing.T) {
 					mock.Anything,
 					mock.Anything,
 					mock.MatchedBy(func(data []byte) bool {
-						expectedBytes, _ := os.ReadFile("testdata/expected/expected_ci_result.json")
+						expectedBytes, _ := os.ReadFile("testdata/expected/expected_ci_result_reconcile_only.json")
 
 						var expected, actual ci.CIPubSubMessage
 						if err := json.Unmarshal(expectedBytes, &expected); err != nil {
@@ -287,7 +287,7 @@ func TestCIExecute(t *testing.T) {
 					mock.Anything,
 					mock.Anything,
 					mock.MatchedBy(func(data []byte) bool {
-						expectedBytes, _ := os.ReadFile("testdata/expected/expected_ci_result.json")
+						expectedBytes, _ := os.ReadFile("testdata/expected/expected_ci_result_reconcile_only.json")
 
 						var expected, actual ci.CIPubSubMessage
 						if err := json.Unmarshal(expectedBytes, &expected); err != nil {

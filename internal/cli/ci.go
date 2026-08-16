@@ -2,10 +2,12 @@ package cli
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -269,11 +271,26 @@ func (c *CICmd) triggerPerComponentCdPipeline(ctx context.Context, app *oam.App,
 }
 
 func (c *CICmd) triggerUnifiedCdPipeline(ctx context.Context, app *oam.App, artifacts map[string]ci.Artifact, oamPath string, routingSlip []ci.RoutingSlipEntry, topicLocation ci.RoutingSlipEntry) error {
-	mainMsg := buildCdPubSubMessage(ctx, app, oamPath, artifacts, routingSlip, true)
+	mainMsg := buildCdPubSubMessage(ctx, app, oamPath, artifacts, routingSlip, false)
+
+	// trigger CD if running locally.
+	if os.Getenv("BUILD_ID") == "" {
+		jsonData, _ := json.Marshal(mainMsg)
+		encoded := base64.StdEncoding.EncodeToString(jsonData)
+
+		cmd := exec.Command(os.Args[0], "cd")
+		cmd.Env = append(os.Environ(), fmt.Sprintf("CI_OUTPUT=%s", encoded))
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		fmt.Println("🚀 Simulating CD locally by invoking 'hammer cd'...")
+		return cmd.Run()
+	}
+
 	return c.pushToPubSub(ctx, topicLocation, mainMsg)
 }
 
-func buildCdPubSubMessage(ctx context.Context, app *oam.App, oamPath string, artifacts map[string]ci.Artifact, routingSlip []ci.RoutingSlipEntry, reconcile bool) *ci.CIPubSubMessage {
+func buildCdPubSubMessage(ctx context.Context, app *oam.App, oamPath string, artifacts map[string]ci.Artifact, routingSlip []ci.RoutingSlipEntry, reconcileOnly bool) *ci.CIPubSubMessage {
 	// Create a carrier to hold the W3C trace headers
 	carrier := propagation.MapCarrier{}
 
@@ -282,15 +299,15 @@ func buildCdPubSubMessage(ctx context.Context, app *oam.App, oamPath string, art
 	propagator.Inject(ctx, carrier)
 
 	return &ci.CIPubSubMessage{
-		Tenant:      app.Metadata.Name,
-		CommitSha:   os.Getenv("COMMIT_SHA"),
-		Branch:      "main",
-		PublishedAt: time.Now(),
-		OAMPath:     oamPath,
-		Artifacts:   artifacts,
-		Reconcile:   reconcile,
-		RoutingSlip: routingSlip,
-		Traceparent: carrier.Get("traceparent"),
+		Tenant:        app.Metadata.Name,
+		CommitSha:     os.Getenv("COMMIT_SHA"),
+		Branch:        "main",
+		PublishedAt:   time.Now(),
+		OAMPath:       oamPath,
+		Artifacts:     artifacts,
+		ReconcileOnly: reconcileOnly,
+		RoutingSlip:   routingSlip,
+		Traceparent:   carrier.Get("traceparent"),
 	}
 }
 func (c *CICmd) uploadOamFile(ctx context.Context, app *oam.App) (string, error) {

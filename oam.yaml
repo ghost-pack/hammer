@@ -34,4 +34,4 @@ spec:
         overrides:
           - component: hammer-cicd
             properties:
-              service_account: "sa-oam@hammer-central-prod.iam.gserviceaccount.com"
+              service_account: "sa-oam@hammer-central-prod.iam.gserviceaccount.com" # overrides currently don't work.
