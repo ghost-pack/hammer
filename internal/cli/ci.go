@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"os/exec"
 	"strings"
 	"time"
 
@@ -273,18 +272,23 @@ func (c *CICmd) triggerPerComponentCdPipeline(ctx context.Context, app *oam.App,
 func (c *CICmd) triggerUnifiedCdPipeline(ctx context.Context, app *oam.App, artifacts map[string]ci.Artifact, oamPath string, routingSlip []ci.RoutingSlipEntry, topicLocation ci.RoutingSlipEntry) error {
 	mainMsg := buildCdPubSubMessage(ctx, app, oamPath, artifacts, routingSlip, false)
 
-	// trigger CD if running locally.
+	// If running locally, just print the payload for manual use
 	if os.Getenv("BUILD_ID") == "" {
-		jsonData, _ := json.Marshal(mainMsg)
+		jsonData, err := json.Marshal(mainMsg)
+		if err != nil {
+			return fmt.Errorf("failed to marshal CI message: %w", err)
+		}
 		encoded := base64.StdEncoding.EncodeToString(jsonData)
 
-		cmd := exec.Command(os.Args[0], "cd")
-		cmd.Env = append(os.Environ(), fmt.Sprintf("CI_OUTPUT=%s", encoded))
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
+		// Send friendly logs and instructions to Stderr
+		fmt.Fprintln(os.Stderr, "🚀 Running locally. Skipping PubSub publish.")
+		fmt.Fprintln(os.Stderr, "💡 Tip: You can capture this into an env var like this:")
+		fmt.Fprintln(os.Stderr, "    export CI_OUTPUT=$(hammer ci) && hammer cd")
 
-		fmt.Println("🚀 Simulating CD locally by invoking 'hammer cd'...")
-		return cmd.Run()
+		// Send ONLY the raw base64 string to Stdout
+		fmt.Println(encoded)
+
+		return nil
 	}
 
 	return c.pushToPubSub(ctx, topicLocation, mainMsg)
