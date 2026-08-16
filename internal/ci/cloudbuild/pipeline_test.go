@@ -49,6 +49,12 @@ func (m *MockCloudStorage) GetObject(ctx context.Context, bucket, object string)
 	return res, callArgs.Error(1)
 }
 
+func (m *MockCloudStorage) BucketExists(ctx context.Context, bucketName string) (bool, error) {
+	callArgs := m.Called(ctx, bucketName)
+	res, _ := callArgs.Get(0).(bool)
+	return res, callArgs.Error(1)
+}
+
 func (m *MockCloudStorage) WriteObject(ctx context.Context, bucket, object string, data []byte, metadata map[string]string) error {
 	callArgs := m.Called(ctx, bucket, object, data, metadata)
 	return callArgs.Error(0)

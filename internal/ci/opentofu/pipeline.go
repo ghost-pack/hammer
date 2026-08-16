@@ -73,6 +73,19 @@ func (p *Pipeline) CI(ctx context.Context) (*ci.Artifact, error) {
 	if len(supportedEnvironments) == 0 {
 		return nil, fmt.Errorf("no supported environments found")
 	}
+
+	tenantName := p.app.Metadata.Name
+	envBucketExists := make(map[string]bool)
+	for _, env := range supportedEnvironments {
+		bucketName := fmt.Sprintf("%s-%s-tfstate", tenantName, env)
+		exists, err := p.cloudStorageClient.BucketExists(ctx, bucketName)
+		if err != nil {
+			return nil, fmt.Errorf("checking tfstate bucket %s: %w", bucketName, err)
+		}
+		envBucketExists[env] = exists
+		slog.InfoContext(ctx, "checked tfstate bucket", "env", env, "bucket", bucketName, "exists", exists)
+	}
+
 	// Next, try to find tfstate in each environment. Save off next to env. I guess env thing can be a map.
 
 	// Before looping through each environment, do:
@@ -80,7 +93,21 @@ func (p *Pipeline) CI(ctx context.Context) (*ci.Artifact, error) {
 	// 2. tflint
 	// 3. checkov
 
+	// won't work until you fix the directory thing.
 	var phases []phase
+	globalPhases := []phase{
+		{"fmt-check", p.format},
+		{"tflint", p.tflint},
+		{"checkov", p.checkov},
+	}
+
+	for _, ph := range globalPhases {
+		slog.InfoContext(ctx, "global phase start", "phase", ph.name)
+		if err := ph.run(ctx, ""); err != nil {
+			slog.ErrorContext(ctx, "global phase error", "phase", ph.name, "error", err)
+			return nil, fmt.Errorf("global phase %s error: %w", ph.name, err)
+		}
+	}
 
 	// For each support environment,
 	// 1. tofu init

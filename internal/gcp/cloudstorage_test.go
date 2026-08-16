@@ -381,3 +381,61 @@ func TestListPrefixes(t *testing.T) {
 		mockIter.AssertExpectations(t)
 	})
 }
+
+func TestBucketExists(t *testing.T) {
+	t.Run("returns true when bucket exists", func(t *testing.T) {
+		mockBucket := &MockBucketHandleAPI{}
+		mockBucket.On("Attrs", mock.Anything).
+			Return(&storage.BucketAttrs{Name: "my-bucket"}, nil)
+
+		mockClient := &MockStorageClientAPI{}
+		mockClient.On("Bucket", "my-bucket").Return(mockBucket)
+
+		client := newCloudStorageClientWithAPI(mockClient)
+		exists, err := client.BucketExists(context.Background(), "my-bucket")
+
+		require.NoError(t, err)
+		require.True(t, exists)
+
+		mockClient.AssertExpectations(t)
+		mockBucket.AssertExpectations(t)
+	})
+
+	t.Run("returns false when bucket does not exist", func(t *testing.T) {
+		mockBucket := &MockBucketHandleAPI{}
+		mockBucket.On("Attrs", mock.Anything).
+			Return(nil, storage.ErrBucketNotExist)
+
+		mockClient := &MockStorageClientAPI{}
+		mockClient.On("Bucket", "my-bucket").Return(mockBucket)
+
+		client := newCloudStorageClientWithAPI(mockClient)
+		exists, err := client.BucketExists(context.Background(), "my-bucket")
+
+		require.NoError(t, err)
+		require.False(t, exists)
+
+		mockClient.AssertExpectations(t)
+		mockBucket.AssertExpectations(t)
+	})
+
+	t.Run("returns error on unexpected Attrs failure", func(t *testing.T) {
+		mockBucket := &MockBucketHandleAPI{}
+		mockBucket.On("Attrs", mock.Anything).
+			Return(nil, errors.New("permission denied"))
+
+		mockClient := &MockStorageClientAPI{}
+		mockClient.On("Bucket", "my-bucket").Return(mockBucket)
+
+		client := newCloudStorageClientWithAPI(mockClient)
+		exists, err := client.BucketExists(context.Background(), "my-bucket")
+
+		require.Error(t, err)
+		require.False(t, exists)
+		require.ErrorContains(t, err, "checking bucket gs://my-bucket")
+		require.ErrorContains(t, err, "permission denied")
+
+		mockClient.AssertExpectations(t)
+		mockBucket.AssertExpectations(t)
+	})
+}

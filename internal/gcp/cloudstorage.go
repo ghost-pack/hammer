@@ -23,6 +23,7 @@ type CloudStorageClient interface {
 	GetObject(ctx context.Context, bucket, object string) ([]byte, error)
 	WriteObject(ctx context.Context, bucket, object string, data []byte, metadata map[string]string) error
 	ListPrefixes(ctx context.Context, bucket, prefix, delimiter string) ([]string, error)
+	BucketExists(ctx context.Context, bucketName string) (bool, error)
 	Close() error
 }
 
@@ -265,4 +266,24 @@ func (c *CloudStorageClientImpl) ListPrefixes(ctx context.Context, bucket, prefi
 		}
 	}
 	return prefixes, nil
+}
+
+func (c *CloudStorageClientImpl) BucketExists(ctx context.Context, bucketName string) (bool, error) {
+	ctx, span := tracing.Tracer("check GCS bucket exists").Start(ctx, "check GCS bucket exists",
+		trace.WithAttributes(attribute.String("bucket", bucketName)))
+	defer span.End()
+
+	_, err := c.client.Bucket(bucketName).Attrs(ctx)
+	if err == nil {
+		span.SetStatus(otelCodes.Ok, "Bucket exists")
+		return true, nil
+	}
+	if errors.Is(err, storage.ErrBucketNotExist) {
+		span.SetStatus(otelCodes.Ok, "Bucket does not exist")
+		return false, nil
+	}
+
+	span.RecordError(err)
+	span.SetStatus(otelCodes.Error, err.Error())
+	return false, fmt.Errorf("checking bucket gs://%s: %w", bucketName, err)
 }

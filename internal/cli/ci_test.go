@@ -74,6 +74,12 @@ func (m *MockCloudStorage) ListPrefixes(ctx context.Context, bucket, prefix, del
 	return res, callArgs.Error(1)
 }
 
+func (m *MockCloudStorage) BucketExists(ctx context.Context, bucketName string) (bool, error) {
+	callArgs := m.Called(ctx, bucketName)
+	res, _ := callArgs.Get(0).(bool)
+	return res, callArgs.Error(1)
+}
+
 func (m *MockCloudStorage) Close() error {
 	callArgs := m.Called()
 	return callArgs.Error(0)
@@ -451,6 +457,7 @@ func TestCIExecute(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			os.Setenv("BRANCH_NAME", "main")
 			os.Setenv("COMMIT_SHA", "1234567")
+			os.Setenv("BUILD_ID", "12341")
 			cloudStorageMock := new(MockCloudStorage)
 			pubSubMock := new(MockPubSubClient)
 
