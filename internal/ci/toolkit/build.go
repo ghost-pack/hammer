@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"os"
+
+	"github.com/ghost-pack/hammer/internal/runner"
 )
 
 type Properties struct {
@@ -26,7 +28,7 @@ func (p *Pipeline) build(ctx context.Context) error {
 		tag = "dev"
 	}
 
-	result, err := p.runner.RunWithoutOptions(ctx, "apko", []string{"build", properties.Path, p.component.Name + ":" + tag, "apko-wolfi.tar"})
+	result, err := p.runner.Run(ctx, "apko", []string{"build", properties.Path, p.component.Name + ":" + tag, "apko-wolfi.tar"}, runner.Options{})
 	if err != nil {
 		if result == nil {
 			return err

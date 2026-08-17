@@ -40,12 +40,6 @@ func (m *MockRunner) Run(ctx context.Context, name string, args []string, opts r
 	return res, callArgs.Error(1)
 }
 
-func (m *MockRunner) RunWithoutOptions(ctx context.Context, name string, args []string) (*runner.Result, error) {
-	callArgs := m.Called(ctx, name, args)
-	res, _ := callArgs.Get(0).(*runner.Result)
-	return res, callArgs.Error(1)
-}
-
 type MockGarClient struct {
 	mock.Mock
 }
@@ -120,8 +114,8 @@ func TestPipeline_CI(t *testing.T) {
 			name:      "SuccessfulCIPipeline",
 			component: &oam.Component{Name: "testComponent", Type: "goservice"},
 			setupMock: func(mockRunner *MockRunner, mockDockerClient *MockDockerClient, mockGarClient *MockGarClient) {
-				mockRunner.On("RunWithoutOptions", mock.Anything, "go", []string{"test", "./..."}).
-					Return(&runner.Result{ExitCode: 0}, nil)
+				mockRunner.On("Run", mock.Anything, "go", []string{"test", "./..."}, mock.Anything).
+					Return(&runner.Result{ExitCode: 0}, nil).Once()
 				mockRunner.On("Run", mock.Anything, "go", []string{"build", "-o", "testComponent", "."}, mock.Anything).
 					Return(&runner.Result{ExitCode: 0}, nil)
 				mockDockerClient.On("Build", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -144,7 +138,7 @@ func TestPipeline_CI(t *testing.T) {
 			name:      "SuccessfulCIPipeline",
 			component: &oam.Component{Name: "testComponent", Type: "gocli"},
 			setupMock: func(mockRunner *MockRunner, mockDockerClient *MockDockerClient, mockGarClient *MockGarClient) {
-				mockRunner.On("RunWithoutOptions", mock.Anything, "go", []string{"test", "./..."}).
+				mockRunner.On("Run", mock.Anything, "go", []string{"test", "./..."}, mock.Anything).
 					Return(&runner.Result{ExitCode: 0}, nil)
 				mockRunner.On("Run", mock.Anything, "go", []string{"build", "-o", "testComponent", "."}, mock.Anything).
 					Return(&runner.Result{ExitCode: 0}, nil)
@@ -161,8 +155,8 @@ func TestPipeline_CI(t *testing.T) {
 			name:      "SuccessfulCIPipelineWithCommitSha",
 			component: &oam.Component{Name: "testComponent", Type: "goservice"},
 			setupMock: func(mockRunner *MockRunner, mockDockerClient *MockDockerClient, mockGarClient *MockGarClient) {
-				mockRunner.On("RunWithoutOptions", mock.Anything, "go", []string{"test", "./..."}).
-					Return(&runner.Result{ExitCode: 0}, nil)
+				mockRunner.On("Run", mock.Anything, "go", []string{"test", "./..."}, mock.Anything).
+					Return(&runner.Result{ExitCode: 0}, nil).Once()
 				mockRunner.On("Run", mock.Anything, "go", []string{"build", "-o", "testComponent", "."}, mock.Anything).
 					Return(&runner.Result{ExitCode: 0}, nil)
 				mockDockerClient.On("Build", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -186,8 +180,8 @@ func TestPipeline_CI(t *testing.T) {
 			name:      "FailedCIPipeline Containerization",
 			component: &oam.Component{Name: "testComponent", Type: "goservice"},
 			setupMock: func(mockRunner *MockRunner, mockDockerClient *MockDockerClient, mockGarClient *MockGarClient) {
-				mockRunner.On("RunWithoutOptions", mock.Anything, "go", []string{"test", "./..."}).
-					Return(&runner.Result{ExitCode: 0}, nil)
+				mockRunner.On("Run", mock.Anything, "go", []string{"test", "./..."}, mock.Anything).
+					Return(&runner.Result{ExitCode: 0}, nil).Once()
 				mockRunner.On("Run", mock.Anything, "go", []string{"build", "-o", "testComponent", "."}, mock.Anything).
 					Return(&runner.Result{ExitCode: 0}, nil)
 				mockDockerClient.On("Build", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -199,7 +193,7 @@ func TestPipeline_CI(t *testing.T) {
 			name:      "FailedCIPipeline_CommandHadError",
 			component: &oam.Component{Name: "testComponent", Type: "goservice"},
 			setupMock: func(mockRunner *MockRunner, mockDockerClient *MockDockerClient, mockGarClient *MockGarClient) {
-				mockRunner.On("RunWithoutOptions", mock.Anything, "go", []string{"test", "./..."}).
+				mockRunner.On("Run", mock.Anything, "go", []string{"test", "./..."}, mock.Anything).
 					Return(&runner.Result{ExitCode: 1}, errors.New("test error"))
 			},
 			wantErr: true,
@@ -208,7 +202,7 @@ func TestPipeline_CI(t *testing.T) {
 			name:      "FailedCIPipeline_NoResultError",
 			component: &oam.Component{Name: "testComponent", Type: "goservice"},
 			setupMock: func(mockRunner *MockRunner, mockDockerClient *MockDockerClient, mockGarClient *MockGarClient) {
-				mockRunner.On("RunWithoutOptions", mock.Anything, "go", []string{"test", "./..."}).
+				mockRunner.On("Run", mock.Anything, "go", []string{"test", "./..."}, mock.Anything).
 					Return(nil, errors.New("test error"))
 			},
 			wantErr: true,
@@ -217,7 +211,7 @@ func TestPipeline_CI(t *testing.T) {
 			name:      "FailedCIPipeline_ResultNoError",
 			component: &oam.Component{Name: "testComponent", Type: "goservice"},
 			setupMock: func(mockRunner *MockRunner, mockDockerClient *MockDockerClient, mockGarClient *MockGarClient) {
-				mockRunner.On("RunWithoutOptions", mock.Anything, "go", []string{"test", "./..."}).
+				mockRunner.On("Run", mock.Anything, "go", []string{"test", "./..."}, mock.Anything).
 					Return(&runner.Result{ExitCode: 1}, nil)
 			},
 			wantErr: true,
@@ -226,8 +220,8 @@ func TestPipeline_CI(t *testing.T) {
 			name:      "FailedCI_BuildHadError",
 			component: &oam.Component{Name: "testComponent", Type: "goservice"},
 			setupMock: func(mockRunner *MockRunner, mockDockerClient *MockDockerClient, mockGarClient *MockGarClient) {
-				mockRunner.On("RunWithoutOptions", mock.Anything, "go", []string{"test", "./..."}).
-					Return(&runner.Result{ExitCode: 0}, nil)
+				mockRunner.On("Run", mock.Anything, "go", []string{"test", "./..."}, mock.Anything).
+					Return(&runner.Result{ExitCode: 0}, nil).Once()
 				mockRunner.On("Run", mock.Anything, "go", []string{"build", "-o", "testComponent", "."}, mock.Anything).
 					Return(&runner.Result{ExitCode: 1}, errors.New("test error"))
 			},
@@ -237,8 +231,8 @@ func TestPipeline_CI(t *testing.T) {
 			name:      "FailedCI_BuildHadErrorNoResult",
 			component: &oam.Component{Name: "testComponent", Type: "goservice"},
 			setupMock: func(mockRunner *MockRunner, mockDockerClient *MockDockerClient, mockGarClient *MockGarClient) {
-				mockRunner.On("RunWithoutOptions", mock.Anything, "go", []string{"test", "./..."}).
-					Return(&runner.Result{ExitCode: 0}, nil)
+				mockRunner.On("Run", mock.Anything, "go", []string{"test", "./..."}, mock.Anything).
+					Return(&runner.Result{ExitCode: 0}, nil).Once()
 				mockRunner.On("Run", mock.Anything, "go", []string{"build", "-o", "testComponent", "."}, mock.Anything).
 					Return(nil, errors.New("test error"))
 			},
@@ -248,8 +242,8 @@ func TestPipeline_CI(t *testing.T) {
 			name:      "FailedCI_BuildHadBadResult",
 			component: &oam.Component{Name: "testComponent", Type: "goservice"},
 			setupMock: func(mockRunner *MockRunner, mockDockerClient *MockDockerClient, mockGarClient *MockGarClient) {
-				mockRunner.On("RunWithoutOptions", mock.Anything, "go", []string{"test", "./..."}).
-					Return(&runner.Result{ExitCode: 0}, nil)
+				mockRunner.On("Run", mock.Anything, "go", []string{"test", "./..."}, mock.Anything).
+					Return(&runner.Result{ExitCode: 0}, nil).Once()
 				mockRunner.On("Run", mock.Anything, "go", []string{"build", "-o", "testComponent", "."}, mock.Anything).
 					Return(&runner.Result{ExitCode: 1}, nil)
 			},
@@ -259,8 +253,8 @@ func TestPipeline_CI(t *testing.T) {
 			name:      "Failed gar ensure",
 			component: &oam.Component{Name: "testComponent", Type: "goservice"},
 			setupMock: func(mockRunner *MockRunner, mockDockerClient *MockDockerClient, mockGarClient *MockGarClient) {
-				mockRunner.On("RunWithoutOptions", mock.Anything, "go", []string{"test", "./..."}).
-					Return(&runner.Result{ExitCode: 0}, nil)
+				mockRunner.On("Run", mock.Anything, "go", []string{"test", "./..."}, mock.Anything).
+					Return(&runner.Result{ExitCode: 0}, nil).Once()
 				mockRunner.On("Run", mock.Anything, "go", []string{"build", "-o", "testComponent", "."}, mock.Anything).
 					Return(&runner.Result{ExitCode: 0}, nil)
 				mockDockerClient.On("Build", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -274,8 +268,8 @@ func TestPipeline_CI(t *testing.T) {
 			name:      "FailedCIPushHadError",
 			component: &oam.Component{Name: "testComponent", Type: "goservice"},
 			setupMock: func(mockRunner *MockRunner, mockDockerClient *MockDockerClient, mockGarClient *MockGarClient) {
-				mockRunner.On("RunWithoutOptions", mock.Anything, "go", []string{"test", "./..."}).
-					Return(&runner.Result{ExitCode: 0}, nil)
+				mockRunner.On("Run", mock.Anything, "go", []string{"test", "./..."}, mock.Anything).
+					Return(&runner.Result{ExitCode: 0}, nil).Once()
 				mockRunner.On("Run", mock.Anything, "go", []string{"build", "-o", "testComponent", "."}, mock.Anything).
 					Return(&runner.Result{ExitCode: 0}, nil)
 				mockDockerClient.On("Build", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -332,7 +326,7 @@ func TestPipeline_Analyze(t *testing.T) {
 			name:      "SuccessfulAnalyzePipeline",
 			component: &oam.Component{Name: "testComponent", Type: "goservice"},
 			setupMock: func(mockRunner *MockRunner, mockDockerClient *MockDockerClient, mockGarClient *MockGarClient) {
-				mockRunner.On("RunWithoutOptions", mock.Anything, "go", []string{"test", "./..."}).
+				mockRunner.On("Run", mock.Anything, "go", []string{"test", "./..."}, mock.Anything).
 					Return(&runner.Result{ExitCode: 0}, nil)
 			},
 			wantErr: false,
@@ -341,7 +335,7 @@ func TestPipeline_Analyze(t *testing.T) {
 			name:      "FailedAnalyzePipeline",
 			component: &oam.Component{Name: "testComponent", Type: "goservice"},
 			setupMock: func(mockRunner *MockRunner, mockDockerClient *MockDockerClient, mockGarClient *MockGarClient) {
-				mockRunner.On("RunWithoutOptions", mock.Anything, "go", []string{"test", "./..."}).
+				mockRunner.On("Run", mock.Anything, "go", []string{"test", "./..."}, mock.Anything).
 					Return(&runner.Result{ExitCode: 1}, nil)
 			},
 			wantErr: true,

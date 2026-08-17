@@ -44,12 +44,15 @@ type Properties struct {
 	Path string `yaml:"path"`
 }
 
-func parseOpenTofuPath(p *Pipeline, properties *properties) error {
-	if err := p.component.Properties.Decode(&properties); err != nil {
+func parseOpenTofuPath(p *Pipeline, props *properties) error {
+	if err := p.component.Properties.Decode(&props); err != nil {
 		return fmt.Errorf("decoding properties: %w", err)
 	}
-	if properties.Path == "" {
-		properties.Path = "opentofu"
+	if props == nil {
+		props = &properties{}
+	}
+	if props.Path == "" {
+		props.Path = "./opentofu"
 	}
 	return nil
 }

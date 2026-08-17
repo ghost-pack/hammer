@@ -26,7 +26,6 @@ type Options struct {
 
 type Runner interface {
 	Run(ctx context.Context, name string, args []string, opts Options) (*Result, error)
-	RunWithoutOptions(ctx context.Context, name string, args []string) (*Result, error)
 }
 
 type OSRunner struct{}
@@ -48,23 +47,6 @@ func (*OSRunner) Run(ctx context.Context, name string, args []string, opts Optio
 	cmd.Env = opts.Env
 
 	var outBuf, errBuf bytes.Buffer
-	cmd.Stdout = &outBuf
-	cmd.Stderr = &errBuf
-
-	return runCommand(cmd, &outBuf, &errBuf, span, name)
-}
-
-func (*OSRunner) RunWithoutOptions(ctx context.Context, name string, args []string) (*Result, error) {
-	ctx, span := tracing.Tracer("runner").Start(ctx, "exec:"+name,
-		trace.WithAttributes(
-			attribute.String("cmd", name),
-			attribute.StringSlice("args", args)))
-	defer span.End()
-
-	cmd := exec.CommandContext(ctx, name, args...)
-
-	var outBuf, errBuf bytes.Buffer
-
 	cmd.Stdout = &outBuf
 	cmd.Stderr = &errBuf
 

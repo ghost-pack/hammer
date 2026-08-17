@@ -3,10 +3,18 @@ package goservice
 import (
 	"context"
 	"fmt"
+
+	"github.com/ghost-pack/hammer/internal/runner"
 )
 
 func (p *Pipeline) test(ctx context.Context) error {
-	result, err := p.runner.RunWithoutOptions(ctx, "go", []string{"test", "./..."})
+	var props properties
+	err := parseGoPath(p, &props)
+	if err != nil {
+		return err
+	}
+
+	result, err := p.runner.Run(ctx, "go", []string{"test", "./..."}, runner.Options{Dir: props.Path})
 	if err != nil {
 		if result == nil {
 			return err

@@ -44,13 +44,3 @@ func (p *Pipeline) submitTest(ctx context.Context) error {
 	span.SetStatus(otelCodes.Ok, "")
 	return nil
 }
-
-func parseCloudBuildPath(p *Pipeline, properties *properties) error {
-	if err := p.component.Properties.Decode(&properties); err != nil {
-		return fmt.Errorf("decoding properties: %w", err)
-	}
-	if properties.Path == "" {
-		properties.Path = "./cloudbuild.yaml"
-	}
-	return nil
-}

@@ -40,12 +40,6 @@ func (m *MockRunner) Run(ctx context.Context, name string, args []string, opts r
 	return res, callArgs.Error(1)
 }
 
-func (m *MockRunner) RunWithoutOptions(ctx context.Context, name string, args []string) (*runner.Result, error) {
-	callArgs := m.Called(ctx, name, args)
-	res, _ := callArgs.Get(0).(*runner.Result)
-	return res, callArgs.Error(1)
-}
-
 type MockGarClient struct {
 	mock.Mock
 }
@@ -117,7 +111,7 @@ func TestPipeline_CI(t *testing.T) {
 			name:      "SuccessfulCIPipeline",
 			component: &oam.Component{Name: "testComponent", Type: "goservice"},
 			setupMock: func(mockRunner *MockRunner, mockDockerClient *MockDockerClient, mockGarClient *MockGarClient) {
-				mockRunner.On("RunWithoutOptions", mock.Anything, "apko", mock.Anything).
+				mockRunner.On("Run", mock.Anything, "apko", mock.Anything, mock.Anything).
 					Return(&runner.Result{ExitCode: 0}, nil)
 				mockGarClient.On("EnsureRepository", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
@@ -131,7 +125,7 @@ func TestPipeline_CI(t *testing.T) {
 			name:      "FailedCIPipeline_apko_fails",
 			component: &oam.Component{Name: "testComponent", Type: "goservice"},
 			setupMock: func(mockRunner *MockRunner, mockDockerClient *MockDockerClient, mockGarClient *MockGarClient) {
-				mockRunner.On("RunWithoutOptions", mock.Anything, "apko", mock.Anything).
+				mockRunner.On("Run", mock.Anything, "apko", mock.Anything, mock.Anything).
 					Return(nil, errors.New("apko error"))
 			},
 			wantErr: true,
@@ -140,7 +134,7 @@ func TestPipeline_CI(t *testing.T) {
 			name:      "FailedCIPipeline_apko_fails_and_returns_result",
 			component: &oam.Component{Name: "testComponent", Type: "goservice"},
 			setupMock: func(mockRunner *MockRunner, mockDockerClient *MockDockerClient, mockGarClient *MockGarClient) {
-				mockRunner.On("RunWithoutOptions", mock.Anything, "apko", mock.Anything).
+				mockRunner.On("Run", mock.Anything, "apko", mock.Anything, mock.Anything).
 					Return(&runner.Result{ExitCode: 0}, errors.New("apko error"))
 			},
 			wantErr: true,
@@ -171,7 +165,7 @@ func TestPipeline_CI(t *testing.T) {
 			name:      "FailedCIPipeline_createGarFails",
 			component: &oam.Component{Name: "testComponent", Type: "goservice"},
 			setupMock: func(mockRunner *MockRunner, mockDockerClient *MockDockerClient, mockGarClient *MockGarClient) {
-				mockRunner.On("RunWithoutOptions", mock.Anything, "apko", mock.Anything).
+				mockRunner.On("Run", mock.Anything, "apko", mock.Anything, mock.Anything).
 					Return(&runner.Result{ExitCode: 0}, nil)
 				mockGarClient.On("EnsureRepository", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(errors.New("gar error"))
@@ -182,7 +176,7 @@ func TestPipeline_CI(t *testing.T) {
 			name:      "FailedCIPipeline_PushFails",
 			component: &oam.Component{Name: "testComponent", Type: "goservice"},
 			setupMock: func(mockRunner *MockRunner, mockDockerClient *MockDockerClient, mockGarClient *MockGarClient) {
-				mockRunner.On("RunWithoutOptions", mock.Anything, "apko", mock.Anything).
+				mockRunner.On("Run", mock.Anything, "apko", mock.Anything, mock.Anything).
 					Return(&runner.Result{ExitCode: 0}, nil)
 				mockGarClient.On("EnsureRepository", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
@@ -235,7 +229,7 @@ func TestPipeline_Analyze(t *testing.T) {
 			name:      "SuccessfulAnalyzePipeline",
 			component: &oam.Component{Name: "testComponent", Type: "goservice"},
 			setupMock: func(mockRunner *MockRunner, mockDockerClient *MockDockerClient, mockGarClient *MockGarClient) {
-				mockRunner.On("RunWithoutOptions", mock.Anything, "apko", mock.Anything).
+				mockRunner.On("Run", mock.Anything, "apko", mock.Anything, mock.Anything).
 					Return(&runner.Result{ExitCode: 0}, nil)
 			},
 			wantErr: false,
@@ -244,7 +238,7 @@ func TestPipeline_Analyze(t *testing.T) {
 			name:      "FailedAnalyzePipeline",
 			component: &oam.Component{Name: "testComponent", Type: "goservice"},
 			setupMock: func(mockRunner *MockRunner, mockDockerClient *MockDockerClient, mockGarClient *MockGarClient) {
-				mockRunner.On("RunWithoutOptions", mock.Anything, "apko", mock.Anything).
+				mockRunner.On("Run", mock.Anything, "apko", mock.Anything, mock.Anything).
 					Return(&runner.Result{ExitCode: 1}, nil)
 			},
 			wantErr: true,

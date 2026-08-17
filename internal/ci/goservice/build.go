@@ -9,12 +9,19 @@ import (
 )
 
 func (p *Pipeline) build(ctx context.Context) error {
+	var props properties
+	err := parseGoPath(p, &props)
+	if err != nil {
+		return err
+	}
+
 	result, err := p.runner.Run(ctx, "go", []string{"build", "-o", p.component.Name, "."}, runner.Options{
 		Env: append(os.Environ(),
 			"CGO_ENABLED=0",
 			"GOOS=linux",
 			"GOARCH=amd64",
 		),
+		Dir: props.Path,
 	})
 	if err != nil {
 		if result == nil {

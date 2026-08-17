@@ -43,6 +43,23 @@ type Pipeline struct {
 	shortCommitSha string
 }
 
+type properties struct {
+	Path string `yaml:"path"`
+}
+
+func parseGoPath(p *Pipeline, props *properties) error {
+	if err := p.component.Properties.Decode(&props); err != nil {
+		return fmt.Errorf("decoding properties: %w", err)
+	}
+	if props == nil {
+		props = &properties{}
+	}
+	if props.Path == "" {
+		props.Path = "."
+	}
+	return nil
+}
+
 func (p *Pipeline) ComponentType() string {
 	return p.component.Type
 }
