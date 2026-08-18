@@ -21,16 +21,9 @@ func (p *Provisioner) ensureServiceAccounts(ctx context.Context) error {
 
 	for _, env := range p.tenant.Spec.Environments {
 		serviceAccounts := map[string]ProvisionedServiceAccount{}
-		email, err := p.clients.IAM.EnsureServiceAccountExists(ctx, p.newState.Projects[env].ProjectID, "sa-pipeline", "sa-pipeline")
-		if err != nil {
-			return err
-		}
-		serviceAccounts["sa-pipeline"] = ProvisionedServiceAccount{
-			Email: email,
-		}
 
 		for _, serviceAccount := range p.tenant.Spec.ServiceAccounts {
-			email, err = p.clients.IAM.EnsureServiceAccountExists(ctx, p.newState.Projects[env].ProjectID, serviceAccount.Name, serviceAccount.Name)
+			email, err := p.clients.IAM.EnsureServiceAccountExists(ctx, p.newState.Projects[env].ProjectID, serviceAccount.Name, serviceAccount.Name)
 			if err != nil {
 				return err
 			}

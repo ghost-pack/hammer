@@ -9,7 +9,7 @@ func (p *Provisioner) applyRoleChanges(ctx context.Context) error {
 	for _, env := range p.tenant.Spec.Environments {
 		projectID := p.newState.Projects[env].ProjectID
 
-		err := applySaPipelineRoles(ctx, p, env, projectID)
+		err := applySaOamRolesOnTenantProject(ctx, p, env, projectID)
 		if err != nil {
 			return err
 		}
@@ -62,76 +62,50 @@ func applyTenantDefinedServiceAccountRoles(ctx context.Context, p *Provisioner, 
 		}
 
 		project := p.newState.Projects[env]
-		sa.ProjectRoles = saSpec.Roles.Project
-		sa.OrgRoles = saSpec.Roles.Organization
+		sa.ProjectRoles = append(sa.ProjectRoles, saSpec.Roles.Project...)
+		sa.OrgRoles = append(sa.OrgRoles, saSpec.Roles.Organization...)
 		project.ServiceAccounts[saSpec.Name] = sa
 		p.newState.Projects[env] = project
 	}
 	return nil
 }
 
-func applySaPipelineRoles(ctx context.Context, p *Provisioner, env string, projectID string) error {
-	pipelineSAEmail := p.newState.Projects[env].ServiceAccounts["sa-pipeline"].Email
-
+func applySaOamRolesOnTenantProject(ctx context.Context, p *Provisioner, env string, projectID string) error {
 	pipelineRolesToAdd, err := convertApiToRole(p.apisToAdd)
 	if err != nil {
-		return fmt.Errorf("converting apis to add for sa-pipeline: %w", err)
+		return fmt.Errorf("converting apis to add for sa-oam: %w", err)
 	}
 	pipelineRolesToAdd = append(pipelineRolesToAdd, alwaysOnRoles...)
 
 	pipelineRolesToRemove, err := convertApiToRole(p.apisToRemove)
 	if err != nil {
-		return fmt.Errorf("converting apis to remove for sa-pipeline: %w", err)
+		return fmt.Errorf("converting apis to remove for sa-oam: %w", err)
 	}
 
 	if len(pipelineRolesToAdd) > 0 {
-		if err := p.clients.IAM.BindProjectRoles(ctx, projectID, pipelineSAEmail, pipelineRolesToAdd); err != nil {
-			return fmt.Errorf("binding sa-pipeline roles for %s: %w", env, err)
+		if err := p.clients.IAM.BindProjectRoles(ctx, projectID, p.platformOAMServiceAccount, pipelineRolesToAdd); err != nil {
+			return fmt.Errorf("binding sa-oam roles for %s on project %s: %w", env, projectID, err)
 		}
 	}
 	if len(pipelineRolesToRemove) > 0 {
-		if err := p.clients.IAM.UnbindProjectRoles(ctx, projectID, pipelineSAEmail, pipelineRolesToRemove); err != nil {
-			return fmt.Errorf("unbinding sa-pipeline roles for %s: %w", env, err)
+		if err := p.clients.IAM.UnbindProjectRoles(ctx, projectID, p.platformOAMServiceAccount, pipelineRolesToRemove); err != nil {
+			return fmt.Errorf("unbinding sa-oam roles for %s on project %s: %w", env, projectID, err)
 		}
 	}
 
-	err = setupSaOamOnTenantProject(ctx, p, env, projectID, pipelineSAEmail)
-	if err != nil {
-		return err
-	}
-
-	// compute final sa-pipeline roles for newState
+	// compute final sa-oam roles for newState
 	allPipelineRoles, err := convertApiToRole(p.tenant.Spec.AllowedApis)
 	if err != nil {
-		return fmt.Errorf("computing final sa-pipeline roles: %w", err)
+		return fmt.Errorf("computing final sa-oam roles: %w", err)
 	}
 	allPipelineRoles = append(allPipelineRoles, alwaysOnRoles...)
 
 	project := p.newState.Projects[env]
-	pipelineSA := project.ServiceAccounts["sa-pipeline"]
-	pipelineSA.ProjectRoles = allPipelineRoles
-	project.ServiceAccounts["sa-pipeline"] = pipelineSA
+	pipelineOAM := project.ServiceAccounts["sa-oam"]
+	pipelineOAM.ProjectRoles = allPipelineRoles
+	pipelineOAM.Email = p.platformOAMServiceAccount
+	project.ServiceAccounts["sa-oam"] = pipelineOAM
 	p.newState.Projects[env] = project
-	return nil
-}
-
-func setupSaOamOnTenantProject(ctx context.Context, p *Provisioner, env string, projectID string, pipelineSAEmail string) error {
-	// Allowing sa-oam to impersonate sa-pipeline
-	if err := p.clients.IAM.AllowImpersonation(ctx, projectID, pipelineSAEmail, p.platformOAMServiceAccount); err != nil {
-		return fmt.Errorf("granting sa-oam impersonation of sa-pipeline for %s: %w", env, err)
-	}
-
-	// Giving sa-oam the ability to view cloud storage (for opentofu plan)
-	if err := p.clients.IAM.BindProjectRoles(
-		ctx,
-		projectID,
-		p.platformOAMServiceAccount,
-		[]string{
-			"roles/storage.objectViewer",
-		},
-	); err != nil {
-		return fmt.Errorf("binding sa-oam roles for %s: %w", env, err)
-	}
 	return nil
 }
 

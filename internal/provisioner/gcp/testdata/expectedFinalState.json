@@ -8,8 +8,8 @@
       "projectId": "acme-corp-dev",
       "projectNumber": "12345",
       "serviceAccounts": {
-        "sa-pipeline": {
-          "email": "sa-pipeline@acme-corp-dev.iam.gserviceaccount.com",
+        "sa-oam": {
+          "email": "sa-oam@hammer-central-prod.iam.gserviceaccount.com",
           "projectRoles": [
             "roles/run.admin",
             "roles/artifactregistry.admin",
@@ -27,8 +27,8 @@
       "projectId": "acme-corp-prod",
       "projectNumber": "12345",
       "serviceAccounts": {
-        "sa-pipeline": {
-          "email": "sa-pipeline@acme-corp-prod.iam.gserviceaccount.com",
+        "sa-oam": {
+          "email": "sa-oam@hammer-central-prod.iam.gserviceaccount.com",
           "projectRoles": [
             "roles/run.admin",
             "roles/artifactregistry.admin",

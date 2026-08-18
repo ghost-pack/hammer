@@ -240,13 +240,7 @@ func TestProvisionerApply(t *testing.T) {
 					Return(nil)
 				mockServiceUsage.On("EnableAPIs", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
-				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return("sa-pipeline@acme-corp-dev.iam.gserviceaccount.com", nil).Once()
-				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return("sa-pipeline@acme-corp-prod.iam.gserviceaccount.com", nil).Once()
 				mockIam.On("BindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
-				mockIam.On("AllowImpersonation", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				stateBytes, _ := os.ReadFile("testdata/expectedFinalState.json")
 				mockCloudStorage.On("WriteObject",
@@ -310,15 +304,9 @@ func TestProvisionerApply(t *testing.T) {
 					Return(nil)
 				mockServiceUsage.On("EnableAPIs", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
-				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return("sa-pipeline@acme-corp-dev.iam.gserviceaccount.com", nil).Once()
-				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return("sa-pipeline@acme-corp-prod.iam.gserviceaccount.com", nil).Once()
 				mockIam.On("BindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockIam.On("UnbindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
-				mockIam.On("AllowImpersonation", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				expectedFinalState, _ := os.ReadFile("testdata/expectedFinalState.json")
 				mockCloudStorage.On("WriteObject",
@@ -376,10 +364,6 @@ func TestProvisionerApply(t *testing.T) {
 					Return("12345", nil)
 				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
-				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return("sa-pipeline@acme-corp-dev.iam.gserviceaccount.com", nil).Once()
-				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return("sa-pipeline@acme-corp-prod.iam.gserviceaccount.com", nil).Once()
 			},
 			wantErr: true,
 		},
@@ -453,16 +437,12 @@ func TestProvisionerApply(t *testing.T) {
 				mockServiceUsage.On("EnableAPIs", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return("sa-pipeline@hammer-central-prod.iam.gserviceaccount.com", nil).Once()
-				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return("sa-provisioner@hammer-central-prod.iam.gserviceaccount.com", nil).Once()
 				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return("sa-oam@hammer-central-prod.iam.gserviceaccount.com", nil).Once()
 				mockIam.On("BindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockIam.On("BindOrgRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
-				mockIam.On("AllowImpersonation", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				stateBytes, _ := os.ReadFile("testdata/expectedFinalState_central.json")
 				mockCloudStorage.On("WriteObject",
@@ -563,13 +543,9 @@ func TestProvisionerApply(t *testing.T) {
 				mockServiceUsage.On("EnableAPIs", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return("sa-pipeline@hammer-central-prod.iam.gserviceaccount.com", nil).Once()
-				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return("sa-provisioner@hammer-central-prod.iam.gserviceaccount.com", nil).Once()
 				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return("sa-oam@hammer-central-prod.iam.gserviceaccount.com", nil).Once()
-				mockIam.On("AllowImpersonation", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
 				mockIam.On("BindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockIam.On("UnbindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -672,8 +648,6 @@ func TestProvisionerApply(t *testing.T) {
 				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return("sa-pipeline@hammer-central-prod.iam.gserviceaccount.com", nil).Once()
-				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return("sa-provisioner@hammer-central-prod.iam.gserviceaccount.com", nil).Once()
 				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return("", fmt.Errorf("error")).Once()
@@ -732,11 +706,7 @@ func TestProvisionerApply(t *testing.T) {
 				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return("sa-pipeline@hammer-central-prod.iam.gserviceaccount.com", nil).Once()
-				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return("custom@hammer-central-prod.iam.gserviceaccount.com", nil).Once()
-				mockIam.On("AllowImpersonation", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
 				mockIam.On("BindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil).Once()
 				mockIam.On("BindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -796,13 +766,7 @@ func TestProvisionerApply(t *testing.T) {
 				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return("sa-pipeline@hammer-central-prod.iam.gserviceaccount.com", nil).Once()
-				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return("custom@hammer-central-prod.iam.gserviceaccount.com", nil).Once()
-				mockIam.On("AllowImpersonation", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
-				mockIam.On("BindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil).Once()
 				mockIam.On("BindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil).Once()
 				mockIam.On("BindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -862,15 +826,9 @@ func TestProvisionerApply(t *testing.T) {
 				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return("sa-pipeline@hammer-central-prod.iam.gserviceaccount.com", nil).Once()
-				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return("custom@hammer-central-prod.iam.gserviceaccount.com", nil).Once()
 				mockIam.On("BindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil).Once()
-				mockIam.On("BindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil).Once()
-				mockIam.On("AllowImpersonation", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
 				mockIam.On("BindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil).Once()
 				mockIam.On("BindOrgRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -945,14 +903,10 @@ func TestProvisionerApply(t *testing.T) {
 				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return("sa-pipeline@hammer-central-prod.iam.gserviceaccount.com", nil).Once()
-				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return("sa-provisioner@hammer-central-prod.iam.gserviceaccount.com", nil).Once()
 				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return("sa-oam@hammer-central-prod.iam.gserviceaccount.com", nil).Once()
 				mockIam.On("BindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
-				mockIam.On("AllowImpersonation", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockIam.On("UnbindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(fmt.Errorf("error"))
@@ -1026,8 +980,6 @@ func TestProvisionerApply(t *testing.T) {
 				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return("sa-pipeline@hammer-central-prod.iam.gserviceaccount.com", nil).Once()
-				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return("sa-provisioner@hammer-central-prod.iam.gserviceaccount.com", nil).Once()
 				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return("sa-oam@hammer-central-prod.iam.gserviceaccount.com", nil).Once()
@@ -1036,8 +988,6 @@ func TestProvisionerApply(t *testing.T) {
 				mockIam.On("UnbindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockIam.On("BindOrgRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
-				mockIam.On("AllowImpersonation", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockIam.On("UnbindOrgRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(fmt.Errorf("error"))
@@ -1077,10 +1027,6 @@ func TestProvisionerApply(t *testing.T) {
 					Return("12345", nil)
 				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
-				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return("sa-pipeline@acme-corp-dev.iam.gserviceaccount.com", nil).Once()
-				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return("sa-pipeline@acme-corp-prod.iam.gserviceaccount.com", nil).Once()
 			},
 			wantErr: true,
 		},
@@ -1117,10 +1063,6 @@ func TestProvisionerApply(t *testing.T) {
 					Return("12345", nil)
 				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
-				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return("sa-pipeline@acme-corp-dev.iam.gserviceaccount.com", nil).Once()
-				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return("sa-pipeline@acme-corp-prod.iam.gserviceaccount.com", nil).Once()
 				mockIam.On("BindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockIam.On("UnbindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -1347,13 +1289,7 @@ func TestProvisionerApply(t *testing.T) {
 					Return(nil)
 				mockServiceUsage.On("EnableAPIs", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
-				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return("sa-pipeline@acme-corp-dev.iam.gserviceaccount.com", nil).Once()
-				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return("sa-pipeline@acme-corp-prod.iam.gserviceaccount.com", nil).Once()
 				mockIam.On("BindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
-				mockIam.On("AllowImpersonation", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockOrgPolicy.On("EnforcePolicy", mock.Anything, mock.Anything, mock.Anything).
 					Return(fmt.Errorf("error"))
@@ -1392,13 +1328,7 @@ func TestProvisionerApply(t *testing.T) {
 					Return("12345", nil)
 				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
-				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return("sa-pipeline@acme-corp-dev.iam.gserviceaccount.com", nil).Once()
-				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return("sa-pipeline@acme-corp-prod.iam.gserviceaccount.com", nil).Once()
 				mockIam.On("BindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
-				mockIam.On("AllowImpersonation", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockServiceUsage.On("EnableAPIs", mock.Anything, mock.Anything, mock.Anything).
 					Return(fmt.Errorf("error"))
@@ -1423,6 +1353,22 @@ func TestProvisionerApply(t *testing.T) {
 					Environments: []string{
 						"dev",
 						"prod",
+					},
+					ServiceAccounts: []tenant.ServiceAccountSpec{
+						{
+							Name:        "sa-oam",
+							Description: "Runs CI/CD pipelines interpreting OAM files",
+							Roles: tenant.SARoleBinding{
+								Project: []string{
+									"roles/iam.serviceAccountTokenCreator",
+									"roles/artifactregistry.writer",
+									"roles/cloudbuild.builds.editor",
+									"roles/storage.objectAdmin",
+									"roles/pubsub.publisher",
+									"roles/pubsub.subscriber",
+								},
+							},
+						},
 					},
 				},
 			},
@@ -1519,10 +1465,6 @@ func TestProvisionerApply(t *testing.T) {
 					Return("12345", nil)
 				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
-				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return("sa-pipeline@acme-corp-dev.iam.gserviceaccount.com", nil).Once()
-				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return("sa-pipeline@acme-corp-prod.iam.gserviceaccount.com", nil).Once()
 				mockIam.On("BindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(fmt.Errorf("error"))
 			},
@@ -1564,13 +1506,7 @@ func TestProvisionerApply(t *testing.T) {
 					Return(nil)
 				mockServiceUsage.On("EnableAPIs", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
-				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return("sa-pipeline@acme-corp-dev.iam.gserviceaccount.com", nil).Once()
-				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return("sa-pipeline@acme-corp-prod.iam.gserviceaccount.com", nil).Once()
 				mockIam.On("BindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
-				mockIam.On("AllowImpersonation", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockCloudStorage.On("WriteObject", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(fmt.Errorf("error"))
@@ -1613,60 +1549,11 @@ func TestProvisionerApply(t *testing.T) {
 					Return(nil)
 				mockServiceUsage.On("EnableAPIs", mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
-				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return("sa-pipeline@acme-corp-dev.iam.gserviceaccount.com", nil).Once()
-				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return("sa-pipeline@acme-corp-prod.iam.gserviceaccount.com", nil).Once()
 				mockIam.On("BindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
-				mockIam.On("AllowImpersonation", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil)
 				mockCloudStorage.On("WriteObject", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(nil).Once()
 				mockCloudStorage.On("WriteObject", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(fmt.Errorf("error")).Once()
-			},
-			wantErr: true,
-		},
-		{
-			name: "fail to allow impersonation",
-			tenant: &tenant.Tenant{
-				APIVersion: "core.oam.dev/v1beta1",
-				Kind:       "Tenant",
-				Metadata:   tenant.Metadata{Name: "acme-corp"},
-				Spec: tenant.Spec{
-					BillingAccount: "ABCDE-12345-FGHIJ",
-					ParentFolder:   "937506553540",
-					AllowedApis: []string{
-						"run.googleapis.com",
-						"artifactregistry.googleapis.com",
-						"logging.googleapis.com",
-						"monitoring.googleapis.com",
-					},
-					Environments: []string{
-						"dev",
-						"prod",
-					},
-				},
-			},
-			setupMock: func(mockResourceManager *MockResourceManager, mockServiceUsage *MockServiceUsage, mockOrgPolicy *MockOrgPolicy, mockIam *MockIam, mockBilling *MockBilling, mockCloudStorage *MockCloudStorage) {
-				mockCloudStorage.On("EnsureBucketExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
-				mockCloudStorage.On("GetObject", mock.Anything, mock.Anything, mock.Anything).
-					Return(nil, storage.ErrObjectNotExist)
-				mockResourceManager.On("EnsureFolderExists", mock.Anything, mock.Anything, mock.Anything).
-					Return("acme-corp", nil)
-				mockResourceManager.On("EnsureProjectExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return("12345", nil)
-				mockBilling.On("LinkBillingAccount", mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
-				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return("sa-pipeline@acme-corp-dev.iam.gserviceaccount.com", nil).Once()
-				mockIam.On("EnsureServiceAccountExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return("sa-pipeline@acme-corp-prod.iam.gserviceaccount.com", nil).Once()
-				mockIam.On("BindProjectRoles", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-					Return(nil)
-				mockIam.On("AllowImpersonation", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 					Return(fmt.Errorf("error")).Once()
 			},
 			wantErr: true,

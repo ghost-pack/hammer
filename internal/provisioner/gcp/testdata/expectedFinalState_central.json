@@ -8,24 +8,6 @@
       "projectId": "hammer-central-prod",
       "projectNumber": "12345",
       "serviceAccounts": {
-        "sa-pipeline": {
-          "email": "sa-pipeline@hammer-central-prod.iam.gserviceaccount.com",
-          "projectRoles": [
-            "roles/cloudbuild.builds.editor",
-            "roles/cloudbuild.integrations.owner",
-            "roles/artifactregistry.admin",
-            "roles/storage.admin",
-            "roles/secretmanager.admin",
-            "roles/logging.admin",
-            "roles/monitoring.admin",
-            "roles/pubsub.admin",
-            "roles/cloudtrace.agent",
-            "roles/iam.serviceAccountAdmin",
-            "roles/iam.serviceAccountUser",
-            "roles/resourcemanager.projectIamAdmin",
-            "roles/serviceusage.serviceUsageConsumer"
-         ]
-        },
         "sa-provisioner": {
           "email": "sa-provisioner@hammer-central-prod.iam.gserviceaccount.com",
           "projectRoles": [
@@ -44,6 +26,19 @@
         "sa-oam": {
           "email": "sa-oam@hammer-central-prod.iam.gserviceaccount.com",
           "projectRoles": [
+            "roles/cloudbuild.builds.editor",
+            "roles/cloudbuild.integrations.owner",
+            "roles/artifactregistry.admin",
+            "roles/storage.admin",
+            "roles/secretmanager.admin",
+            "roles/logging.admin",
+            "roles/monitoring.admin",
+            "roles/pubsub.admin",
+            "roles/cloudtrace.agent",
+            "roles/iam.serviceAccountAdmin",
+            "roles/iam.serviceAccountUser",
+            "roles/resourcemanager.projectIamAdmin",
+            "roles/serviceusage.serviceUsageConsumer",
             "roles/iam.serviceAccountTokenCreator",
             "roles/artifactregistry.writer",
             "roles/cloudbuild.builds.editor",
