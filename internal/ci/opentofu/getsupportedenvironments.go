@@ -39,7 +39,7 @@ func (p *Pipeline) getSupportedEnvironments(ctx context.Context) ([]string, erro
 
 	// Step 2: Get terraform environments by scanning the filesystem
 	var props properties
-	if err := parseOpenTofuPath(p, &props); err != nil {
+	if props, err = parseOpenTofuPath(p); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 		return nil, fmt.Errorf("parsing opentofu path: %w", err)

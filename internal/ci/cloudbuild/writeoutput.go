@@ -27,13 +27,11 @@ func (p *Pipeline) writeOutput(ctx context.Context) (err error) {
 		span.End()
 	}()
 
-
-	var properties properties
-	err = parseCloudBuildPath(p, &properties)
+	props, err := parseCloudBuildPath(p)
 	if err != nil {
 		return err
 	}
-	cloudBuildYamlBytes, err := os.ReadFile(properties.Path)
+	cloudBuildYamlBytes, err := os.ReadFile(props.Path)
 	if err != nil {
 		return err
 	}

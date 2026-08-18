@@ -14,6 +14,7 @@ import (
 	"github.com/ghost-pack/hammer/internal/runner"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 type MockDockerClient struct {
@@ -204,6 +205,30 @@ func TestPipeline_CI(t *testing.T) {
 			setupMock: func(mockRunner *MockRunner, mockDockerClient *MockDockerClient, mockGarClient *MockGarClient) {
 				mockRunner.On("Run", mock.Anything, "go", []string{"test", "./..."}, mock.Anything).
 					Return(nil, errors.New("test error"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "FailedCIPipeline_unparseable_props",
+			component: &oam.Component{
+				Name: "testComponent",
+				Type: "goservice",
+				Properties: yaml.Node{
+					Kind: yaml.MappingNode,
+					Tag:  "!!map",
+					Content: []*yaml.Node{
+						{Kind: yaml.ScalarNode, Tag: "!!str", Value: "path"},
+						{
+							Kind: yaml.SequenceNode,
+							Tag:  "!!seq",
+							Content: []*yaml.Node{
+								{Kind: yaml.ScalarNode, Tag: "!!str", Value: "item"},
+							},
+						},
+					},
+				},
+			},
+			setupMock: func(mockRunner *MockRunner, mockDockerClient *MockDockerClient, mockGarClient *MockGarClient) {
 			},
 			wantErr: true,
 		},

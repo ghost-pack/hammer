@@ -11,8 +11,7 @@ func (p *Pipeline) createOrUpdateTrigger(ctx context.Context) error {
 	ctx, span := tracing.Tracer("creating cloud build trigger").Start(ctx, "creating cloud build trigger")
 	defer span.End()
 
-	var props properties
-	err := parseCloudBuildPath(p, &props)
+	props, err := parseCloudBuildPath(p)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(otelCodes.Error, err.Error())

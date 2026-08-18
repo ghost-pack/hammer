@@ -9,8 +9,7 @@ import (
 )
 
 func (p *Pipeline) build(ctx context.Context) error {
-	var props properties
-	err := parseGoPath(p, &props)
+	props, err := parseGoPath(p)
 	if err != nil {
 		return err
 	}

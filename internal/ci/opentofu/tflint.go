@@ -8,8 +8,7 @@ import (
 )
 
 func (p *Pipeline) tflint(ctx context.Context, env string) error {
-	var props properties
-	err := parseOpenTofuPath(p, &props)
+	props, err := parseOpenTofuPath(p)
 	if err != nil {
 		return err
 	}

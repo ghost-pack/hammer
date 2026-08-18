@@ -90,7 +90,6 @@ func (c *CICmd) Execute(ctx context.Context, args []string) (err error) {
 		trace.WithAttributes(
 			attribute.String("cmd", "CI"),
 			attribute.StringSlice("args", args)))
-	defer span.End()
 	defer func() {
 		if err != nil {
 			span.RecordError(err)

@@ -33,17 +33,18 @@ type testConfig struct {
 	Required *bool  `yaml:"required"` // use pointer to detect if field was explicitly set
 }
 
-func parseCloudBuildPath(p *Pipeline, props *properties) error {
+func parseCloudBuildPath(p *Pipeline) (properties, error) {
+	var props properties
+
 	if err := p.component.Properties.Decode(&props); err != nil {
-		return fmt.Errorf("decoding properties: %w", err)
+		return properties{}, fmt.Errorf("decoding properties: %w", err)
 	}
-	if props == nil {
-		props = &properties{}
-	}
+
 	if props.Path == "" {
 		props.Path = "./cloudbuild.yaml"
 	}
-	return nil
+
+	return props, nil
 }
 
 func New(component oam.Component, app oam.App, clients ci.DependencyClients) (ci.Pipeline, error) {

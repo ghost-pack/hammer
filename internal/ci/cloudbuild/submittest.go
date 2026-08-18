@@ -12,8 +12,7 @@ func (p *Pipeline) submitTest(ctx context.Context) error {
 	ctx, span := tracing.Tracer("testing cloud build pipelines").Start(ctx, "testing cloud build pipelines")
 	defer span.End()
 
-	var props properties
-	err := parseCloudBuildPath(p, &props)
+	props, err := parseCloudBuildPath(p)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(otelCodes.Error, err.Error())

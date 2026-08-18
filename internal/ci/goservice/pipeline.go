@@ -47,17 +47,18 @@ type properties struct {
 	Path string `yaml:"path"`
 }
 
-func parseGoPath(p *Pipeline, props *properties) error {
+func parseGoPath(p *Pipeline) (properties, error) {
+	var props properties
+
 	if err := p.component.Properties.Decode(&props); err != nil {
-		return fmt.Errorf("decoding properties: %w", err)
+		return properties{}, fmt.Errorf("decoding properties: %w", err)
 	}
-	if props == nil {
-		props = &properties{}
-	}
+
 	if props.Path == "" {
 		props.Path = "."
 	}
-	return nil
+
+	return props, nil
 }
 
 func (p *Pipeline) ComponentType() string {

@@ -44,17 +44,17 @@ type Properties struct {
 	Path string `yaml:"path"`
 }
 
-func parseOpenTofuPath(p *Pipeline, props *properties) error {
+func parseOpenTofuPath(p *Pipeline) (properties, error) {
+	var props properties
+
 	if err := p.component.Properties.Decode(&props); err != nil {
-		return fmt.Errorf("decoding properties: %w", err)
+		return properties{}, fmt.Errorf("decoding properties: %w", err)
 	}
-	if props == nil {
-		props = &properties{}
-	}
+
 	if props.Path == "" {
 		props.Path = "./opentofu"
 	}
-	return nil
+	return props, nil
 }
 
 func (p *Pipeline) ComponentType() string {
@@ -88,8 +88,6 @@ func (p *Pipeline) CI(ctx context.Context) (*ci.Artifact, error) {
 		envBucketExists[env] = exists
 		slog.InfoContext(ctx, "checked tfstate bucket", "env", env, "bucket", bucketName, "exists", exists)
 	}
-
-	// Next, try to find tfstate in each environment. Save off next to env. I guess env thing can be a map.
 
 	// Before looping through each environment, do:
 	// 1. tofu fmt -recursive -check.
