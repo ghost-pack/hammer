@@ -300,59 +300,6 @@ func TestBindProjectRoles(t *testing.T) {
 	})
 }
 
-func TestAllowImpersonation(t *testing.T) {
-	t.Run("successfully allow impersonation", func(t *testing.T) {
-		mockIamApi := &MockIamAPI{}
-		mockIamApi.On("GetServiceAccountIamPolicy", mock.Anything, mock.MatchedBy(func(req *iampb.GetIamPolicyRequest) bool {
-			return req.Resource == "projects/my-project/serviceAccounts/sa-pipeline@my-project.iam.gserviceaccount.com"
-		})).Return(&iampolicy.Policy{}, nil)
-
-		mockIamApi.On("SetServiceAccountIamPolicy", mock.Anything, mock.MatchedBy(func(req *iam.SetIamPolicyRequest) bool {
-			return req.Resource == "projects/my-project/serviceAccounts/sa-pipeline@my-project.iam.gserviceaccount.com" &&
-				req.Policy.InternalProto.Bindings[0].Members[0] == "serviceAccount:sa-oam@hammer-central-prod.iam.gserviceaccount.com" &&
-				req.Policy.InternalProto.Bindings[0].Role == "roles/iam.serviceAccountTokenCreator"
-		})).Return(&iampolicy.Policy{}, nil)
-
-		client := newIamClientWithAPI(mockIamApi, &MockProjectsAPI{}, &MockOrganizationAPI{})
-		err := client.AllowImpersonation(context.Background(), "my-project", "sa-pipeline@my-project.iam.gserviceaccount.com", "sa-oam@hammer-central-prod.iam.gserviceaccount.com")
-		require.NoError(t, err)
-
-		mockIamApi.AssertExpectations(t)
-	})
-
-	t.Run("fail to get iam policy", func(t *testing.T) {
-		mockIamApi := &MockIamAPI{}
-		mockIamApi.On("GetServiceAccountIamPolicy", mock.Anything, mock.MatchedBy(func(req *iampb.GetIamPolicyRequest) bool {
-			return req.Resource == "projects/my-project/serviceAccounts/sa-pipeline@my-project.iam.gserviceaccount.com"
-		})).Return(nil, fmt.Errorf("some error"))
-
-		client := newIamClientWithAPI(mockIamApi, &MockProjectsAPI{}, &MockOrganizationAPI{})
-		err := client.AllowImpersonation(context.Background(), "my-project", "sa-pipeline@my-project.iam.gserviceaccount.com", "sa-oam@hammer-central-prod.iam.gserviceaccount.com")
-		require.Error(t, err)
-
-		mockIamApi.AssertExpectations(t)
-	})
-
-	t.Run("fail to set iam policy", func(t *testing.T) {
-		mockIamApi := &MockIamAPI{}
-		mockIamApi.On("GetServiceAccountIamPolicy", mock.Anything, mock.MatchedBy(func(req *iampb.GetIamPolicyRequest) bool {
-			return req.Resource == "projects/my-project/serviceAccounts/sa-pipeline@my-project.iam.gserviceaccount.com"
-		})).Return(&iampolicy.Policy{}, nil)
-
-		mockIamApi.On("SetServiceAccountIamPolicy", mock.Anything, mock.MatchedBy(func(req *iam.SetIamPolicyRequest) bool {
-			return req.Resource == "projects/my-project/serviceAccounts/sa-pipeline@my-project.iam.gserviceaccount.com" &&
-				req.Policy.InternalProto.Bindings[0].Members[0] == "serviceAccount:sa-oam@hammer-central-prod.iam.gserviceaccount.com" &&
-				req.Policy.InternalProto.Bindings[0].Role == "roles/iam.serviceAccountTokenCreator"
-		})).Return(nil, fmt.Errorf("some error"))
-
-		client := newIamClientWithAPI(mockIamApi, &MockProjectsAPI{}, &MockOrganizationAPI{})
-		err := client.AllowImpersonation(context.Background(), "my-project", "sa-pipeline@my-project.iam.gserviceaccount.com", "sa-oam@hammer-central-prod.iam.gserviceaccount.com")
-		require.Error(t, err)
-
-		mockIamApi.AssertExpectations(t)
-	})
-}
-
 func TestBindOrgRoles(t *testing.T) {
 	t.Run("successfully bind new role on org", func(t *testing.T) {
 		mockIamApi := &MockIamAPI{}

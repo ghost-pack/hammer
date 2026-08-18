@@ -102,7 +102,7 @@ func applySaOamRolesOnTenantProject(ctx context.Context, p *Provisioner, env str
 
 	project := p.newState.Projects[env]
 	pipelineOAM := project.ServiceAccounts["sa-oam"]
-	pipelineOAM.ProjectRoles = allPipelineRoles
+	pipelineOAM.ProjectRoles = append(pipelineOAM.ProjectRoles, allPipelineRoles...)
 	pipelineOAM.Email = p.platformOAMServiceAccount
 	project.ServiceAccounts["sa-oam"] = pipelineOAM
 	p.newState.Projects[env] = project

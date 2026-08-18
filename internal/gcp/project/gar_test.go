@@ -135,51 +135,6 @@ func TestEnsureRepository(t *testing.T) {
 
 }
 
-func TestGrantRepositoryReader(t *testing.T) {
-	t.Run("successfully grant repository reader", func(t *testing.T) {
-		mockAPI := &MockGarAPI{}
-		mockAPI.On("GetIamPolicy", mock.Anything, mock.MatchedBy(func(req *iampb.GetIamPolicyRequest) bool {
-			return req.Resource == fmt.Sprintf("projects/%s/locations/%s/repositories/%s", "my-project", "us-central1", "my-repo")
-		})).Return(&iampb.Policy{}, nil)
-
-		mockAPI.On("SetIamPolicy", mock.Anything, mock.Anything).Return(nil, nil)
-
-		client := newGarClientWithAPI(mockAPI)
-		err := client.GrantRepositoryReader(context.Background(), "my-project", "us-central1", "my-repo", "sa-pipeline@hammer-central-prod.iam.gserviceaccount.com")
-		require.NoError(t, err)
-
-		mockAPI.AssertExpectations(t)
-	})
-
-	t.Run("fail to get policy", func(t *testing.T) {
-		mockAPI := &MockGarAPI{}
-		mockAPI.On("GetIamPolicy", mock.Anything, mock.MatchedBy(func(req *iampb.GetIamPolicyRequest) bool {
-			return req.Resource == fmt.Sprintf("projects/%s/locations/%s/repositories/%s", "my-project", "us-central1", "my-repo")
-		})).Return(nil, fmt.Errorf("some error"))
-
-		client := newGarClientWithAPI(mockAPI)
-		err := client.GrantRepositoryReader(context.Background(), "my-project", "us-central1", "my-repo", "sa-pipeline@hammer-central-prod.iam.gserviceaccount.com")
-		require.Error(t, err)
-
-		mockAPI.AssertExpectations(t)
-	})
-
-	t.Run("fail to set policy", func(t *testing.T) {
-		mockAPI := &MockGarAPI{}
-		mockAPI.On("GetIamPolicy", mock.Anything, mock.MatchedBy(func(req *iampb.GetIamPolicyRequest) bool {
-			return req.Resource == fmt.Sprintf("projects/%s/locations/%s/repositories/%s", "my-project", "us-central1", "my-repo")
-		})).Return(&iampb.Policy{}, nil)
-
-		mockAPI.On("SetIamPolicy", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("some error"))
-
-		client := newGarClientWithAPI(mockAPI)
-		err := client.GrantRepositoryReader(context.Background(), "my-project", "us-central1", "my-repo", "sa-pipeline@hammer-central-prod.iam.gserviceaccount.com")
-		require.Error(t, err)
-
-		mockAPI.AssertExpectations(t)
-	})
-}
-
 func TestNewGarClient(t *testing.T) {
 	tests := []struct {
 		name           string

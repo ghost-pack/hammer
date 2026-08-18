@@ -49,11 +49,6 @@ func (m *MockGarClient) EnsureRepository(ctx context.Context, projectID, locatio
 	return callArgs.Error(0)
 }
 
-func (m *MockGarClient) GrantRepositoryReader(ctx context.Context, projectID, location, repoID, saEmail string) error {
-	callArgs := m.Called(ctx, projectID, location, repoID, saEmail)
-	return callArgs.Error(0)
-}
-
 func (m *MockGarClient) Close() error {
 	callArgs := m.Called()
 	return callArgs.Error(0)

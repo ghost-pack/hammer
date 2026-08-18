@@ -28,7 +28,6 @@ type IAMClient interface {
 	UnbindProjectRoles(ctx context.Context, projectID, saEmail string, roles []string) error
 	BindOrgRoles(ctx context.Context, orgID, saEmail string, roles []string) error
 	UnbindOrgRoles(ctx context.Context, orgID, saEmail string, roles []string) error
-	AllowImpersonation(ctx context.Context, projectID, targetSAEmail, impersonatorEmail string) error
 	Close() error
 }
 
@@ -394,45 +393,4 @@ func removeBinding(policy *iampb.Policy, role, member string) {
 		}
 		return
 	}
-}
-
-func (c *IAMClientImpl) AllowImpersonation(ctx context.Context, projectID, targetSAEmail, impersonatorEmail string) error {
-	ctx, span := tracing.Tracer("allow service account impersonation").Start(ctx, "allow service account impersonation",
-		trace.WithAttributes(
-			attribute.String("project", projectID),
-			attribute.String("targetSA", targetSAEmail),
-			attribute.String("impersonator", impersonatorEmail)))
-	defer span.End()
-
-	resource := fmt.Sprintf("projects/%s/serviceAccounts/%s", projectID, targetSAEmail)
-
-	policy, err := c.iam.GetServiceAccountIamPolicy(ctx, &iampb.GetIamPolicyRequest{
-		Resource: resource,
-	})
-	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(otelCodes.Error, err.Error())
-		return fmt.Errorf("getting IAM policy for SA %s: %w", targetSAEmail, err)
-	}
-
-	policy.Add(
-		"serviceAccount:"+impersonatorEmail,
-		"roles/iam.serviceAccountTokenCreator",
-	)
-
-	_, err = c.iam.SetServiceAccountIamPolicy(ctx, &iam.SetIamPolicyRequest{
-		Resource: resource,
-		Policy:   policy,
-	})
-	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(otelCodes.Error, err.Error())
-		return fmt.Errorf("setting IAM policy for SA %s: %w", targetSAEmail, err)
-	}
-
-	slog.InfoContext(ctx, "impersonation granted",
-		"target", targetSAEmail,
-		"impersonator", impersonatorEmail)
-	span.SetStatus(otelCodes.Ok, "impersonation granted")
-	return nil
 }
